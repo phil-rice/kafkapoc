@@ -1,0 +1,58 @@
+# This is the configuration file for the notification system. It can be overridden by geo/product/domain item.
+
+tasks: # The tasks that are needed by the notification system. Can be overridden by geo/product/domain item
+  - send_notification:
+      service: send_notification # This is the service that we will call to send the notification
+  - look_up_recipient:
+      service: look_up_recipient # This is the service that we will call to look up the recipient of the notification
+  - look_up_recipient # This is a task that looks up the recipient of the notification based on the message type
+  # Note in practice we would probably have done this earlier and added it to the CEP state
+
+services: # How we implement the tasks for the notification system. Again can easily be overridden
+  send_notification:
+    type: api
+    method: POST
+    url: https:example.com/send_notification
+    authentication:
+      method: API_KEY
+      apikey: SEND_NOTIFICATION_API_KEY # Env variable for the API key
+    body:
+      schema: '/some/url/for/schema'
+
+# Now we are saying what logic to apply when a message applies
+# Note that we can override these for different products, domains, or geos
+# I am unsure of the best way to handle this. Perhaps indexing by message type with a default
+
+logic:
+  enrich: # This enriches the message with additional information
+    - type: task # This means we are calling a task. Note that tasks take time. We will continue the processing when the task returns. Also note that tasks have retry logic... perhaps they take up to 15 mins, or never terminate
+      task: look_up_recipient # This is a task that looks up the recipient of the notification based on the message type
+      params: [ ] # We could have passed parameters here, but actually the defaults are fine. Params is optional, this is just for conversation
+
+    - type: cel
+      file: 'enrich_notification' # The name of a file that holds cel logic
+
+  sideEffects: # This calculates side effects based on the message type
+               # Note that the expressions can return one or many side effects
+               # We aggregate the side effects from each expression
+    arrival:
+      type: cel
+      file: 'arrival_notification' # The name of a file that holds cel
+    departure: # Here we can see we have two different ways to define the logic. We execute both
+      - type: cel
+        cel: | # Here we have some inline cel. It is creating a single side effect
+          recipient.country == "uk" && product.type == "registeredDelivery"
+            ? {
+                type: "send_notification",
+                message: "Departure notification for {{ parcel_id }}",
+                recipient: "{{ recipient_email }}"
+              }
+            : null}
+      - type: cel
+        file: 'departure_notification' # The name of a file that holds cel
+    delivery:
+      type: decisionTree
+      file: 'delivery_notification' # The name of a file that holds decision tree logic
+    default: # special...this matches any message that does not have a specific side effect defined
+      type: nop
+

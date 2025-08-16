@@ -1,0 +1,10 @@
+modules:
+  notification:
+    description: |
+      This module works out which notifications to send to interested parties.
+
+  billing:
+    description: |
+      This module works out the billing for 
+        
+          
