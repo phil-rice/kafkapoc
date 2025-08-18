@@ -11,8 +11,7 @@ package com.example.cepstate;
  *       (timers, pause/resume) is handled elsewhere.</li>
  *   <li><b>Succeed:</b> Release the lease; if backlog exists, atomically hand ownership to the head.
  *       The next unit can be picked up on the next poll (or immediately if you resume).</li>
- *   <li><b>Fencing:</b> {@code token} must match the active lease for {@code domainId}, otherwise
- *       implementations should throw {@link IllegalStateException}.</li>
+ *   <li><b>Fencing:</b> {@code token} must match the active lease for {@code domainId}
  *   <li><b>Scope:</b> One {@code WorkLease} instance is intended <b>per Kafka partition</b>.
  *       (If you share across partitions, incorporate the partition in your keying at the adapter.)</li>
  * </ul>
