@@ -1,0 +1,37 @@
+services:
+  kafka:
+    image: apache/kafka:4.0.0   # pin a version you like; update when you choose
+    container_name: kafka
+    ports:
+      - "9092:9092"              # host apps use localhost:9092
+    environment:
+      # Single-node KRaft (no ZooKeeper)
+      KAFKA_PROCESS_ROLES: broker,controller
+      KAFKA_NODE_ID: 1
+      KAFKA_LISTENERS: CONTROLLER://:9091,HOST://:9092,DOCKER://:9093
+      KAFKA_ADVERTISED_LISTENERS: HOST://localhost:9092,DOCKER://kafka:9093
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: CONTROLLER:PLAINTEXT,HOST:PLAINTEXT,DOCKER:PLAINTEXT
+      KAFKA_CONTROLLER_LISTENER_NAMES: CONTROLLER
+      KAFKA_CONTROLLER_QUORUM_VOTERS: 1@kafka:9091
+      KAFKA_INTER_BROKER_LISTENER_NAME: DOCKER
+      # Dev-friendly (single broker)
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
+      # optional: KAFKA_AUTO_CREATE_TOPICS_ENABLE: "true"
+    volumes:
+      - kafka-data:/var/lib/kafka/data
+
+  # Redpanda Console (topic/message browser)
+  rp-console:
+    image: redpandadata/console:latest
+    container_name: rp-console
+    ports:
+      - "8081:8080"               # UI at http://localhost:8081
+    environment:
+      KAFKA_BROKERS: "kafka:9093" # talk to Kafka over the container-only listener
+    depends_on:
+      - kafka
+
+volumes:
+  kafka-data:

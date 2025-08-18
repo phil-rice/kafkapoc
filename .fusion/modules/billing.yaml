@@ -1,0 +1,6 @@
+module:
+  billings:
+     arrival:
+         logic:
+            - type: celFile
+              file: 'cel/arrival_billing.cel' # The name of a file that holds cel logic for arrival billing

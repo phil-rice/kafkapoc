@@ -1,0 +1,5 @@
+{
+                  type: "send_notification",
+                  message: "Departure notification for {{ parcel_id }}",
+                  recipient: "{{ recipient_email }}"
+                }

@@ -1,0 +1,20 @@
+services: # How we implement the tasks
+  send_notification:
+    type: api
+    method: POST
+    url: https:example.com/send_notification
+    authentication:
+      method: API_KEY
+      apikey: SEND_NOTIFICATION_API_KEY # Env variable for the API key
+    body:
+      schema: '/some/url/for/schema'
+
+  look_up_address_default:
+    type: api
+    method: GET
+    url: https://example.com/look_up_address
+    authentication:
+      method: API_KEY
+      apikey: LOOK_UP_ADDRESS_API_KEY # Env variable for the API key
+    params:
+      address: "{{ recipient_address }}"  # This is the address of the recipient. It is taken from the message or CEP state ... in practice probably several lines

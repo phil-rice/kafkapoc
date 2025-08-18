@@ -1,0 +1,41 @@
+version: '1'
+
+parameters:
+  domain:
+    legal:
+      - parcel
+      - vehicle
+    default: parcel
+  company:
+    legal:
+      - rmg
+      - sainsbury
+      - oneVanMan
+    default: rmg
+  product:
+    legal:
+      - firstClass
+      - secondClass
+      - signedForFirstClass
+      - signedForSecondClass
+      - tracked24
+      - tracked48
+    default: firstClass
+#  event:
+#    legal:
+#      - created
+#      - collected
+#      - arrived
+#      - departed
+#      - outForDelivery
+#      - signedFor
+#      - delivered
+    # no default
+
+files:
+  - tasks.yaml  # This is the file that contains the tasks that are needed by the system
+  - services.yaml  # This is the file that contains services that implement the tasks
+  - modules.yaml  # This is the file that contains the modules that are used by the system
+  - company/${domain}_${company}.yaml  # This is the file that contains the company specific configuration
+  - product/${domain}_${product}.yaml  # This is the file that contains the product specific configuration
+  - company/product/${company}/${domain}_${company}_${product}.yaml  # This is the file that contains the company and product specific configuration
