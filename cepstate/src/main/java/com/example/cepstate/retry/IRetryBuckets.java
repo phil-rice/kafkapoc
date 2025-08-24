@@ -1,7 +1,8 @@
 package com.example.cepstate.retry;
 
-import com.example.cepstate.ITimeService;
-import com.example.cepstate.WorkLeaseStage;
+import com.example.cepstate.metrics.IMetrics;
+import com.example.kafka.common.ITimeService;
+import com.example.cepstate.worklease.WorkLeaseStage;
 
 import java.util.*;
 
@@ -11,13 +12,13 @@ public interface IRetryBuckets {
      * Returns false if we've tried enough (i.e., out of ladder).
      * leaseAcquireTime is when this work last started.
      */
-    boolean addToRetryBucket(String topic, String domainId, String offset, long leaseAcquireTime, int retriesSoFar);
+    boolean addToRetryBucket(String topic, String domainId, long offset, long leaseAcquireTime, int retriesSoFar);
 
     /** Returns all retry keys due as of "now". Each key includes its dueAtMs. */
     List<RetryKey> retryKeysForNow();
 
-    static IRetryBuckets retryBuckets(List<WorkLeaseStage> stages, ITimeService timeService, int granularityMs) {
-        return new RetryBuckets(stages, timeService, granularityMs);
+    static IRetryBuckets retryBuckets(List<WorkLeaseStage> stages, ITimeService timeService, int granularityMs, IMetrics metrics) {
+        return new RetryBuckets(stages, timeService, granularityMs, metrics);
     }
 }
 

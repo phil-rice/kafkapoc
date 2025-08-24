@@ -1,4 +1,4 @@
-package com.example.cepstate;
+package com.example.cepstate.worklease;
 
 /**
  * Represents a work lease stage in a process.

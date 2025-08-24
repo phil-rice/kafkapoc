@@ -1,8 +1,11 @@
 package com.example.optics;
 
+import com.example.kafka.common.Codec;
 import org.apache.commons.jxpath.JXPathContext;
 
+import java.nio.charset.StandardCharsets;
 import java.util.List;
+import java.util.Map;
 
 public interface IOpticsEvent<Optics> {
     Optics apply(Optics initial);
@@ -14,6 +17,26 @@ public interface IOpticsEvent<Optics> {
 
     static <Child> IOpticsEvent<JXPathContext> appendEvent(String path, Child value) {
         return new AppendEvent<>(path, value);
+    }
+
+    static Codec<IOpticsEvent<JXPathContext>, String> codec() {
+        Codec<? extends IOpticsEvent<JXPathContext>, String> setC =
+                (Codec<? extends IOpticsEvent<JXPathContext>, String>) (Codec<?, String>) Codec.clazzCodec(SetEvent.class);
+        Codec<? extends IOpticsEvent<JXPathContext>, String> appendC =
+                (Codec<? extends IOpticsEvent<JXPathContext>, String>) (Codec<?, String>) Codec.clazzCodec(AppendEvent.class);
+
+        return Codec.<IOpticsEvent<JXPathContext>>polymorphicCodec(
+                x -> {
+                    if (x instanceof SetEvent) return "set";
+                    if (x instanceof AppendEvent) return "append";
+                    throw new IllegalArgumentException("Unknown event type: " + x.getClass());
+                },
+                Map.of(
+                        "set", setC,
+                        "append", appendC
+                )
+
+        );
     }
 }
 

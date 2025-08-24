@@ -1,6 +1,12 @@
 // src/test/java/com/example/cepstate/ProcessMessageTest.java
 package com.example.cepstate;
 
+import com.example.cepstate.retry.IRetryBuckets;
+import com.example.cepstate.worklease.AcquireResult;
+import com.example.cepstate.worklease.FailResult;
+import com.example.cepstate.worklease.SuceedResult;
+import com.example.cepstate.worklease.WorkLease;
+import com.example.kafka.common.ITimeService;
 import com.example.optics.IOpticsEvent;
 import org.apache.commons.jxpath.JXPathContext;
 import org.junit.jupiter.api.Test;
@@ -24,19 +30,36 @@ final class ProcessMessageTest {
     @org.mockito.Mock
     CepState<JXPathContext, String> cepState;
 
+    @org.mockito.Mock
+    IRetryBuckets buckets;
+
+    // simple fixed time service for tests
+    private static final ITimeService time = () -> 1_000_000L;
+
     @Test
     void happyPath_appliesMutations_returnsSideEffects_and_succeeds() {
         // arrange
-        when(lease.tryAcquire(eq("domain-1"), anyLong())).thenReturn("t1");
-        when(cepState.get(eq("domain-1"), eq("INIT"))).thenReturn(CompletableFuture.completedFuture("INIT"));
+        when(lease.tryAcquire(eq("domain-1"), anyLong()))
+                .thenReturn(new AcquireResult("test", "t1"));
+        when(cepState.get(eq("domain-1"), eq("INIT")))
+                .thenReturn(CompletableFuture.completedFuture("INIT"));
+        // succeed returns no backlog hint
+        when(lease.succeed(eq("domain-1"), eq("t1")))
+                .thenReturn(new SuceedResult("lease.succeed.noBacklog", null));
 
         @SuppressWarnings("unchecked")
         ArgumentCaptor<List<IOpticsEvent<JXPathContext>>> eventsCap = ArgumentCaptor.forClass(List.class);
         when(cepState.mutate(eq("domain-1"), eventsCap.capture()))
                 .thenReturn(CompletableFuture.completedFuture(null));
 
-        var ctx = new ProcessMessageContext<JXPathContext, String, String>(
-                "INIT", cepState, lease, m -> "domain-1"
+        var ctx = new ProcessMessageContext<>(
+                "test-topic",            // topic
+                "INIT",                  // startState
+                cepState,
+                lease,
+                buckets,                 // non-null to avoid NPEs
+                time,
+                (String m) -> "domain-1"
         );
 
         var events = List.<IOpticsEvent<JXPathContext>>of(dummyEvent(), dummyEvent());
@@ -57,14 +80,23 @@ final class ProcessMessageTest {
         verify(cepState).get("domain-1", "INIT");
         verify(cepState).mutate(eq("domain-1"), anyList());
         assertEquals(events, eventsCap.getValue());
+        // no backlog → no bucket scheduling
+        verifyNoInteractions(buckets);
     }
 
     @Test
     void queued_returnsNull_and_doesNothing() {
-        when(lease.tryAcquire(eq("domain-2"), anyLong())).thenReturn(null); // queued
+        when(lease.tryAcquire(eq("domain-2"), anyLong()))
+                .thenReturn(new AcquireResult("Test")); // queued/terminal
 
-        var ctx = new ProcessMessageContext<JXPathContext, String, String>(
-                "INIT", cepState, lease, m -> "domain-2"
+        var ctx = new ProcessMessageContext<>(
+                "test-topic",
+                "INIT",
+                cepState,
+                lease,
+                buckets,
+                time,
+                (String m) -> "domain-2"
         );
 
         var out = ProcessMessage.processMessage(
@@ -80,14 +112,22 @@ final class ProcessMessageTest {
         verifyNoInteractions(cepState);
         verify(lease, never()).succeed(any(), any());
         verify(lease, never()).fail(any(), any());
+        verifyNoInteractions(buckets);
     }
 
     @Test
     void process_syncThrow_marksFail_and_bubbles() {
-        when(lease.tryAcquire(eq("d"), anyLong())).thenReturn("tok");
-        when(cepState.get(eq("d"), eq("S0"))).thenReturn(CompletableFuture.completedFuture("S0"));
+        when(lease.tryAcquire(eq("d"), anyLong()))
+                .thenReturn(new AcquireResult("test", "tok"));
+        when(cepState.get(eq("d"), eq("S0")))
+                .thenReturn(CompletableFuture.completedFuture("S0"));
+        // fail result (willRetry=false; no next)
+        when(lease.fail(eq("d"), eq("tok")))
+                .thenReturn(new FailResult("lease.fail.retryScheduled", null, false, 1));
 
-        var ctx = new ProcessMessageContext<JXPathContext, String, String>("S0", cepState, lease, m -> "d");
+        var ctx = new ProcessMessageContext<>(
+                "test-topic", "S0", cepState, lease, buckets, time, (String m) -> "d"
+        );
 
         ProcessMessage<JXPathContext, String, String, String> processor = (snap, msg) -> {
             throw new IllegalStateException("boom");
@@ -100,16 +140,25 @@ final class ProcessMessageTest {
         verify(lease).fail("d", "tok");
         verify(lease, never()).succeed(any(), any());
         verify(cepState, never()).mutate(any(), anyList());
+        // willRetry=false → no bucket call
+        verifyNoInteractions(buckets);
     }
 
     @Test
     void mutate_asyncFailure_marksFail_and_bubbles() {
-        when(lease.tryAcquire(eq("d"), anyLong())).thenReturn("tok");
-        when(cepState.get(eq("d"), eq("S0"))).thenReturn(CompletableFuture.completedFuture("S0"));
+        when(lease.tryAcquire(eq("d"), anyLong()))
+                .thenReturn(new AcquireResult("test", "tok"));
+        when(cepState.get(eq("d"), eq("S0")))
+                .thenReturn(CompletableFuture.completedFuture("S0"));
         when(cepState.mutate(eq("d"), anyList()))
                 .thenReturn(CompletableFuture.failedFuture(new IllegalArgumentException("nope")));
+        // failing here, choose willRetry=true to exercise bucket path
+        when(lease.fail(eq("d"), eq("tok")))
+                .thenReturn(new FailResult("lease.fail.retryScheduled", null, true, 2));
 
-        var ctx = new ProcessMessageContext<JXPathContext, String, String>("S0", cepState, lease, m -> "d");
+        var ctx = new ProcessMessageContext<>(
+                "test-topic", "S0", cepState, lease, buckets, time, (String m) -> "d"
+        );
 
         var events = List.<IOpticsEvent<JXPathContext>>of(dummyEvent());
         var sideFx = List.of("fx");
@@ -125,14 +174,22 @@ final class ProcessMessageTest {
         verify(lease).fail("d", "tok");
         verify(lease, never()).succeed(any(), any());
         verify(cepState).mutate(eq("d"), anyList());
+        // willRetry=true → bucket called with current offset
+        verify(buckets).addToRetryBucket(eq("test-topic"), eq("d"), eq(10L), anyLong(), eq(2));
     }
 
     @Test
     void process_asyncFailure_marksFail_and_bubbles() {
-        when(lease.tryAcquire(eq("d"), anyLong())).thenReturn("tok");
-        when(cepState.get(eq("d"), eq("S0"))).thenReturn(CompletableFuture.completedFuture("S0"));
+        when(lease.tryAcquire(eq("d"), anyLong()))
+                .thenReturn(new AcquireResult("test", "tok"));
+        when(cepState.get(eq("d"), eq("S0")))
+                .thenReturn(CompletableFuture.completedFuture("S0"));
+        when(lease.fail(eq("d"), eq("tok")))
+                .thenReturn(new FailResult("lease.fail.retryScheduled", null, true, 1));
 
-        var ctx = new ProcessMessageContext<JXPathContext, String, String>("S0", cepState, lease, m -> "d");
+        var ctx = new ProcessMessageContext<>(
+                "test-topic", "S0", cepState, lease, buckets, time, (String m) -> "d"
+        );
 
         ProcessMessage<JXPathContext, String, String, String> processor =
                 (snap, msg) -> CompletableFuture.failedFuture(new RuntimeException("async-err"));
@@ -141,18 +198,24 @@ final class ProcessMessageTest {
                 () -> ProcessMessage.processMessage(ctx, processor, "m", 3L).toCompletableFuture().join());
 
         assertEquals("async-err", ex.getCause().getMessage());
-        verify(lease, times(1)).fail("d", "tok");
+        verify(lease).fail("d", "tok");
         verify(lease, never()).succeed(any(), any());
         verify(cepState, never()).mutate(any(), anyList());
+        verify(buckets).addToRetryBucket(eq("test-topic"), eq("d"), eq(3L), anyLong(), eq(1));
     }
 
     @Test
     void get_asyncFailure_marksFail_and_bubbles_before_process() {
-        when(lease.tryAcquire(eq("d"), anyLong())).thenReturn("tok");
+        when(lease.tryAcquire(eq("d"), anyLong()))
+                .thenReturn(new AcquireResult("test", "tok"));
         when(cepState.get(eq("d"), eq("S0")))
                 .thenReturn(CompletableFuture.failedFuture(new IllegalStateException("get-fail")));
+        when(lease.fail(eq("d"), eq("tok")))
+                .thenReturn(new FailResult("lease.fail.retryScheduled", null, true, 1));
 
-        var ctx = new ProcessMessageContext<JXPathContext, String, String>("S0", cepState, lease, m -> "d");
+        var ctx = new ProcessMessageContext<>(
+                "test-topic", "S0", cepState, lease, buckets, time, (String m) -> "d"
+        );
 
         // processor must NOT run
         ProcessMessage<JXPathContext, String, String, String> processor = (snap, msg) -> {
@@ -164,22 +227,29 @@ final class ProcessMessageTest {
                 () -> ProcessMessage.processMessage(ctx, processor, "m", 9L).toCompletableFuture().join());
 
         assertEquals("get-fail", ex.getCause().getMessage());
-        verify(lease, times(1)).fail("d", "tok");
+        verify(lease).fail("d", "tok");
         verify(lease, never()).succeed(any(), any());
         verify(cepState, never()).mutate(any(), anyList());
+        verify(buckets).addToRetryBucket(eq("test-topic"), eq("d"), eq(9L), anyLong(), eq(1));
     }
 
     @Test
     void empty_mutations_still_calls_mutate_and_succeeds() {
-        when(lease.tryAcquire(eq("domain-3"), anyLong())).thenReturn("t3");
-        when(cepState.get(eq("domain-3"), eq("INIT"))).thenReturn(CompletableFuture.completedFuture("INIT"));
+        when(lease.tryAcquire(eq("domain-3"), anyLong()))
+                .thenReturn(new AcquireResult("test", "t3"));
+        when(cepState.get(eq("domain-3"), eq("INIT")))
+                .thenReturn(CompletableFuture.completedFuture("INIT"));
+        when(lease.succeed(eq("domain-3"), eq("t3")))
+                .thenReturn(new SuceedResult("lease.succeed.noBacklog", null));
 
         @SuppressWarnings("unchecked")
         ArgumentCaptor<List<IOpticsEvent<JXPathContext>>> cap = ArgumentCaptor.forClass(List.class);
         when(cepState.mutate(eq("domain-3"), cap.capture()))
                 .thenReturn(CompletableFuture.completedFuture(null));
 
-        var ctx = new ProcessMessageContext<JXPathContext, String, String>("INIT", cepState, lease, m -> "domain-3");
+        var ctx = new ProcessMessageContext<>(
+                "test-topic", "INIT", cepState, lease, buckets, time, (String m) -> "domain-3"
+        );
 
         ProcessMessage<JXPathContext, String, String, String> processor =
                 (snap, msg) -> CompletableFuture.completedFuture(
@@ -193,6 +263,7 @@ final class ProcessMessageTest {
         assertTrue(cap.getValue().isEmpty(), "mutations list should be empty");
         verify(lease, times(1)).succeed("domain-3", "t3");
         verify(lease, never()).fail(any(), any());
+        verifyNoInteractions(buckets);
     }
 
     // --- helpers ---

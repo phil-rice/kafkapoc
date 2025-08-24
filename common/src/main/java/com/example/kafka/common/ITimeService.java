@@ -1,4 +1,4 @@
-package com.example.cepstate;
+package com.example.kafka.common;
 
 public interface ITimeService {
     long currentTimeMillis();

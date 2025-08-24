@@ -23,6 +23,10 @@
             <groupId>com.example</groupId>
             <artifactId>common</artifactId>
             <version>${project.version}</version>
+        </dependency>        <dependency>
+            <groupId>com.example</groupId>
+            <artifactId>cepstate_rocksdb</artifactId>
+            <version>${project.version}</version>
         </dependency>
         <dependency>
             <groupId>org.rocksdb</groupId>

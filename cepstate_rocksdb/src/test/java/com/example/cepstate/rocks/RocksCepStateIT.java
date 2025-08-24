@@ -1,5 +1,6 @@
 package com.example.cepstate.rocks;
 
+import com.example.kafka.common.Codec;
 import com.example.optics.IOpticsEvent;
 import com.example.optics.Interpreter;
 import org.apache.commons.jxpath.JXPathContext;

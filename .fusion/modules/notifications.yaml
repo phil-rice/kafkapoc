@@ -15,11 +15,15 @@ module:
         - type: celInline
           inline: | # Here we have some inline cel. It is creating a single side effect
             recipient.country == "uk" && product.type == "registeredDelivery"
-              ? {
+              ? [{
                   type: "send_notification",
                   message: "Departure notification for {{ parcel_id }}",
                   recipient: "{{ recipient_email }}"
-                }
+                },
+            {type: "send_notification",
+                message: "Another Departure notification for {{ parcel_id }}",
+                recipient: "{{ my_email }}"
+            }]
               : null}
         - type: celFile
           file: 'cel/departure_notification.cel' # The name of a file that holds cel
