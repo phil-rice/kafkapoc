@@ -124,7 +124,7 @@ public class ProducerApp {
 
                 var message = it.next();
                 long n = message.count();
-                String key = "key-" + n;
+                String key = String.valueOf(message.domainId());
                 String value = codec.encode(message);
 
                 gate.acquireUninterruptibly(); // cap in-flight sends
