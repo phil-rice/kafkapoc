@@ -44,45 +44,58 @@ public final class KafkaFlowControlledStream
         Objects.requireNonNull(assignmentListener, "assignmentListener");
         consumer.subscribe(List.of(topic), assignment.asRebalanceListener(consumer, assignmentListener));
     }
-
     @Override
     public Iterable<ConsumerRecord<String, String>> poll(Duration timeout, Demand<TopicPartition> demand) {
-        // A) Pre-drain existing buffers against the requested allowance
-        var out = buffers.drain(assignment.assigned(), demand);
-        int drained = 0;
-        for (var __ : out) drained++; // count quickly
+        Objects.requireNonNull(demand, "demand");
 
-        // If we already filled the global allowance, just heartbeat and return what we have
-        int globalLeft = demand.globalMax() > 0 ? Math.max(0, demand.globalMax() - drained) : Integer.MAX_VALUE;
+        // --- 1) Pre-drain existing buffers against the requested allowance ---
+        // Collect to a list so we can count how many we drained.
+        final List<ConsumerRecord<String, String>> out =
+                new ArrayList<>();
+        for (ConsumerRecord<String, String> rec : buffers.drain(assignment.assigned(), demand)) {
+            out.add(rec);
+        }
+        final int drained = out.size();
 
-        // Build a reduced allowance map for what's left
-        var remaining = new HashMap<TopicPartition, Integer>();
+        // Compute remaining global allowance (if any)
+        final int globalLeft = demand.globalMax() > 0
+                ? Math.max(0, demand.globalMax() - drained)
+                : Integer.MAX_VALUE;
+
+        // Build a per-TP "remaining" view for pause/resume (allowance > 0 = resume; 0 = pause)
+        final Map<TopicPartition, Integer> remaining = new HashMap<>();
         if (globalLeft > 0) {
-            for (var tp : assignment.assigned()) {
-                int allow = demand.allowance(tp);
-                if (allow > 0) remaining.put(tp, allow); // (we purposely don't decrement per-TP; buffers.drain already respected per-TP)
+            for (TopicPartition tp : assignment.assigned()) {
+                final int allow = demand.allowance(tp);
+                if (allow > 0) remaining.put(tp, allow);
             }
         }
 
-        // B) Apply pause/resume based on remaining allowance
+        // --- 2) Apply pause/resume based on remaining allowance BEFORE polling ---
         pauser.apply(consumer, assignment.assigned(), Demand.of(remaining, globalLeft));
 
-        // C) Poll only if we still want more; otherwise heartbeat with zero timeout
-        ConsumerRecords<String, String> polled = consumer.poll(globalLeft > 0 ? timeout : Duration.ZERO);
-        if (!polled.isEmpty()) buffers.add(polled, assignment.tpCache());
+        // --- 3) Poll: if nothing left to fetch, heartbeat only (Duration.ZERO) ---
+        final boolean wantMore = globalLeft > 0;
+        final ConsumerRecords<String, String> polled =
+                consumer.poll(wantMore ? timeout : Duration.ZERO);
 
-        // D) Final drain to satisfy any leftover allowance
-        if (globalLeft > 0) {
-            var more = buffers.drain(assignment.assigned(), Demand.of(remaining, globalLeft));
-            if (more.iterator().hasNext()) {
-                var combined = new ArrayList<ConsumerRecord<String, String>>();
-                more.forEach(combined::add);
-                out.forEach(combined::add);
-                return combined;
+        // Stash any newly polled records into per-partition buffers
+        if (!polled.isEmpty()) {
+            buffers.add(polled, assignment.tpCache());
+        }
+
+        // --- 4) Final drain to satisfy any leftover allowance ---
+        if (wantMore) {
+            for (ConsumerRecord<String, String> rec :
+                    buffers.drain(assignment.assigned(), Demand.of(remaining, globalLeft))) {
+                out.add(rec);
             }
         }
+
         return out;
     }
+
+
     @Override
     public void commit(Map<TopicPartition, Long> positions) {
         if (positions == null || positions.isEmpty()) return;

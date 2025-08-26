@@ -11,9 +11,19 @@ import java.util.concurrent.atomic.AtomicInteger;
 /**
  * Generic worker that:
  * - Subscribes to one topic
- * - Uses per-shard BufferedRunner to buffer and process sequentially
- * - Computes Demand from runner idleness (1 if queue empty + idle, else 0)
- * - Commits on a simple time tick
+ * - Spawns one ordered PartitionRunner per shard (partition)
+ * - Uses CREDIT-BASED flow control driven by per-partition remaining capacity
+ * - Commits periodically on a simple time tick
+ *
+ * <M> message type
+ * <S> shard id type (e.g., TopicPartition)
+ * <P> position type (e.g., next offset to commit)
+ *
+ * Requirements:
+ * - PartitionRunner MUST expose:
+ *     - outstanding(): queued + in-flight
+ *     - remainingCapacity(): current queue headroom
+ *     - tryStart(msg,next): enqueue without blocking
  */
 public final class GenericWorker<M, S, P> implements Runnable {
     private final String topic;
@@ -22,15 +32,21 @@ public final class GenericWorker<M, S, P> implements Runnable {
     private final MessageProcessor<M, S> processor;
     private final NextPosition<M, P> nextPosition;
     private final MetricsRegistry<S> metrics;
+
+    private final SeekStrategy<S, P> seekStrategy;
+    private final SeekOps<S, P> seekOps;
+
     private final int pollMs;
     private final long commitTickMs;
     private final ThreadFactory laneFactory;
     private final int runnerBufferCapacity;
 
+    /** Flow control knobs */
+    private final int maxOutstandingPerPartition; // hard credit ceiling per partition
+    private final int perPollPerPartition;       // per-poll top-up cap per partition
+
     private final Set<S> assigned = ConcurrentHashMap.newKeySet();
     private final Map<S, PartitionRunner<M, S, P>> runners = new ConcurrentHashMap<>();
-    private final SeekStrategy<S, P> seekStrategy;
-    private final SeekOps<S, P> seekOps;
 
     private volatile boolean running = true;
 
@@ -45,19 +61,45 @@ public final class GenericWorker<M, S, P> implements Runnable {
                          int pollMs,
                          long commitTickMs,
                          ThreadFactory laneFactory,
-                         int runnerBufferCapacity) {
-        this.topic = Objects.requireNonNull(topic);
-        this.source = Objects.requireNonNull(source);
-        this.access = Objects.requireNonNull(access);
-        this.processor = Objects.requireNonNull(processor);
-        this.nextPosition = Objects.requireNonNull(nextPosition);
-        this.metrics = metrics;
+                         int runnerBufferCapacity,
+                         int maxOutstandingPerPartition,
+                         int perPollPerPartition) {
+        this.topic = Objects.requireNonNull(topic, "topic");
+        this.source = Objects.requireNonNull(source, "source");
+        this.access = Objects.requireNonNull(access, "access");
+        this.processor = Objects.requireNonNull(processor, "processor");
+        this.nextPosition = Objects.requireNonNull(nextPosition, "nextPosition");
+        this.metrics = metrics; // may be null if you don't track metrics
+
         this.seekStrategy = Objects.requireNonNullElse(seekStrategy, SeekStrategy.continueCommitted());
         this.seekOps = Objects.requireNonNull(seekOps, "seekOps");
+
         this.pollMs = Math.max(1, pollMs);
         this.commitTickMs = Math.max(10, commitTickMs);
-        this.laneFactory = Objects.requireNonNull(laneFactory);
+        this.laneFactory = Objects.requireNonNull(laneFactory, "laneFactory");
         this.runnerBufferCapacity = Math.max(1, runnerBufferCapacity);
+
+        this.maxOutstandingPerPartition = Math.max(1, maxOutstandingPerPartition);
+        this.perPollPerPartition = Math.max(1, perPollPerPartition);
+    }
+
+    /** Convenience ctor: derives sensible credits from buffer capacity. */
+    public GenericWorker(String topic,
+                         FlowControlledStream<M, S, P> source,
+                         RecordAccess<M, S, P, ?, ?> access,
+                         MessageProcessor<M, S> processor,
+                         NextPosition<M, P> nextPosition,
+                         MetricsRegistry<S> metrics,
+                         SeekStrategy<S, P> seekStrategy,
+                         SeekOps<S, P> seekOps,
+                         int pollMs,
+                         long commitTickMs,
+                         ThreadFactory laneFactory,
+                         int runnerBufferCapacity) {
+        this(topic, source, access, processor, nextPosition, metrics, seekStrategy, seekOps,
+                pollMs, commitTickMs, laneFactory, runnerBufferCapacity,
+                /* maxOutstandingPerPartition */ Math.max(1, runnerBufferCapacity) * 10,
+                /* perPollPerPartition      */  Math.max(1, runnerBufferCapacity));
     }
 
     public void requestStop() {
@@ -66,10 +108,10 @@ public final class GenericWorker<M, S, P> implements Runnable {
 
     @Override
     public void run() {
+        // Subscribe; create runners; then apply seek policy
         source.subscribe(topic, new AssignmentListener<>() {
             @Override
             public void onAssigned(Set<S> shards) {
-                // Track shards and ensure runners exist
                 for (S s : shards) {
                     assigned.add(s);
                     runners.computeIfAbsent(s, k ->
@@ -78,9 +120,6 @@ public final class GenericWorker<M, S, P> implements Runnable {
                                     runnerBufferCapacity)
                     );
                 }
-                // >>> Apply seek policy for newly assigned shards
-                // Do this AFTER registering shards/runners but BEFORE the next poll
-                // so the next fetch starts at the desired position.
                 if (!shards.isEmpty()) {
                     seekStrategy.onAssigned(seekOps, shards);
                 }
@@ -91,7 +130,9 @@ public final class GenericWorker<M, S, P> implements Runnable {
                 for (S s : shards) {
                     assigned.remove(s);
                     PartitionRunner<M, S, P> r = runners.remove(s);
-                    if (r != null) r.stopAndDrain(10_000);
+                    if (r != null) {
+                        try { r.stopAndDrain(10_000); } catch (Exception ignored) {}
+                    }
                 }
             }
         });
@@ -100,25 +141,47 @@ public final class GenericWorker<M, S, P> implements Runnable {
 
         try {
             while (running) {
+                // CREDIT-BASED DEMAND (safe against drops):
+                // For each shard, request at most remainingCapacity(),
+                // further clamped by perPollPerPartition and maxOutstanding credit.
                 Map<S, Integer> perShard = new HashMap<>();
                 int globalMax = 0;
+
                 for (S s : assigned) {
-                    var r = runners.get(s);
+                    PartitionRunner<M, S, P> r = runners.get(s);
                     if (r == null) continue;
-                    int rem = r.remainingCapacity();
-                    if (rem > 0) { perShard.put(s, rem); globalMax += rem; }
+
+                    int cap   = Math.max(0, r.remainingCapacity());                 // hard queue headroom
+                    if (cap == 0) continue;
+
+                    int credit = Math.max(0, maxOutstandingPerPartition - r.outstanding()); // soft credit
+                    if (credit == 0) continue;
+
+                    int need = Math.min(cap, Math.min(perPollPerPartition, credit));
+                    if (need > 0) {
+                        perShard.put(s, need);
+                        globalMax += need;
+                    }
                 }
-                Demand<S> demand = Demand.of(perShard, globalMax);
+
+                Demand<S> demand = (globalMax > 0) ? Demand.of(perShard, globalMax)
+                        : Demand.of(Map.of(), 0);
+
+                // Fetch from stream according to our credits
                 Iterable<M> batch = source.poll(Duration.ofMillis(pollMs), demand);
 
+                // Enqueue into runners (should not fail with remainingCapacity-based demand)
                 for (M msg : batch) {
                     S shard = access.shardOf(msg);
-                    P next = nextPosition.of(msg);
+                    P next  = nextPosition.of(msg);
                     PartitionRunner<M, S, P> r = runners.get(shard);
-                    if (r != null) r.tryStart(msg, next);
+                    if (r != null) {
+                        boolean ok = r.tryStart(msg, next);
+                        // If this returns false, our demand math is off; consider logging in your codebase.
+                    }
                 }
 
-                // periodic commit
+                // Periodic commit
                 long now = System.currentTimeMillis();
                 if (now - lastCommit >= commitTickMs) {
                     Map<S, P> commitMap = new HashMap<>();
@@ -127,35 +190,28 @@ public final class GenericWorker<M, S, P> implements Runnable {
                         if (next != null) commitMap.put(e.getKey(), next);
                     }
                     if (!commitMap.isEmpty()) {
-                        try {
-                            source.commit(commitMap);
-                        } catch (Exception ignored) {
-                        }
+                        try { source.commit(commitMap); } catch (Exception ignored) {}
                     }
                     lastCommit = now;
                 }
             }
         } finally {
+            // Graceful shutdown: stop lanes → final commit → close source
+            for (var r : runners.values()) {
+                try { r.stopAndDrain(30_000); } catch (Exception ignored) {}
+            }
             try {
                 Map<S, P> commitMap = new HashMap<>();
                 for (var e : runners.entrySet()) {
                     P next = e.getValue().commitReadyNext();
                     if (next != null) commitMap.put(e.getKey(), next);
                 }
-                if (!commitMap.isEmpty()) source.commit(commitMap);
-            } catch (Exception ignored) {
-            }
-            for (var r : runners.values()) {
-                try {
-                    r.stopAndDrain(5_000);
-                } catch (Exception ignored) {
+                if (!commitMap.isEmpty()) {
+                    source.commit(commitMap);
                 }
-            }
+            } catch (Exception ignored) {}
             runners.clear();
-            try {
-                source.close();
-            } catch (Exception ignored) {
-            }
+            try { source.close(); } catch (Exception ignored) {}
         }
     }
 
