@@ -28,8 +28,8 @@ public class Main {
         NextPosition<ConsumerRecord<String, String>, Long> nextPos = r -> r.offset() + 1;
 
         // 4) Business logic
-//        MessageProcessor<ConsumerRecord<String, String>, TopicPartition> processor = new SimpleMessageProcessor();
-        MessageProcessor<ConsumerRecord<String, String>, TopicPartition> processor = new SimulatedDelayMessageProcessor(cfg.simulatedProcessingDelayMs());
+        MessageProcessor<ConsumerRecord<String, String>, TopicPartition> processor = new SimpleMessageProcessor();
+//        MessageProcessor<ConsumerRecord<String, String>, TopicPartition> processor = new SimulatedDelayMessageProcessor(cfg.simulatedProcessingDelayMs());
 
         // 5) Seek plumbing
 //        SeekStrategy<TopicPartition, Long> seekStrategy = cfg.seekStrategy();
