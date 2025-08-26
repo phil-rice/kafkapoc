@@ -64,6 +64,10 @@ public final class AppConfig implements WorkerConfig<TopicPartition, Long> {
         return Integer.parseInt(get("simulated.processor.delay.ms", "10"));
     }
 
+    public int metricsPrintMs() {        return Integer.parseInt(get("metrics.print.ms", "2000"));    }
+
+    public int metricsFullEvery() {        return Integer.parseInt(get("metrics.full.every", "10"));    }
+
     @Override
     public ThreadFactory laneFactory() {
         return Executors.defaultThreadFactory();

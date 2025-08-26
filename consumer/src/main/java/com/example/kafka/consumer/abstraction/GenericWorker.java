@@ -13,17 +13,12 @@ import java.util.concurrent.atomic.AtomicInteger;
  * - Subscribes to one topic
  * - Spawns one ordered PartitionRunner per shard (partition)
  * - Uses CREDIT-BASED flow control driven by per-partition remaining capacity
+ * - Emits minimal PRE gauges: runner.need, runner.queued, runner.inflight
  * - Commits periodically on a simple time tick
  *
  * <M> message type
  * <S> shard id type (e.g., TopicPartition)
  * <P> position type (e.g., next offset to commit)
- *
- * Requirements:
- * - PartitionRunner MUST expose:
- *     - outstanding(): queued + in-flight
- *     - remainingCapacity(): current queue headroom
- *     - tryStart(msg,next): enqueue without blocking
  */
 public final class GenericWorker<M, S, P> implements Runnable {
     private final String topic;
@@ -31,7 +26,7 @@ public final class GenericWorker<M, S, P> implements Runnable {
     private final RecordAccess<M, S, P, ?, ?> access;
     private final MessageProcessor<M, S> processor;
     private final NextPosition<M, P> nextPosition;
-    private final MetricsRegistry<S> metrics;
+    private final MetricsRegistry<S> metrics; // may be null
 
     private final SeekStrategy<S, P> seekStrategy;
     private final SeekOps<S, P> seekOps;
@@ -69,7 +64,7 @@ public final class GenericWorker<M, S, P> implements Runnable {
         this.access = Objects.requireNonNull(access, "access");
         this.processor = Objects.requireNonNull(processor, "processor");
         this.nextPosition = Objects.requireNonNull(nextPosition, "nextPosition");
-        this.metrics = metrics; // may be null if you don't track metrics
+        this.metrics = metrics;
 
         this.seekStrategy = Objects.requireNonNullElse(seekStrategy, SeekStrategy.continueCommitted());
         this.seekOps = Objects.requireNonNull(seekOps, "seekOps");
@@ -102,9 +97,45 @@ public final class GenericWorker<M, S, P> implements Runnable {
                 /* perPollPerPartition      */  Math.max(1, runnerBufferCapacity));
     }
 
-    public void requestStop() {
-        running = false;
+    public void requestStop() { running = false; }
+
+    // ---------------- Metrics helpers (PRE only) ----------------
+
+    private void mset(String name, S shard, long value) {
+        if (metrics != null) metrics.set(name, shard, value);
     }
+
+    /** Publish zeros for the minimal gauges when runner is missing. */
+    private void publishZeroPreGauges(S shard) {
+        mset("runner.need",     shard, 0);
+        mset("runner.queued",   shard, 0);
+        mset("runner.inflight", shard, 0);
+    }
+
+    /**
+     * Publish PRE gauges and compute 'need' for this shard.
+     * queued = bufferCapacity - remainingCapacity
+     * inflight = max(0, outstanding - queued)  // 0 or 1 for single-lane
+     */
+    private int publishPreGaugesAndComputeNeed(S shard, PartitionRunner<M, S, P> r) {
+        int remCap      = Math.max(0, r.remainingCapacity());
+        int outstanding = Math.max(0, r.outstanding());
+        int queued      = Math.max(0, runnerBufferCapacity - remCap);
+        int inflight    = Math.max(0, outstanding - queued);
+
+        int credit      = Math.max(0, maxOutstandingPerPartition - outstanding);
+        int need        = (remCap > 0 && credit > 0)
+                ? Math.min(remCap, Math.min(perPollPerPartition, credit))
+                : 0;
+
+        mset("runner.need",     shard, need);
+        mset("runner.queued",   shard, queued);
+        mset("runner.inflight", shard, inflight);
+
+        return need;
+    }
+
+    // ---------------- Run loop ----------------
 
     @Override
     public void run() {
@@ -141,23 +172,17 @@ public final class GenericWorker<M, S, P> implements Runnable {
 
         try {
             while (running) {
-                // CREDIT-BASED DEMAND (safe against drops):
-                // For each shard, request at most remainingCapacity(),
-                // further clamped by perPollPerPartition and maxOutstanding credit.
+                // Build per-shard credits and publish PRE gauges
                 Map<S, Integer> perShard = new HashMap<>();
                 int globalMax = 0;
 
                 for (S s : assigned) {
                     PartitionRunner<M, S, P> r = runners.get(s);
-                    if (r == null) continue;
-
-                    int cap   = Math.max(0, r.remainingCapacity());                 // hard queue headroom
-                    if (cap == 0) continue;
-
-                    int credit = Math.max(0, maxOutstandingPerPartition - r.outstanding()); // soft credit
-                    if (credit == 0) continue;
-
-                    int need = Math.min(cap, Math.min(perPollPerPartition, credit));
+                    if (r == null) {
+                        publishZeroPreGauges(s);
+                        continue;
+                    }
+                    int need = publishPreGaugesAndComputeNeed(s, r);
                     if (need > 0) {
                         perShard.put(s, need);
                         globalMax += need;
@@ -177,7 +202,7 @@ public final class GenericWorker<M, S, P> implements Runnable {
                     PartitionRunner<M, S, P> r = runners.get(shard);
                     if (r != null) {
                         boolean ok = r.tryStart(msg, next);
-                        // If this returns false, our demand math is off; consider logging in your codebase.
+                        // If false, our demand math is off; consider logging in your codebase.
                     }
                 }
 

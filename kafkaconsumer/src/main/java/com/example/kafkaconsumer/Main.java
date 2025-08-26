@@ -4,10 +4,7 @@ import com.example.kafka.consumer.abstraction.*;
 
 import com.example.kafka.consumer.processors.SimpleMessageProcessor;
 import com.example.kafka.consumer.processors.SimulatedDelayMessageProcessor;
-import com.example.metrics.LoggingMetricsPrinter;
-import com.example.metrics.MetricsPrinter;
-import com.example.metrics.MetricsRegistry;
-import com.example.metrics.MetricsScheduler;
+import com.example.metrics.*;
 import org.apache.kafka.clients.consumer.ConsumerRecord;
 import org.apache.kafka.clients.consumer.KafkaConsumer;
 import org.apache.kafka.common.TopicPartition;
@@ -43,8 +40,12 @@ public class Main {
 
         // 6) Metrics
         MetricsRegistry<TopicPartition> registry = new MetricsRegistry<>();
-        MetricsPrinter<TopicPartition> printer = new LoggingMetricsPrinter<>();
-        try (MetricsScheduler<TopicPartition> scheduler = new MetricsScheduler<>(registry, printer, 2000)) {
+
+        int metricsPrintMs = cfg.metricsPrintMs();
+        int metricsFullEvery = cfg.metricsFullEvery();
+        MetricsPrinter<TopicPartition> printer = new SmartLoggingMetricsPrinter<>(metricsFullEvery);
+
+        try (MetricsScheduler<TopicPartition> scheduler = new MetricsScheduler<>(registry, printer, metricsPrintMs)) {
             scheduler.start();
             System.out.println("Metrics scheduler started");
 

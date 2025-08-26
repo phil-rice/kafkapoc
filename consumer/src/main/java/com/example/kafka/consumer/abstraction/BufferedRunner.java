@@ -108,7 +108,7 @@ public final class BufferedRunner<M, S, P> implements PartitionRunner<M, S, P> {
 
                 try {
                     processor.process(shard, e.msg);
-                    metrics.recordProcessed(shard);
+                    metrics.inc("processed",shard );
                     // Success => advance watermark to the next position
                     commitNext = e.next;
                 } catch (Exception ex) {
