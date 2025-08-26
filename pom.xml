@@ -17,6 +17,7 @@
         <module>cepstate</module>
         <module>cepstate_rocksdb</module>
         <module>consumer</module>
+        <module>kafkaconsumer</module>
         <module>tools-producer</module>
     </modules>
 

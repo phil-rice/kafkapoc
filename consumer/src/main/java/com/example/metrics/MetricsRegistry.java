@@ -1,26 +1,32 @@
 package com.example.metrics;
 
-import org.apache.kafka.common.TopicPartition;
-
-import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.LongAdder;
+import java.util.stream.Collectors;
 
-public class MetricsRegistry {
+/**
+ * Thread-safe registry of processing metrics.
+ * 
+ * <S> shard type (e.g. Kafka TopicPartition).
+ */
+public final class MetricsRegistry<S> {
     private final LongAdder totalProcessed = new LongAdder();
-    private final ConcurrentHashMap<TopicPartition, LongAdder> perPartition = new ConcurrentHashMap<>();
+    private final ConcurrentHashMap<S, LongAdder> perShard = new ConcurrentHashMap<>();
 
-    /** Call this after a record has been successfully processed. */
-    public void recordProcessed(TopicPartition tp) {
+    /** Record one successfully processed message for the given shard. */
+    public void recordProcessed(S shard) {
         totalProcessed.increment();
-        perPartition.computeIfAbsent(tp, k -> new LongAdder()).increment();
+        perShard.computeIfAbsent(shard, __ -> new LongAdder()).increment();
     }
 
-    /** Snapshot for printing. Cheap (LongAdder.sum()). */
-    public MetricsSnapshot snapshot() {
-        Map<TopicPartition, Long> parts = new HashMap<>();
-        perPartition.forEach((tp, adder) -> parts.put(tp, adder.sum()));
-        return new MetricsSnapshot(System.currentTimeMillis(), totalProcessed.sum(), parts);
+    /** Snapshot current counts (immutable view). */
+    public MetricsSnapshot<S> snapshot() {
+        Map<S, Long> counts = perShard.entrySet().stream()
+                .collect(Collectors.toUnmodifiableMap(
+                        Map.Entry::getKey,
+                        e -> e.getValue().sum()
+                ));
+        return new MetricsSnapshot<>(System.currentTimeMillis(), totalProcessed.sum(), counts);
     }
 }

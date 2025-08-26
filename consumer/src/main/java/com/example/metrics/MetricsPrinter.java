@@ -1,10 +1,13 @@
 package com.example.metrics;
 
-public interface MetricsPrinter {
+/**
+ * Strategy interface: how to publish metrics snapshots.
+ */
+public interface MetricsPrinter<S> {
     /**
-     * @param snapshot   the current counters
-     * @param delta      processed since last tick (total)
-     * @param ratePerSec approximate processed/sec since last tick
+     * @param snap   current snapshot
+     * @param delta  number of records processed since last snapshot
+     * @param rate   processing rate (records/sec) since last snapshot
      */
-    void print(MetricsSnapshot snapshot, long delta, double ratePerSec);
+    void print(MetricsSnapshot<S> snap, long delta, double rate);
 }

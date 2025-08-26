@@ -10,7 +10,7 @@
         <version>1.0.0-SNAPSHOT</version>
     </parent>
 
-    <artifactId>consumer</artifactId>
+    <artifactId>kafkaconsumer</artifactId>
     <name>consumer</name>
     <packaging>jar</packaging>
 
@@ -23,7 +23,13 @@
             <groupId>com.example</groupId>
             <artifactId>common</artifactId>
             <version>${project.version}</version>
-        </dependency>        <dependency>
+        </dependency>
+        <dependency>
+            <groupId>com.example</groupId>
+            <artifactId>consumer</artifactId>
+            <version>${project.version}</version>
+        </dependency>
+        <dependency>
             <groupId>com.example</groupId>
             <artifactId>cepstate_rocksdb</artifactId>
             <version>${project.version}</version>

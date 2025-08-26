@@ -65,7 +65,7 @@ class LineSeparatedListCodecTest {
     @Test
     void helper_builds_codec() throws Exception {
         Codec<Integer, String> intJson = Codec.clazzCodec(Integer.class);
-        Codec<List<Integer>, String> lines = Codec.linesList(intJson);
+        Codec<List<Integer>, String> lines = Codec.lines(intJson);
 
         String wire = lines.encode(List.of(10, 20));
         assertEquals("10\n20", wire);

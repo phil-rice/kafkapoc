@@ -1,10 +1,14 @@
 package com.example.metrics;
 
-import org.apache.kafka.common.TopicPartition;
 import java.util.Map;
 
-public record MetricsSnapshot(
+/**
+ * Immutable snapshot of metrics at a point in time.
+ *
+ * @param <S> shard type
+ */
+public record MetricsSnapshot<S>(
         long timestampMs,
         long totalProcessed,
-        Map<TopicPartition, Long> processedByPartition
+        Map<S, Long> processedByShard
 ) {}
