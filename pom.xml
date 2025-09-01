@@ -17,6 +17,9 @@
         <module>cepstate</module>
         <module>cepstate_rocksdb</module>
         <module>consumer</module>
+        <module>flink/domainpipeline</module>
+        <module>flink/flinkadapters</module>
+        <module>flink/interfaces</module>
         <module>kafkaconsumer</module>
         <module>tools-producer</module>
     </modules>

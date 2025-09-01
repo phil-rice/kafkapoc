@@ -57,7 +57,7 @@
               <createDependencyReducedPom>true</createDependencyReducedPom>
               <transformers>
                 <transformer implementation="org.apache.maven.plugins.shade.resource.ManifestResourceTransformer">
-                  <mainClass>com.example.kafka.tools.ProducerApp</mainClass>
+                  <mainClass>com.hcltech.rmg.tools.ProducerApp</mainClass>
                 </transformer>
               </transformers>
             </configuration>
