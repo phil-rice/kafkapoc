@@ -2,7 +2,6 @@ package com.hcltech.rmg.kafkaconsumer;
 
 import com.hcltech.rmg.consumer.abstraction.*;
 import com.hcltech.rmg.consumer.processors.SimpleMessageProcessor;
-import com.example.metrics.*;
 import com.hcltech.rmg.metrics.MetricsPrinter;
 import com.hcltech.rmg.metrics.MetricsRegistry;
 import com.hcltech.rmg.metrics.MetricsScheduler;

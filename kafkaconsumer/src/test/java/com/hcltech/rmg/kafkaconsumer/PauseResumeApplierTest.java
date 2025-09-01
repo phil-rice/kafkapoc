@@ -25,7 +25,7 @@ class PauseResumeApplierTest {
 
         var t0 = tp("topic", 0);
         var t1 = tp("topic", 1);
-        var assigned = List.of(t0, t1);
+        var assigned = Set.of(t0, t1);
 
         // First: allow t0=1, t1=0 -> should pause t1
         var d1 = Demand.of(Map.of(t0, 1, t1, 0));

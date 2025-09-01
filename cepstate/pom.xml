@@ -5,7 +5,7 @@
     <modelVersion>4.0.0</modelVersion>
 
     <parent>
-        <groupId>com.example</groupId>
+        <groupId>com.hcltech.rmg</groupId>
         <artifactId>kafka-basic-multi-module</artifactId>
         <version>1.0.0-SNAPSHOT</version>
     </parent>
@@ -17,12 +17,12 @@
     <dependencies>
         <!-- Shared JSON model (ObjectMapper, Jackson annotations) -->
         <dependency>
-            <groupId>com.example</groupId>
+            <groupId>com.hcltech.rmg</groupId>
             <artifactId>common</artifactId>
             <version>${project.version}</version>
         </dependency>
         <dependency>
-            <groupId>com.example</groupId>
+            <groupId>com.hcltech.rmg</groupId>
             <artifactId>optics</artifactId>
             <version>${project.version}</version>
         </dependency>

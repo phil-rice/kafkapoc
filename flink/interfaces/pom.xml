@@ -5,9 +5,10 @@
     <modelVersion>4.0.0</modelVersion>
 
     <parent>
-        <groupId>com.example</groupId>
+        <groupId>com.hcltech.rmg</groupId>
         <artifactId>kafka-basic-multi-module</artifactId>
         <version>1.0.0-SNAPSHOT</version>
+        <relativePath>../../pom.xml</relativePath>
     </parent>
 
     <artifactId>interfaces</artifactId>
@@ -20,17 +21,17 @@
 
     <dependencies>
         <dependency>
-            <groupId>com.example</groupId>
+            <groupId>com.hcltech.rmg</groupId>
             <artifactId>common</artifactId>
             <version>${project.version}</version>
         </dependency>
         <dependency>
-            <groupId>com.example</groupId>
+            <groupId>com.hcltech.rmg</groupId>
             <artifactId>consumer</artifactId>
             <version>${project.version}</version>
         </dependency>
         <dependency>
-            <groupId>com.example</groupId>
+            <groupId>com.hcltech.rmg</groupId>
             <artifactId>cepstate_rocksdb</artifactId>
             <version>${project.version}</version>
         </dependency>
