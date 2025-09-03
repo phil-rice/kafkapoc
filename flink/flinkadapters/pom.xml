@@ -25,6 +25,11 @@
             <artifactId>common</artifactId>
             <version>${project.version}</version>
         </dependency>
+   <dependency>
+            <groupId>com.hcltech.rmg</groupId>
+            <artifactId>interfaces</artifactId>
+            <version>${project.version}</version>
+        </dependency>
         <dependency>
             <groupId>com.hcltech.rmg</groupId>
             <artifactId>consumer</artifactId>
@@ -57,7 +62,12 @@
             <artifactId>junit-jupiter</artifactId>
             <scope>test</scope>
         </dependency>
-
+        <!-- https://mvnrepository.com/artifact/org.apache.flink/flink-streaming-java -->
+        <dependency>
+            <groupId>org.apache.flink</groupId>
+            <artifactId>flink-streaming-java</artifactId>
+            <scope>provided</scope>
+        </dependency>
         <dependency>
             <groupId>org.mockito</groupId>
             <artifactId>mockito-junit-jupiter</artifactId>

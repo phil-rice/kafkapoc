@@ -9,7 +9,7 @@ import java.util.Objects;
 import java.util.function.Function;
 
 @SuppressWarnings("unchecked")
-public final class JacksonPolymorphicByCodec<T> implements Codec<T, String> {
+public final class JacksonPolymorphicByCodec<T> implements Codec<T, String>, HasObjectMapper {
     private final Function<? super T, String> typeOf;
     private final Map<String, Codec<? extends T, String>> codecs;
     private final ObjectMapper mapper;
@@ -64,4 +64,9 @@ public final class JacksonPolymorphicByCodec<T> implements Codec<T, String> {
         String payloadJson = mapper.writeValueAsString(payload);
         return ((Codec<T, String>) sub).decode(payloadJson);
     }
+    @Override
+    public ObjectMapper objectMapper() {
+        return mapper;
+    }
+
 }

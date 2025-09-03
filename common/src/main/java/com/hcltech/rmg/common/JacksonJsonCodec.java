@@ -2,7 +2,7 @@ package com.hcltech.rmg.common;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 
-public final class JacksonJsonCodec implements Codec<Object, String> {
+public final class JacksonJsonCodec implements Codec<Object, String>, HasObjectMapper {
     private final ObjectMapper mapper;
 
     public JacksonJsonCodec() {
@@ -19,5 +19,10 @@ public final class JacksonJsonCodec implements Codec<Object, String> {
     public Object decode(String json) throws Exception {
         // Decodes to Maps/Lists/Strings/Numbers/Booleans/null
         return mapper.readValue(json, Object.class);
+    }
+
+    @Override
+    public ObjectMapper objectMapper() {
+        return mapper;
     }
 }

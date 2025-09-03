@@ -32,6 +32,7 @@
         <!-- Centralize versions here so child modules don't repeat them -->
         <kafka.clients.version>3.7.1</kafka.clients.version>
         <slf4j.version>2.0.12</slf4j.version>
+        <flink.version>2.1.0</flink.version>
         <logback.version>1.4.14</logback.version>
         <jackson.version>2.17.1</jackson.version>
         <junit.version>5.10.2</junit.version>
@@ -82,6 +83,13 @@
                 <groupId>org.rocksdb</groupId>
                 <artifactId>rocksdbjni</artifactId>
                 <version>${rocksdb.version}</version>
+            </dependency>
+            <!-- https://mvnrepository.com/artifact/org.apache.flink/flink-streaming-java -->
+            <dependency>
+                <groupId>org.apache.flink</groupId>
+                <artifactId>flink-streaming-java</artifactId>
+                <version>${flink.version}</version>
+                <scope>provided</scope>
             </dependency>
             <dependency>
                 <groupId>org.mockito</groupId>

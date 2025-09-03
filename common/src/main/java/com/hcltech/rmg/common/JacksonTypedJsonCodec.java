@@ -5,7 +5,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 
 import java.util.Objects;
 
-public final class JacksonTypedJsonCodec<T> implements Codec<T, String> {
+public final class JacksonTypedJsonCodec<T> implements Codec<T, String> , HasObjectMapper{
     private final ObjectMapper mapper;
     private final Class<T> klass;
     private final TypeReference<T> typeRef; // optional for generic types
@@ -45,4 +45,9 @@ public final class JacksonTypedJsonCodec<T> implements Codec<T, String> {
         }
         return mapper.readValue(json, typeRef);
     }
+    @Override
+    public ObjectMapper objectMapper() {
+        return mapper;
+    }
+
 }
