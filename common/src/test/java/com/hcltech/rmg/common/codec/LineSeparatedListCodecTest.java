@@ -1,5 +1,5 @@
 // src/test/java/com/example/kafka/common/LineSeparatedListCodecTest.java
-package com.hcltech.rmg.common;
+package com.hcltech.rmg.common.codec;
 
 import org.junit.jupiter.api.Test;
 

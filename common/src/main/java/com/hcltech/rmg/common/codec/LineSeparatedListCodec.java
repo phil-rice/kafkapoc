@@ -1,5 +1,5 @@
 // src/main/java/com/example/kafka/common/LineSeparatedListCodec.java
-package com.hcltech.rmg.common;
+package com.hcltech.rmg.common.codec;
 
 import java.util.ArrayList;
 import java.util.List;

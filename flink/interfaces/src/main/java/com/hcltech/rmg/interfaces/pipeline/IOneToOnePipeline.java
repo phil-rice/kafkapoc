@@ -9,7 +9,7 @@ import java.util.concurrent.CompletionStage;
 /**
  * Our business logic implements this
  */
-public interface IOneToOnePipeline<From, To> {
+public interface IOneToOnePipeline<From, To> extends IAsyncPipeline<From, To> {
     CompletionStage<Outcome<To>> process(From from);
 
     default IOneToManyPipeline<From, To> toOneToManyPipeline() {

@@ -1,4 +1,4 @@
-package com.hcltech.rmg.common;
+package com.hcltech.rmg.common.codec;
 
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;

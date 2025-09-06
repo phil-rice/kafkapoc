@@ -1,5 +1,5 @@
 // src/test/java/com/example/kafka/common/JacksonPolymorphicByCodecTest.java
-package com.hcltech.rmg.common;
+package com.hcltech.rmg.common.codec;
 
 import com.hcltech.rmg.common.testevent.AlphaEvent;
 import com.hcltech.rmg.common.testevent.BetaEvent;

@@ -1,14 +1,13 @@
 package com.hcltech.rmg.interfaces.repository;
 
+import com.hcltech.rmg.interfaces.builder.PipelineBuilder;
 import com.hcltech.rmg.interfaces.pipeline.IOneToManyPipeline;
 import com.hcltech.rmg.interfaces.pipeline.IOneToOnePipeline;
-import com.hcltech.rmg.interfaces.pipeline.ValueTC;
 import com.hcltech.rmg.interfaces.retry.RetryPolicyConfig;
 import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
 
 import java.util.LinkedHashMap;
-import java.util.Map;
 import java.util.function.BiFunction;
 
 import static org.junit.jupiter.api.Assertions.*;
@@ -24,10 +23,7 @@ public class PipelineStageBuilderTest {
         return Mockito.mock(RetryPolicyConfig.class);
     }
 
-    @SuppressWarnings("unchecked")
-    private static <F> ValueTC<F> dummyValueTC() {
-        return (ValueTC<F>) Mockito.mock(ValueTC.class);
-    }
+
 
     private static final BiFunction<String, Throwable, String> DEFAULT_ERR = (stage, t) -> "err@" + stage;
 
@@ -54,12 +50,12 @@ public class PipelineStageBuilderTest {
     @Test
     void chain_three_one_to_one_uses_default_timeout_and_builds() {
         long defaultTimeoutMs = 30_000L;
-        var builder = new PipelineBuilder<String>(dummyValueTC(), DEFAULT_ERR, dummyRetry(), defaultTimeoutMs);
+        var builder = new PipelineBuilder<String>( DEFAULT_ERR, dummyRetry(), defaultTimeoutMs);
 
         PipelineDetails<String, C> details = builder
-                .oneToOne("s1", String.class, oneToOne(String.class, A.class))
-                .oneToOne("s2", A.class,      oneToOne(A.class, B.class))
-                .oneToOne("s3", B.class,      oneToOne(B.class, C.class))
+                .stage("s1", String.class, oneToOne(String.class, A.class))
+                .stage("s2", A.class,      oneToOne(A.class, B.class))
+                .stage("s3", B.class,      oneToOne(B.class, C.class))
                 .build();
 
         assertNotNull(details);
@@ -75,12 +71,12 @@ public class PipelineStageBuilderTest {
     @Test
     void chain_three_one_to_many_uses_default_timeout_and_builds() {
         long defaultTimeoutMs = 45_000L;
-        var builder = new PipelineBuilder<Integer>(dummyValueTC(), DEFAULT_ERR, dummyRetry(), defaultTimeoutMs);
+        var builder = new PipelineBuilder<Integer>( DEFAULT_ERR, dummyRetry(), defaultTimeoutMs);
 
         PipelineDetails<Integer, F> details = builder
-                .oneToMany("m1", Integer.class, oneToMany(Integer.class, D.class))
-                .oneToMany("m2", D.class,       oneToMany(D.class, E.class))
-                .oneToMany("m3", E.class,       oneToMany(E.class, F.class))
+                .stage("m1", Integer.class, oneToMany(Integer.class, D.class))
+                .stage("m2", D.class,       oneToMany(D.class, E.class))
+                .stage("m3", E.class,       oneToMany(E.class, F.class))
                 .build();
 
         assertNotNull(details);
@@ -96,7 +92,7 @@ public class PipelineStageBuilderTest {
     @Test
     void mixed_chain_with_all_overrides_including_timeouts_builds_and_preserves_order() {
         long defaultTimeoutMs = 10_000L;
-        var builder = new PipelineBuilder<Long>(dummyValueTC(), DEFAULT_ERR, dummyRetry(), defaultTimeoutMs);
+        var builder = new PipelineBuilder<Long>( DEFAULT_ERR, dummyRetry(), defaultTimeoutMs);
 
         long tOnly1  = 5_000L;
         long tOnly2  = 60_000L;
@@ -110,30 +106,30 @@ public class PipelineStageBuilderTest {
 
         PipelineDetails<Long, F> details = builder
                 // 1) Long -> A (one-to-one, all defaults)
-                .oneToOne("x1", Long.class, oneToOne(Long.class, A.class))
+                .stage("x1", Long.class, oneToOne(Long.class, A.class))
                 // 2) A -> B (one-to-one with retry override)
-                .oneToOne("x2", A.class,    oneToOne(A.class, B.class), r1)
+                .stage("x2", A.class,    oneToOne(A.class, B.class), r1)
                 // 3) B -> C (one-to-one with error override)
-                .oneToOne("x3", B.class,    oneToOne(B.class, C.class), customErr1)
+                .stage("x3", B.class,    oneToOne(B.class, C.class), customErr1)
                 // 4) C -> D (one-to-one with timeout-only override)
-                .oneToOne("x4", C.class,    oneToOne(C.class, D.class), tOnly1)
+                .stage("x4", C.class,    oneToOne(C.class, D.class), tOnly1)
                 // 5) D -> E (one-to-one with retry+error overrides; default timeout)
-                .oneToOne("x5", D.class,    oneToOne(D.class, E.class), r2, customErr2)
+                .stage("x5", D.class,    oneToOne(D.class, E.class), r2, customErr2)
                 // 6) E -> F (one-to-one with retry+error+timeout override)
-                .oneToOne("x6", E.class,    oneToOne(E.class, F.class), r2, customErr2, tBoth)
+                .stage("x6", E.class,    oneToOne(E.class, F.class), r2, customErr2, tBoth)
 
                 // 7) F -> A (one-to-many, defaults)
-                .oneToMany("y1", F.class,   oneToMany(F.class, A.class))
+                .stage("y1", F.class,   oneToMany(F.class, A.class))
                 // 8) A -> B (one-to-many with retry override)
-                .oneToMany("y2", A.class,   oneToMany(A.class, B.class), r1)
+                .stage("y2", A.class,   oneToMany(A.class, B.class), r1)
                 // 9) B -> C (one-to-many with error override)
-                .oneToMany("y3", B.class,   oneToMany(B.class, C.class), customErr1)
+                .stage("y3", B.class,   oneToMany(B.class, C.class), customErr1)
                 // 10) C -> D (one-to-many with timeout-only override)
-                .oneToMany("y4", C.class,   oneToMany(C.class, D.class), tOnly2)
+                .stage("y4", C.class,   oneToMany(C.class, D.class), tOnly2)
                 // 11) D -> E (one-to-many with retry+error overrides; default timeout)
-                .oneToMany("y5", D.class,   oneToMany(D.class, E.class), r2, customErr2)
+                .stage("y5", D.class,   oneToMany(D.class, E.class), r2, customErr2)
                 // 12) E -> F (one-to-many with retry+error+timeout override; Long nullable accepted)
-                .oneToMany("y6", E.class,   oneToMany(E.class, F.class), r2, customErr2, tBoth)
+                .stage("y6", E.class,   oneToMany(E.class, F.class), r2, customErr2, tBoth)
                 .build();
 
         assertNotNull(details);
@@ -161,12 +157,12 @@ public class PipelineStageBuilderTest {
     @Test
     void retry_error_timeout_nullable_combo_falls_back_to_default_timeout() {
         long defaultTimeoutMs = 12_345L;
-        var builder = new PipelineBuilder<String>(dummyValueTC(), DEFAULT_ERR, dummyRetry(), defaultTimeoutMs);
+        var builder = new PipelineBuilder<String>( DEFAULT_ERR, dummyRetry(), defaultTimeoutMs);
 
         PipelineDetails<String, B> details = builder
-                .oneToOne("p1", String.class, oneToOne(String.class, A.class))
+                .stage("p1", String.class, oneToOne(String.class, A.class))
                 // pass null timeout on the 3-arg override: should fallback to defaultTimeoutMs
-                .oneToOne("p2", A.class, oneToOne(A.class, B.class), dummyRetry(), (stage,t) -> "oops@" + stage, null)
+                .stage("p2", A.class, oneToOne(A.class, B.class), dummyRetry(), (stage,t) -> "oops@" + stage, null)
                 .build();
 
         assertNotNull(details);
@@ -179,12 +175,12 @@ public class PipelineStageBuilderTest {
     @Test
     void duplicate_stage_name_throws() {
         long defaultTimeoutMs = 1_000L;
-        var builder = new PipelineBuilder<String>(dummyValueTC(), DEFAULT_ERR, dummyRetry(), defaultTimeoutMs);
+        var builder = new PipelineBuilder<String>( DEFAULT_ERR, dummyRetry(), defaultTimeoutMs);
 
         assertThrows(IllegalArgumentException.class, () ->
                 builder
-                        .oneToOne("dup", String.class, oneToOne(String.class, A.class))
-                        .oneToOne("dup", A.class,      oneToOne(A.class, B.class)) // duplicate name should throw
+                        .stage("dup", String.class, oneToOne(String.class, A.class))
+                        .stage("dup", A.class,      oneToOne(A.class, B.class)) // duplicate name should throw
                         .build()
         );
     }

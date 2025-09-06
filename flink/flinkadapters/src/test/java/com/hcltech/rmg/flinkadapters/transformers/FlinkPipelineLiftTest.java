@@ -14,45 +14,29 @@ import java.util.concurrent.CopyOnWriteArrayList;
 
 class FlinkPipelineLiftTest {
 
-    // Side-output tags
     private static final OutputTag<RetryEnvelope<Object>> RETRIES =
-            new OutputTag<>("retries", TypeInformation.of(new TypeHint<RetryEnvelope<Object>>() {
-            })) {
-            };
+            new OutputTag<>("retries", TypeInformation.of(new TypeHint<RetryEnvelope<Object>>(){})) {};
     private static final OutputTag<ErrorEnvelope<Object>> ERRORS =
-            new OutputTag<>("errors", TypeInformation.of(new TypeHint<ErrorEnvelope<Object>>() {
-            })) {
-            };
+            new OutputTag<>("errors",  TypeInformation.of(new TypeHint<ErrorEnvelope<Object>>(){})) {};
 
-    // DTO we store from each lane
-    record TestOut(String id, String channel, String value) {
-    }
+    record TestOut(String id, String channel, String value) {}
 
-    // In-memory sinks
     static final class MainSink implements SinkFunction<ValueEnvelope<Object>> {
         static final List<TestOut> OUT = new CopyOnWriteArrayList<>();
-
-        @Override
-        public void invoke(ValueEnvelope<Object> ve, Context ctx) {
+        @Override public void invoke(ValueEnvelope<Object> ve, Context ctx) {
             OUT.add(new TestOut(ve.domainId(), "main", String.valueOf(ve.data())));
         }
     }
-
     static final class ErrorSink implements SinkFunction<ErrorEnvelope<Object>> {
         static final List<TestOut> OUT = new CopyOnWriteArrayList<>();
-
-        @Override
-        public void invoke(ErrorEnvelope<Object> er, Context ctx) {
+        @Override public void invoke(ErrorEnvelope<Object> er, Context ctx) {
             String msg = er.errorMessages().isEmpty() ? "" : er.errorMessages().get(0);
             OUT.add(new TestOut(er.envelope().domainId(), "error", msg));
         }
     }
-
     static final class RetrySink implements SinkFunction<RetryEnvelope<Object>> {
         static final List<TestOut> OUT = new CopyOnWriteArrayList<>();
-
-        @Override
-        public void invoke(RetryEnvelope<Object> re, Context ctx) {
+        @Override public void invoke(RetryEnvelope<Object> re, Context ctx) {
             OUT.add(new TestOut(re.envelope().domainId(), "retry", re.stageName()));
         }
     }
@@ -71,61 +55,61 @@ class FlinkPipelineLiftTest {
     }
 
     @Test
-    void e2e_multiScenario_collect_each_lane_assert_collections() throws Exception {
+    void e2e_sync_and_async_value_error_retry() throws Exception {
         String repoClass = TrainingRepository.class.getName();
 
-        // Local bounded job
         var env = StreamExecutionEnvironment.getExecutionEnvironment();
         env.setParallelism(1);
         env.getConfig().setAutoWatermarkInterval(0);
 
-        // IDs
-        String okId = "ok-foo";
-        String errId = "err-enrichment";
-        String retryId = "rt-cepEnrichment";
+        // Distinct ids; control tokens live in PAYLOAD
+        String okId      = "ok-foo";
+        String errEnrich = "err-enrichment";     // async error
+        String rtCep     = "rt-cepEnrichment";   // sync retry
+        String errValid  = "err-validate";       // sync error
+        String rtBiz     = "rt-bizLogic";        // async retry
 
-        // Put control tokens in the PAYLOAD (StageFns.stage inspects payload), keep ids distinct
-        ValueEnvelope<String> in1 = new ValueEnvelope<>("domainType1", okId, "foo", 100);
-        ValueEnvelope<String> in2 = new ValueEnvelope<>("domainType2", errId, "Error:enrichment-data2", 200);
-        ValueEnvelope<String> in3 = new ValueEnvelope<>("domainType3", retryId, "Retry:cepEnrichment-data3", 300);
+        ValueEnvelope<String> in1 = new ValueEnvelope<>("domainType1", okId,      "foo",                          100);
+        ValueEnvelope<String> in2 = new ValueEnvelope<>("domainType2", errEnrich, "Error:enrichment-data2",       200);
+        ValueEnvelope<String> in3 = new ValueEnvelope<>("domainType3", rtCep,     "Retry:cepEnrichment-data3",    300);
+        ValueEnvelope<String> in4 = new ValueEnvelope<>("domainType4", errValid,  "Error:validate-data4",         400);
+        ValueEnvelope<String> in5 = new ValueEnvelope<>("domainType5", rtBiz,     "Retry:bizLogic-data5",         500);
 
-        var src = env.fromElements(in1, in2, in3);
+        var src = env.fromElements(in1, in2, in3, in4, in5);
 
-        // Lift
         var main = FlinkPipelineLift.lift(src, repoClass, RETRIES, ERRORS);
 
-        // Sinks per lane
         main.addSink(new MainSink()).name("collect-main");
         main.getSideOutput(ERRORS).addSink(new ErrorSink()).name("collect-errors");
         main.getSideOutput(RETRIES).addSink(new RetrySink()).name("collect-retries");
 
-        // Run once
-        env.execute("e2e-multi");
+        env.execute("e2e-sync-async");
 
-        // Expected collections (sorted for deterministic assert)
-        Comparator<TestOut> cmp = Comparator
-                .comparing(TestOut::id)
+        // Comparator for deterministic equality (if multiple in a lane)
+        Comparator<TestOut> cmp = Comparator.comparing(TestOut::id)
                 .thenComparing(TestOut::channel)
                 .thenComparing(TestOut::value);
 
+        // Expected
         List<TestOut> expectedMain = List.of(
                 new TestOut(okId, "main", "bizlogic-enrichment-cep enrichment-validate-foo")
         );
         List<TestOut> expectedErrors = List.of(
-                new TestOut(errId, "error", "enrichment: forced error")
+                new TestOut(errEnrich, "error", "enrichment: forced error"), // async stage error
+                new TestOut(errValid,  "error", "validate: forced error")    // sync stage error
         );
         List<TestOut> expectedRetries = List.of(
-                new TestOut(retryId, "retry", "cepEnrichment")
+                new TestOut(rtCep, "retry", "cepEnrichment"), // sync stage retry
+                new TestOut(rtBiz, "retry", "bizLogic")       // async stage retry
         );
 
         // Actual (sorted)
-        List<TestOut> gotMain = MainSink.OUT.stream().sorted(cmp).toList();
-        List<TestOut> gotErrors = ErrorSink.OUT.stream().sorted(cmp).toList();
+        List<TestOut> gotMain    = MainSink.OUT.stream().sorted(cmp).toList();
+        List<TestOut> gotErrors  = ErrorSink.OUT.stream().sorted(cmp).toList();
         List<TestOut> gotRetries = RetrySink.OUT.stream().sorted(cmp).toList();
 
-        // Assert whole collections
-        Assertions.assertEquals(expectedMain, gotMain, "main lane mismatch");
-        Assertions.assertEquals(expectedErrors, gotErrors, "errors lane mismatch");
-        Assertions.assertEquals(expectedRetries, gotRetries, "retries lane mismatch");
+        Assertions.assertEquals(expectedMain.stream().sorted(cmp).toList(),    gotMain,    "main lane mismatch");
+        Assertions.assertEquals(expectedErrors.stream().sorted(cmp).toList(),  gotErrors,  "errors lane mismatch");
+        Assertions.assertEquals(expectedRetries.stream().sorted(cmp).toList(), gotRetries, "retries lane mismatch");
     }
 }

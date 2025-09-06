@@ -1,7 +1,4 @@
-package com.hcltech.rmg.common;
-
-import java.util.Map;
-import java.util.function.Function;
+package com.hcltech.rmg.common.codec;
 
 public class MappedCodec<T, T1, To> implements Codec<T1, To> {
     private final Codec<T, To> base;

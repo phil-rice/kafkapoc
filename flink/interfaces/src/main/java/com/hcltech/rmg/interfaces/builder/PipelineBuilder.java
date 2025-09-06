@@ -1,8 +1,7 @@
-package com.hcltech.rmg.interfaces.repository;
+package com.hcltech.rmg.interfaces.builder;
 
-import com.hcltech.rmg.interfaces.pipeline.IOneToManyPipeline;
-import com.hcltech.rmg.interfaces.pipeline.IOneToOnePipeline;
-import com.hcltech.rmg.interfaces.pipeline.ValueTC;
+import com.hcltech.rmg.interfaces.pipeline.IPipeline;
+import com.hcltech.rmg.interfaces.repository.PipelineStageDetails;
 import com.hcltech.rmg.interfaces.retry.RetryPolicyConfig;
 
 import java.util.LinkedHashMap;
@@ -16,52 +15,38 @@ import java.util.function.BiFunction;
  */
 public class PipelineBuilder<InitialFrom> {
 
-    private final ValueTC<InitialFrom> valueTC;                 // kept for completeness
+    // kept for completeness
     private final BiFunction<String, Throwable, String> defaultErrorMsg;
     private final RetryPolicyConfig defaultRetry;
     private final long defaultTimeoutMs;
 
     public static <InitialFrom> PipelineBuilder<InitialFrom> builder(
-            ValueTC<InitialFrom> valueTC,
             BiFunction<String, Throwable, String> errorMsgFn,
             RetryPolicyConfig retry,
             long defaultTimeoutMs) {
-        return new PipelineBuilder<>(valueTC, errorMsgFn, retry, defaultTimeoutMs);
+        return new PipelineBuilder<>(errorMsgFn, retry, defaultTimeoutMs);
     }
 
-    public PipelineBuilder(ValueTC<InitialFrom> valueTC,
-                           BiFunction<String, Throwable, String> errorMsgFn,
+    public PipelineBuilder(BiFunction<String, Throwable, String> errorMsgFn,
                            RetryPolicyConfig retry,
                            long defaultTimeoutMs) {
-        this.valueTC = Objects.requireNonNull(valueTC, "valueTC");
         this.defaultErrorMsg = Objects.requireNonNull(errorMsgFn, "errorMsgFn");
         this.defaultRetry = Objects.requireNonNull(retry, "retry");
         this.defaultTimeoutMs = defaultTimeoutMs;
     }
 
     /**
-     * First stage: requires Class token of InitialFrom, plus a one-to-many pipeline.
+     * First stage: requires Class token of InitialFrom, plus a one-to-many pipeline (async).
      */
-    public <To> PipelineStageBuilder<InitialFrom, InitialFrom, To> oneToMany(
+    public <To> PipelineStageBuilder<InitialFrom, InitialFrom, To> stage(
             String name,
             Class<InitialFrom> fromClass,
-            IOneToManyPipeline<InitialFrom, To> pipeline
+            IPipeline<InitialFrom, To> pipeline
     ) {
         var map = new LinkedHashMap<String, PipelineStageDetails<?, ?>>();
-        putUnique(map, name, new PipelineStageDetails<InitialFrom, To>(
+        putUnique(map, name, new PipelineStageDetails<>(
                 fromClass, pipeline, defaultRetry, defaultErrorMsg, defaultTimeoutMs));
-        return new PipelineStageBuilder<>(valueTC, map, defaultRetry, defaultErrorMsg, defaultTimeoutMs);
-    }
-
-    /**
-     * First stage: one-to-one overload (delegates to one-to-many).
-     */
-    public <To> PipelineStageBuilder<InitialFrom, InitialFrom, To> oneToOne(
-            String name,
-            Class<InitialFrom> fromClass,
-            IOneToOnePipeline<InitialFrom, To> pipeline
-    ) {
-        return oneToMany(name, fromClass, pipeline.toOneToManyPipeline());
+        return new PipelineStageBuilder<>(map, defaultRetry, defaultErrorMsg, defaultTimeoutMs);
     }
 
     private static void putUnique(Map<String, PipelineStageDetails<?, ?>> map,
@@ -75,7 +60,4 @@ public class PipelineBuilder<InitialFrom> {
         map.put(name, details);
     }
 
-    public ValueTC<InitialFrom> valueTC() {
-        return valueTC;
-    }
 }

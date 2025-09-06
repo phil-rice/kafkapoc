@@ -3,6 +3,8 @@ package com.hcltech.rmg.flinkadapters.transformers;
 import com.hcltech.rmg.flinkadapters.envelopes.RetryEnvelope;
 import com.hcltech.rmg.flinkadapters.envelopes.ValueEnvelope;
 import com.hcltech.rmg.flinkadapters.envelopes.ValueRetryErrorEnvelope;
+import com.hcltech.rmg.interfaces.pipeline.IOneToManyPipeline;
+import com.hcltech.rmg.interfaces.pipeline.IOneToOnePipeline;
 import com.hcltech.rmg.interfaces.repository.IPipelineRepository;
 import com.hcltech.rmg.interfaces.repository.PipelineStageDetails;
 import org.apache.flink.api.common.functions.OpenContext;
@@ -17,6 +19,7 @@ public final class AsyncOutcomeAdapter<From, To> extends RichAsyncFunction<Value
     private final String stageName;
     private final String repositoryName;
     private transient PipelineStageDetails<From, To> pipelineStageDetails;
+    private transient IOneToManyPipeline<From, To> pipeline;
 
     public AsyncOutcomeAdapter(String stageName, String repositoryName) {
         this.stageName = stageName;
@@ -34,6 +37,13 @@ public final class AsyncOutcomeAdapter<From, To> extends RichAsyncFunction<Value
                     " in repository " + repositoryName + " legal names are " + stages.keySet());
         }
         this.pipelineStageDetails = details;
+        if (details.pipeline() instanceof IOneToOnePipeline<?, ?>)
+            this.pipeline = ((IOneToOnePipeline<From, To>) details.pipeline()).toOneToManyPipeline();
+        else if (details.pipeline() instanceof IOneToManyPipeline<?, ?>)
+            this.pipeline = (IOneToManyPipeline<From, To>) details.pipeline();
+        else
+            throw new IllegalArgumentException("Pipeline for stage " + stageName + " should be a IOneToOnePipeline or IOneToManyPipeline, was " +
+                    details.pipeline().getClass().getName());
     }
 
     @Override
@@ -59,7 +69,7 @@ public final class AsyncOutcomeAdapter<From, To> extends RichAsyncFunction<Value
     private void processValueEnvelope(ValueEnvelope<From> in,
                                       ResultFuture<ValueRetryErrorEnvelope> rf,
                                       int retryCountOnFail) {
-        pipelineStageDetails.pipeline().process(in.data()).whenComplete((outcome, err) -> {
+        pipeline.process(in.data()).whenComplete((outcome, err) -> {
             if (outcome.isValue()) {
                 rf.complete(com.hcltech.rmg.common.ListComprehensions.map(
                         outcome.valueOrThrow(), in::withData));

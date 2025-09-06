@@ -1,7 +1,7 @@
 package com.hcltech.rmg.cepstate.rocks;
 
 import com.hcltech.rmg.cepstate.CepState;
-import com.hcltech.rmg.common.Codec;
+import com.hcltech.rmg.common.codec.Codec;
 import com.hcltech.rmg.optics.IOpticsEvent;
 import com.hcltech.rmg.optics.Interpreter;
 import org.rocksdb.*;

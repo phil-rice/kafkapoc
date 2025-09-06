@@ -1,4 +1,4 @@
-package com.hcltech.rmg.common;
+package com.hcltech.rmg.common.codec;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;

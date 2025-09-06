@@ -1,7 +1,7 @@
 // src/test/java/com/example/optics/IOpticsEventCodecTest.java
 package com.hcltech.rmg.optics;
 
-import com.hcltech.rmg.common.Codec;
+import com.hcltech.rmg.common.codec.Codec;
 import org.apache.commons.jxpath.JXPathContext;
 import org.junit.jupiter.api.Test;
 

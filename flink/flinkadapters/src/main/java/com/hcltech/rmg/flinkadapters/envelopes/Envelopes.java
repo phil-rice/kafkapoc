@@ -1,6 +1,6 @@
 package com.hcltech.rmg.flinkadapters.envelopes;
 
-import com.hcltech.rmg.common.Codec;
+import com.hcltech.rmg.common.codec.Codec;
 
 import java.util.Map;
 
@@ -50,7 +50,8 @@ record RetryEnvelopeStringCodec<T>(Codec<RetryEnvelope<Map<String, Object>>, Str
 
     @Override
     public String encode(RetryEnvelope<T> value) throws Exception {
-        Map<String, Object> dataAsMaps = dataCodec.encode(value.envelope().data());
+        T data = value.envelope().data();
+        Map<String, Object> dataAsMaps = dataCodec.encode(data);
         RetryEnvelope<Map<String, Object>> newEnv = value.withData(dataAsMaps);
         return retryCodec.encode(newEnv);
     }

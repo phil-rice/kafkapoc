@@ -1,18 +1,16 @@
 package com.hcltech.rmg.domainpipeline;
 
+import com.hcltech.rmg.interfaces.builder.PipelineBuilder;
 import com.hcltech.rmg.interfaces.outcome.Outcome;
 import com.hcltech.rmg.interfaces.outcome.RetrySpec;
 import com.hcltech.rmg.interfaces.pipeline.IOneToOnePipeline;
-import com.hcltech.rmg.interfaces.pipeline.ValueTC;
+import com.hcltech.rmg.interfaces.pipeline.IOneToOneSyncPipeline;
 import com.hcltech.rmg.interfaces.repository.IPipelineRepository;
-import com.hcltech.rmg.interfaces.repository.PipelineBuilder;
 import com.hcltech.rmg.interfaces.repository.PipelineDetails;
 import com.hcltech.rmg.interfaces.retry.RetryPolicyConfig;
 
 import java.time.Duration;
 import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.CompletionStage;
-import java.util.function.Function;
 
 /**
  * Flink frankly sucks when it comes to dependency injection. This is because the job manager has to serialise the tasks
@@ -27,24 +25,13 @@ import java.util.function.Function;
 public class TrainingRepository implements IPipelineRepository<String, String> {
     public static TrainingRepository instance = new TrainingRepository();
 
-    public static ValueTC<String> stringValueTC = new ValueTC<String>() {
-        @Override
-        public String domainId(String value) {
-            return value; // In this trivial example, the value itself is the domain ID
-        }
-
-        @Override
-        public String msgId(String value) {
-            return value; // In this trivial example, the value itself is the message ID
-        }
-    };
 
     /**
      * If the payload contains "Error:<stageName>" -> Errors
      * If it contains "Retry:<stageName>" -> Retry
      * Otherwise -> Value with prefix prepended.
      */
-    public static  IOneToOnePipeline<String,String> stage(
+    public static IOneToOnePipeline<String, String> async(
             String stageName, String prefix) {
 
         final String errToken = "Error:" + stageName;
@@ -54,7 +41,6 @@ public class TrainingRepository implements IPipelineRepository<String, String> {
             if (in.contains(errToken)) {
                 return CompletableFuture.completedFuture(
                         Outcome.error(stageName + ": forced error"));
-                // or: Outcome.errors(List.of(...)) if that's your API
             }
             if (in.contains(retryToken)) {
                 return CompletableFuture.completedFuture(
@@ -65,19 +51,40 @@ public class TrainingRepository implements IPipelineRepository<String, String> {
         };
     }
 
+    /**
+     * If the payload contains "Error:<stageName>" -> Errors
+     * If it contains "Retry:<stageName>" -> Retry
+     * Otherwise -> Value with prefix prepended.
+     */
+    public static IOneToOneSyncPipeline<String, String> sync(
+            String stageName, String prefix) {
+
+        final String errToken = "Error:" + stageName;
+        final String retryToken = "Retry:" + stageName;
+
+        return in -> {
+            if (in.contains(errToken)) {
+                return Outcome.error(stageName + ": forced error");
+            }
+            if (in.contains(retryToken)) {
+                return Outcome.retry(new RetrySpec("forced retry at " + stageName));
+            }
+            return Outcome.value(prefix + in);
+        };
+    }
+
     public static PipelineDetails<String, String> details;
 
     static {
         RetryPolicyConfig retryPolicyConfig = new RetryPolicyConfig(Duration.ofSeconds(1), 2.0, Duration.ofSeconds(10), 5, .5);
-        details = PipelineBuilder.builder(
-                        stringValueTC,
+        details = PipelineBuilder.<String>builder(
                         (stage, e) -> stage + " " + e.getClass().getSimpleName() + "-" + e.getLocalizedMessage(),
                         retryPolicyConfig,
                         500)
-                .oneToOne("validate",      String.class, stage("validate",      "validate-"))
-                .oneToOne("cepEnrichment", String.class, stage("cepEnrichment", "cep enrichment-"))
-                .oneToOne("enrichment",    String.class, stage("enrichment",    "enrichment-"))
-                .oneToOne("bizLogic",      String.class, stage("bizLogic",      "bizlogic-"))
+                .stage("validate", String.class, sync("validate", "validate-"))
+                .stage("cepEnrichment", String.class, sync("cepEnrichment", "cep enrichment-"))
+                .stage("enrichment", String.class, async("enrichment", "enrichment-"))
+                .stage("bizLogic", String.class, async("bizLogic", "bizlogic-"))
                 .build();
     }
 

@@ -1,8 +1,8 @@
 // src/test/java/com/hcltech/rmg/flinkadapters/context/FlinkStageCodecsTest.java
 package com.hcltech.rmg.flinkadapters.context;
 
-import com.hcltech.rmg.common.Codec;
-import com.hcltech.rmg.common.JacksonTreeCodec;
+import com.hcltech.rmg.common.codec.Codec;
+import com.hcltech.rmg.common.codec.JacksonTreeCodec;
 import com.hcltech.rmg.flinkadapters.envelopes.RetryEnvelope;
 import com.hcltech.rmg.flinkadapters.envelopes.ValueEnvelope;
 import org.junit.jupiter.api.Test;
@@ -15,32 +15,7 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 class FlinkStageCodecsTest {
 
     // --- Simple domain type for tests ---
-    static final class MyEvent {
-        final String id;
-        final int amount;
-
-        MyEvent(String id, int amount) {
-            this.id = id;
-            this.amount = amount;
-        }
-
-        @Override
-        public boolean equals(Object o) {
-            if (this == o) return true;
-            if (!(o instanceof MyEvent that)) return false;
-            return amount == that.amount && java.util.Objects.equals(id, that.id);
-        }
-
-        @Override
-        public int hashCode() {
-            return java.util.Objects.hash(id, amount);
-        }
-
-        @Override
-        public String toString() {
-            return "MyEvent{id='%s', amount=%d}".formatted(id, amount);
-        }
-    }
+  record MyEvent(String id, int amount) {}
 
     @Test
     void valueEnvelope_roundTrips_withSharedMapper() throws Exception {
@@ -64,7 +39,7 @@ class FlinkStageCodecsTest {
 
     @Test
     void retryEnvelope_roundTrips_withSharedMapper() throws Exception {
-        Codec<MyEvent, Map<String, Object>> payload = new JacksonTreeCodec<>(MyEvent.class);
+        Codec<MyEvent, Map<String, Object>> payload = Codec.jsonTree(MyEvent.class);
         FlinkStageCodecs<MyEvent> bundle = FlinkStageCodecs.fromPayloadCodec(payload);
 
         MyEvent ev = new MyEvent("E-999", 7);
@@ -79,22 +54,4 @@ class FlinkStageCodecsTest {
         assertEquals(ev, decoded.envelope().data());
     }
 
-    @Test
-    void fromPayloadCodec_throws_ifPayloadCodecDoesNotExposeObjectMapper() {
-        // Minimal fake codec that does NOT implement HasObjectMapper
-        Codec<MyEvent, Map<String, Object>> badCodec = new Codec<>() {
-            @Override
-            public Map<String, Object> encode(MyEvent from) {
-                return Map.of("id", from.id, "amount", from.amount);
-            }
-
-            @Override
-            public MyEvent decode(Map<String, Object> to) {
-                return new MyEvent((String) to.get("id"), ((Number) to.get("amount")).intValue());
-            }
-        };
-
-        // Expect the treeUsingParent check (used inside fromPayloadCodec) to fail fast
-        assertThrows(IllegalArgumentException.class, () -> FlinkStageCodecs.fromPayloadCodec(badCodec));
-    }
 }

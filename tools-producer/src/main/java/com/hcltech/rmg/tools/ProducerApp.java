@@ -1,6 +1,6 @@
 package com.hcltech.rmg.tools;
 
-import com.hcltech.rmg.common.Codec;
+import com.hcltech.rmg.common.codec.Codec;
 import org.apache.kafka.clients.admin.AdminClient;
 import org.apache.kafka.clients.admin.AdminClientConfig;
 import org.apache.kafka.clients.admin.NewPartitions;

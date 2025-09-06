@@ -1,6 +1,6 @@
 package com.hcltech.rmg.flinkadapters.context;
 
-import com.hcltech.rmg.common.Codec;
+import com.hcltech.rmg.common.codec.Codec;
 
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;

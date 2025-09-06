@@ -4,6 +4,8 @@ import com.hcltech.rmg.flinkadapters.envelopes.ErrorEnvelope;
 import com.hcltech.rmg.flinkadapters.envelopes.RetryEnvelope;
 import com.hcltech.rmg.flinkadapters.envelopes.ValueEnvelope;
 import com.hcltech.rmg.flinkadapters.envelopes.ValueRetryErrorEnvelope;
+import com.hcltech.rmg.interfaces.pipeline.IAsyncPipeline;
+import com.hcltech.rmg.interfaces.pipeline.ISyncPipeline;
 import com.hcltech.rmg.interfaces.repository.IPipelineRepository;
 import com.hcltech.rmg.interfaces.repository.PipelineDetails;
 import com.hcltech.rmg.interfaces.repository.PipelineStageDetails;
@@ -41,16 +43,25 @@ public final class FlinkPipelineLift {
             final String stageName = e.getKey();
             final long stageTimeOutMs = e.getValue().timeOutMs();
 
-            current = AsyncDataStream
-                    .orderedWait(
-                            current,
-                            new AsyncOutcomeAdapter<>(stageName, repository),
-                            stageTimeOutMs,
-                            TimeUnit.MILLISECONDS
-                    )
-                    .name(stageName)
-                    .uid(stageName)
-                    .returns(vreType); // <— important: OUT is also ValueRetryErrorEnvelope
+            if (e.getValue().pipeline() instanceof ISyncPipeline<?, ?>)
+                current = current
+                        .flatMap(new SyncOutcomeAdapter<>(stageName, repository))
+                        .name(stageName).uid(stageName)
+                        .returns(vreType);
+            else if (e.getValue().pipeline() instanceof IAsyncPipeline<?, ?>)
+                current = AsyncDataStream
+                        .orderedWait(
+                                current,
+                                new AsyncOutcomeAdapter<>(stageName, repository),
+                                stageTimeOutMs,
+                                TimeUnit.MILLISECONDS
+                        )
+                        .name(stageName)
+                        .uid(stageName)
+                        .returns(vreType); // <— important: OUT is also ValueRetryErrorEnvelope
+            else
+                throw new IllegalArgumentException("Pipeline for stage " + stageName + " should be a ISyncPipeline or IAsyncPipeline, was " +
+                        e.getValue().pipeline().getClass().getName());
         }
 
         // 3) Final split
@@ -64,5 +75,6 @@ public final class FlinkPipelineLift {
         return typedResult;
     }
 
-    private FlinkPipelineLift() {}
+    private FlinkPipelineLift() {
+    }
 }

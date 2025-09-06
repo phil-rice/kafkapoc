@@ -1,4 +1,4 @@
-package com.hcltech.rmg.common;
+package com.hcltech.rmg.common.codec;
 
 
 import java.util.List;

@@ -1,6 +1,6 @@
 package com.hcltech.rmg.optics;
 
-import com.hcltech.rmg.common.Codec;
+import com.hcltech.rmg.common.codec.Codec;
 import org.apache.commons.jxpath.JXPathContext;
 
 import java.util.List;

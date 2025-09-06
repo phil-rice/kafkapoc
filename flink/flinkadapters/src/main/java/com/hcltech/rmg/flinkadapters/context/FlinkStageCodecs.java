@@ -1,9 +1,6 @@
 package com.hcltech.rmg.flinkadapters.context;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.hcltech.rmg.common.Codec;
-import com.hcltech.rmg.common.HasObjectMapper;
-import com.hcltech.rmg.common.JacksonTreeCodec;
+import com.hcltech.rmg.common.codec.Codec;
 import com.hcltech.rmg.flinkadapters.envelopes.Envelopes;
 import com.hcltech.rmg.flinkadapters.envelopes.RetryEnvelope;
 import com.hcltech.rmg.flinkadapters.envelopes.ValueEnvelope;
