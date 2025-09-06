@@ -69,6 +69,7 @@ public sealed interface Outcome<T>
         throw new IllegalStateException("Expected retry but was: " + this);
     }
 
+
     // ---- Transformations ----------------------------------------------------------------------
 
     default <U> Outcome<U> map(Function<? super T, ? extends U> f) {

@@ -1,10 +1,11 @@
 version: '1'
 
 parameters:
-  domain:
+  barcode:
     legal:
-      - parcel
-      - vehicle
+      - idbarcode
+      - longbarcode
+      - qrcode
     default: parcel
   company:
     legal:
@@ -36,6 +37,6 @@ files:
   - tasks.yaml  # This is the file that contains the tasks that are needed by the system
   - services.yaml  # This is the file that contains services that implement the tasks
   - modules.yaml  # This is the file that contains the modules that are used by the system
-  - company/${domain}_${company}.yaml  # This is the file that contains the company specific configuration
-  - product/${domain}_${product}.yaml  # This is the file that contains the product specific configuration
-  - company/product/${company}/${domain}_${company}_${product}.yaml  # This is the file that contains the company and product specific configuration
+  - company/${barcode}_${company}.yaml  # This is the file that contains the company specific configuration
+  - product/${barcode}_${product}.yaml  # This is the file that contains the product specific configuration
+  - company/product/${company}/${barcode}_${company}_${product}.yaml  # This is the file that contains the company and product specific configuration

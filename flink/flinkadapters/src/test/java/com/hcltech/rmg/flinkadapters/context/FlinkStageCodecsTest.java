@@ -9,7 +9,8 @@ import org.junit.jupiter.api.Test;
 
 import java.util.Map;
 
-import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 class FlinkStageCodecsTest {
 
@@ -23,13 +24,22 @@ class FlinkStageCodecsTest {
             this.amount = amount;
         }
 
-        @Override public boolean equals(Object o) {
+        @Override
+        public boolean equals(Object o) {
             if (this == o) return true;
             if (!(o instanceof MyEvent that)) return false;
             return amount == that.amount && java.util.Objects.equals(id, that.id);
         }
-        @Override public int hashCode() { return java.util.Objects.hash(id, amount); }
-        @Override public String toString() { return "MyEvent{id='%s', amount=%d}".formatted(id, amount); }
+
+        @Override
+        public int hashCode() {
+            return java.util.Objects.hash(id, amount);
+        }
+
+        @Override
+        public String toString() {
+            return "MyEvent{id='%s', amount=%d}".formatted(id, amount);
+        }
     }
 
     @Test
@@ -41,13 +51,10 @@ class FlinkStageCodecsTest {
 
         // build envelope
         MyEvent ev = new MyEvent("E-123", 42);
-        ValueEnvelope<MyEvent> ve = new ValueEnvelope<>(ev, "Order", 1693651200123L);
+        ValueEnvelope<MyEvent> ve = new ValueEnvelope<>("Order", "id", ev, 1693651200123L);
 
         // encode -> Map<String,Object>
-        Map<String, Object> encoded = bundle.valueEnvelope().encode(ve);
-        assertEquals("Order", encoded.get("domainType"));
-        assertEquals(1693651200123L, ((Number) encoded.get("eventTimeMillis")).longValue());
-        assertTrue(encoded.containsKey("data"));
+        String encoded = bundle.valueEnvelope().encode(ve);
 
         // decode -> ValueEnvelope<MyEvent>
         ValueEnvelope<MyEvent> decoded = bundle.valueEnvelope().decode(encoded);
@@ -61,13 +68,10 @@ class FlinkStageCodecsTest {
         FlinkStageCodecs<MyEvent> bundle = FlinkStageCodecs.fromPayloadCodec(payload);
 
         MyEvent ev = new MyEvent("E-999", 7);
-        ValueEnvelope<MyEvent> ve = new ValueEnvelope<>(ev, "Payment", 1693651300456L);
-        RetryEnvelope<MyEvent> re = new RetryEnvelope<>(ve, "StageA", 3);
+        ValueEnvelope<MyEvent> ve = new ValueEnvelope<>("Payment", "domId", ev, 1693651300456L);
+        RetryEnvelope<MyEvent> re = new RetryEnvelope<>(ve, "stageName", 3);
 
-        Map<String, Object> encoded = bundle.retryEnvelope().encode(re);
-        assertEquals("StageA", encoded.get("nodeName"));
-        assertEquals(3, ((Number) encoded.get("retryCount")).intValue());
-        assertTrue(encoded.containsKey("envelope"));
+        String encoded = bundle.retryEnvelope().encode(re);
 
         RetryEnvelope<MyEvent> decoded = bundle.retryEnvelope().decode(encoded);
         assertEquals(re, decoded);
@@ -79,8 +83,13 @@ class FlinkStageCodecsTest {
     void fromPayloadCodec_throws_ifPayloadCodecDoesNotExposeObjectMapper() {
         // Minimal fake codec that does NOT implement HasObjectMapper
         Codec<MyEvent, Map<String, Object>> badCodec = new Codec<>() {
-            @Override public Map<String, Object> encode(MyEvent from) { return Map.of("id", from.id, "amount", from.amount); }
-            @Override public MyEvent decode(Map<String, Object> to) {
+            @Override
+            public Map<String, Object> encode(MyEvent from) {
+                return Map.of("id", from.id, "amount", from.amount);
+            }
+
+            @Override
+            public MyEvent decode(Map<String, Object> to) {
                 return new MyEvent((String) to.get("id"), ((Number) to.get("amount")).intValue());
             }
         };
