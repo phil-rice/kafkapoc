@@ -1,70 +1,131 @@
 package com.hcltech.rmg.flinkadapters.transformers;
 
 import com.hcltech.rmg.domainpipeline.TrainingRepository;
-import com.hcltech.rmg.flinkadapters.envelopes.ErrorEnvelope;
-import com.hcltech.rmg.flinkadapters.envelopes.RetryEnvelope;
-import com.hcltech.rmg.flinkadapters.envelopes.ValueEnvelope;
+import com.hcltech.rmg.flinkadapters.envelopes.*;
 import org.apache.flink.api.common.typeinfo.TypeHint;
 import org.apache.flink.api.common.typeinfo.TypeInformation;
-import org.apache.flink.streaming.api.datastream.DataStreamSource;
-import org.apache.flink.streaming.api.datastream.SingleOutputStreamOperator;
 import org.apache.flink.streaming.api.environment.StreamExecutionEnvironment;
-import org.apache.flink.util.CloseableIterator;
+import org.apache.flink.streaming.api.functions.sink.legacy.SinkFunction;
 import org.apache.flink.util.OutputTag;
-import org.junit.jupiter.api.Assertions;
-import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.*;
 
-import java.util.ArrayList;
-import java.util.List;
+import java.util.*;
+import java.util.concurrent.CopyOnWriteArrayList;
 
 class FlinkPipelineLiftTest {
 
-    private final OutputTag<RetryEnvelope<Object>> RETRIES =
+    // Side-output tags
+    private static final OutputTag<RetryEnvelope<Object>> RETRIES =
             new OutputTag<>("retries", TypeInformation.of(new TypeHint<RetryEnvelope<Object>>() {
             })) {
             };
-    private final OutputTag<ErrorEnvelope<Object>> ERRORS =
+    private static final OutputTag<ErrorEnvelope<Object>> ERRORS =
             new OutputTag<>("errors", TypeInformation.of(new TypeHint<ErrorEnvelope<Object>>() {
             })) {
             };
 
-    @Test
-    void happyPath_trainingRepository() throws Exception {
-        // 1) Local env
-        StreamExecutionEnvironment env = StreamExecutionEnvironment.getExecutionEnvironment();
-        env.setParallelism(1);
+    // DTO we store from each lane
+    record TestOut(String id, String channel, String value) {
+    }
 
-        // 2) Input envelope
-        // TrainingRepository.valueTC() maps domainId(value) = value, so payload "foo" => key "foo".
-        // Adjust ctor to your real API if different.
-        ValueEnvelope<String> in = new ValueEnvelope<>("domainType", "domainId", "foo", 1000); // data, domainId, stageName?
-        DataStreamSource<ValueEnvelope<String>> source = env.fromElements(in);
+    // In-memory sinks
+    static final class MainSink implements SinkFunction<ValueEnvelope<Object>> {
+        static final List<TestOut> OUT = new CopyOnWriteArrayList<>();
 
-        // 3) Side-output tags with explicit type info
-
-        // 4) Lift using repository class name (no key selector needed anymore)
-        String repoClass = TrainingRepository.class.getName();
-        SingleOutputStreamOperator<ValueEnvelope<Object>> main =
-                FlinkPipelineLift.lift(source, repoClass, RETRIES, ERRORS);
-
-        // 5) Execute and collect main results
-        List<String> got = new ArrayList<>();
-        try (CloseableIterator<ValueEnvelope<Object>> it = main.executeAndCollect()) {
-            while (it.hasNext()) got.add((String) it.next().data());
+        @Override
+        public void invoke(ValueEnvelope<Object> ve, Context ctx) {
+            OUT.add(new TestOut(ve.domainId(), "main", String.valueOf(ve.data())));
         }
+    }
 
-        // 6) Assert (adjust expected if your stage ids/names differ)
-        Assertions.assertEquals(
-                List.of("bizlogic-enrichment-cep enrichment-validate-foo"),
-                got
+    static final class ErrorSink implements SinkFunction<ErrorEnvelope<Object>> {
+        static final List<TestOut> OUT = new CopyOnWriteArrayList<>();
+
+        @Override
+        public void invoke(ErrorEnvelope<Object> er, Context ctx) {
+            String msg = er.errorMessages().isEmpty() ? "" : er.errorMessages().get(0);
+            OUT.add(new TestOut(er.envelope().domainId(), "error", msg));
+        }
+    }
+
+    static final class RetrySink implements SinkFunction<RetryEnvelope<Object>> {
+        static final List<TestOut> OUT = new CopyOnWriteArrayList<>();
+
+        @Override
+        public void invoke(RetryEnvelope<Object> re, Context ctx) {
+            OUT.add(new TestOut(re.envelope().domainId(), "retry", re.stageName()));
+        }
+    }
+
+    @BeforeAll
+    static void warmRepo() {
+        String repoClass = TrainingRepository.class.getName();
+        com.hcltech.rmg.interfaces.repository.IPipelineRepository.load(repoClass).pipelineDetails();
+    }
+
+    @BeforeEach
+    void clearSinks() {
+        MainSink.OUT.clear();
+        ErrorSink.OUT.clear();
+        RetrySink.OUT.clear();
+    }
+
+    @Test
+    void e2e_multiScenario_collect_each_lane_assert_collections() throws Exception {
+        String repoClass = TrainingRepository.class.getName();
+
+        // Local bounded job
+        var env = StreamExecutionEnvironment.getExecutionEnvironment();
+        env.setParallelism(1);
+        env.getConfig().setAutoWatermarkInterval(0);
+
+        // IDs
+        String okId = "ok-foo";
+        String errId = "err-enrichment";
+        String retryId = "rt-cepEnrichment";
+
+        // Put control tokens in the PAYLOAD (StageFns.stage inspects payload), keep ids distinct
+        ValueEnvelope<String> in1 = new ValueEnvelope<>("domainType1", okId, "foo", 100);
+        ValueEnvelope<String> in2 = new ValueEnvelope<>("domainType2", errId, "Error:enrichment-data2", 200);
+        ValueEnvelope<String> in3 = new ValueEnvelope<>("domainType3", retryId, "Retry:cepEnrichment-data3", 300);
+
+        var src = env.fromElements(in1, in2, in3);
+
+        // Lift
+        var main = FlinkPipelineLift.lift(src, repoClass, RETRIES, ERRORS);
+
+        // Sinks per lane
+        main.addSink(new MainSink()).name("collect-main");
+        main.getSideOutput(ERRORS).addSink(new ErrorSink()).name("collect-errors");
+        main.getSideOutput(RETRIES).addSink(new RetrySink()).name("collect-retries");
+
+        // Run once
+        env.execute("e2e-multi");
+
+        // Expected collections (sorted for deterministic assert)
+        Comparator<TestOut> cmp = Comparator
+                .comparing(TestOut::id)
+                .thenComparing(TestOut::channel)
+                .thenComparing(TestOut::value);
+
+        List<TestOut> expectedMain = List.of(
+                new TestOut(okId, "main", "bizlogic-enrichment-cep enrichment-validate-foo")
+        );
+        List<TestOut> expectedErrors = List.of(
+                new TestOut(errId, "error", "enrichment: forced error")
+        );
+        List<TestOut> expectedRetries = List.of(
+                new TestOut(retryId, "retry", "cepEnrichment")
         );
 
-        // (Optional) Side outputs should be empty on happy path
-        try (CloseableIterator<ErrorEnvelope<Object>> errIt = main.getSideOutput(ERRORS).executeAndCollect()) {
-            Assertions.assertFalse(errIt.hasNext());
-        }
-        try (CloseableIterator<RetryEnvelope<Object>> rtIt = main.getSideOutput(RETRIES).executeAndCollect()) {
-            Assertions.assertFalse(rtIt.hasNext());
-        }
+        // Actual (sorted)
+        List<TestOut> gotMain = MainSink.OUT.stream().sorted(cmp).toList();
+        List<TestOut> gotErrors = ErrorSink.OUT.stream().sorted(cmp).toList();
+        List<TestOut> gotRetries = RetrySink.OUT.stream().sorted(cmp).toList();
+
+        // Assert whole collections
+        Assertions.assertEquals(expectedMain, gotMain, "main lane mismatch");
+        Assertions.assertEquals(expectedErrors, gotErrors, "errors lane mismatch");
+        Assertions.assertEquals(expectedRetries, gotRetries, "retries lane mismatch");
     }
 }

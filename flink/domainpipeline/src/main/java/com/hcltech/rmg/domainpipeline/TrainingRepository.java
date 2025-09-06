@@ -1,6 +1,8 @@
 package com.hcltech.rmg.domainpipeline;
 
 import com.hcltech.rmg.interfaces.outcome.Outcome;
+import com.hcltech.rmg.interfaces.outcome.RetrySpec;
+import com.hcltech.rmg.interfaces.pipeline.IOneToOnePipeline;
 import com.hcltech.rmg.interfaces.pipeline.ValueTC;
 import com.hcltech.rmg.interfaces.repository.IPipelineRepository;
 import com.hcltech.rmg.interfaces.repository.PipelineBuilder;
@@ -9,6 +11,8 @@ import com.hcltech.rmg.interfaces.retry.RetryPolicyConfig;
 
 import java.time.Duration;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.CompletionStage;
+import java.util.function.Function;
 
 /**
  * Flink frankly sucks when it comes to dependency injection. This is because the job manager has to serialise the tasks
@@ -21,7 +25,7 @@ import java.util.concurrent.CompletableFuture;
  * This is a training / test repository. It allows us to develop and test against a sample.
  */
 public class TrainingRepository implements IPipelineRepository<String, String> {
-   public  static TrainingRepository instance = new TrainingRepository();
+    public static TrainingRepository instance = new TrainingRepository();
 
     public static ValueTC<String> stringValueTC = new ValueTC<String>() {
         @Override
@@ -34,17 +38,46 @@ public class TrainingRepository implements IPipelineRepository<String, String> {
             return value; // In this trivial example, the value itself is the message ID
         }
     };
+
+    /**
+     * If the payload contains "Error:<stageName>" -> Errors
+     * If it contains "Retry:<stageName>" -> Retry
+     * Otherwise -> Value with prefix prepended.
+     */
+    public static  IOneToOnePipeline<String,String> stage(
+            String stageName, String prefix) {
+
+        final String errToken = "Error:" + stageName;
+        final String retryToken = "Retry:" + stageName;
+
+        return in -> {
+            if (in.contains(errToken)) {
+                return CompletableFuture.completedFuture(
+                        Outcome.error(stageName + ": forced error"));
+                // or: Outcome.errors(List.of(...)) if that's your API
+            }
+            if (in.contains(retryToken)) {
+                return CompletableFuture.completedFuture(
+                        Outcome.retry(new RetrySpec("forced retry at " + stageName)));
+            }
+            return CompletableFuture.completedFuture(
+                    Outcome.value(prefix + in));
+        };
+    }
+
     public static PipelineDetails<String, String> details;
 
     static {
         RetryPolicyConfig retryPolicyConfig = new RetryPolicyConfig(Duration.ofSeconds(1), 2.0, Duration.ofSeconds(10), 5, .5);
-        details = PipelineBuilder.builder(stringValueTC,
-                        (stage,e) -> stage + " " + e.getClass().getSimpleName() + "-" + e.getLocalizedMessage(),
-                        retryPolicyConfig, 500)
-                .oneToOne("validate", String.class, e -> CompletableFuture.completedFuture(Outcome.value("validate-" + e)))
-                .oneToOne("cepEnrichment", String.class, e -> CompletableFuture.completedFuture(Outcome.value("cep enrichment-" + e)))
-                .oneToOne("enrichment", String.class, e -> CompletableFuture.completedFuture(Outcome.value("enrichment-" + e)))
-                .oneToOne("bizLogic", String.class, e -> CompletableFuture.completedFuture(Outcome.value("bizlogic-" + e)))
+        details = PipelineBuilder.builder(
+                        stringValueTC,
+                        (stage, e) -> stage + " " + e.getClass().getSimpleName() + "-" + e.getLocalizedMessage(),
+                        retryPolicyConfig,
+                        500)
+                .oneToOne("validate",      String.class, stage("validate",      "validate-"))
+                .oneToOne("cepEnrichment", String.class, stage("cepEnrichment", "cep enrichment-"))
+                .oneToOne("enrichment",    String.class, stage("enrichment",    "enrichment-"))
+                .oneToOne("bizLogic",      String.class, stage("bizLogic",      "bizlogic-"))
                 .build();
     }
 
