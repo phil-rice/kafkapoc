@@ -1,18 +1,13 @@
 package com.hcltech.rmg.domainpipeline;
 
 import com.hcltech.rmg.interfaces.builder.PipelineBuilder;
-import com.hcltech.rmg.interfaces.outcome.Outcome;
-import com.hcltech.rmg.interfaces.outcome.RetrySpec;
-import com.hcltech.rmg.interfaces.pipeline.IOneToOnePipeline;
-import com.hcltech.rmg.interfaces.pipeline.IOneToOneSyncPipeline;
 import com.hcltech.rmg.interfaces.repository.IPipelineRepository;
 import com.hcltech.rmg.interfaces.repository.PipelineDetails;
 import com.hcltech.rmg.interfaces.retry.RetryPolicyConfig;
 
 import java.time.Duration;
-import java.util.concurrent.CompletableFuture;
 
-import static com.hcltech.rmg.domainpipeline.PipelineTestStages.async;
+import static com.hcltech.rmg.domainpipeline.PipelineTestStages.delay;
 import static com.hcltech.rmg.domainpipeline.PipelineTestStages.sync;
 
 /**
@@ -25,8 +20,8 @@ import static com.hcltech.rmg.domainpipeline.PipelineTestStages.sync;
  * <p>
  * This is a training / test repository. It allows us to develop and test against a sample.
  */
-public class TrainingRepository implements IPipelineRepository<String, String> {
-    public static TrainingRepository instance = new TrainingRepository();
+public class DomainRepository implements IPipelineRepository<String, String> {
+    public static DomainRepository instance = new DomainRepository();
 
 
     public static PipelineDetails<String, String> details;
@@ -36,11 +31,11 @@ public class TrainingRepository implements IPipelineRepository<String, String> {
         details = PipelineBuilder.<String>builder(
                         (stage, e) -> stage + " " + e.getClass().getSimpleName() + "-" + e.getLocalizedMessage(),
                         retryPolicyConfig,
-                        500)
+                        2000)
                 .stage("validate", String.class, sync("validate", "validate-"))
                 .stage("cepEnrichment", String.class, sync("cepEnrichment", "cep enrichment-"))
-                .stage("enrichment", String.class, async("enrichment", "enrichment-"))
-                .stage("bizLogic", String.class, async("bizLogic", "bizlogic-"))
+                .stage("enrichment", String.class, delay("enrichment", 500))
+                .stage("bizLogic", String.class, delay("bizLogic", 500))
                 .build();
     }
 

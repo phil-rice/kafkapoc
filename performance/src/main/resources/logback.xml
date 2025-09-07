@@ -1,0 +1,23 @@
+<configuration>
+    <!-- Console appender -->
+    <appender name="CONSOLE" class="ch.qos.logback.core.ConsoleAppender">
+        <encoder>
+            <pattern>%d{HH:mm:ss.SSS} [%thread] %-5level %logger{36} - %msg%n</pattern>
+        </encoder>
+    </appender>
+
+    <!-- Turn down the noise -->
+    <logger name="org.apache.flink" level="INFO"/>
+    <logger name="org.apache.flink.connector" level="WARN"/>
+    <logger name="org.apache.flink.connector.base.source.reader.fetcher.SplitFetcher" level="WARN"/>
+    <logger name="org.apache.kafka" level="WARN"/>
+    <logger name="org.rocksdb" level="WARN"/>
+
+    <!-- keep your app logs readable -->
+    <logger name="com.hcltech.rmg" level="INFO"/>
+
+    <!-- default -->
+    <root level="INFO">
+        <appender-ref ref="CONSOLE"/>
+    </root>
+</configuration>
