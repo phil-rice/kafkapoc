@@ -1,19 +1,14 @@
 package com.hcltech.rmg.domainpipeline;
 
 import com.hcltech.rmg.interfaces.builder.PipelineBuilder;
-import com.hcltech.rmg.interfaces.outcome.Outcome;
-import com.hcltech.rmg.interfaces.outcome.RetrySpec;
-import com.hcltech.rmg.interfaces.pipeline.IOneToOnePipeline;
-import com.hcltech.rmg.interfaces.pipeline.IOneToOneSyncPipeline;
 import com.hcltech.rmg.interfaces.repository.IPipelineRepository;
 import com.hcltech.rmg.interfaces.repository.PipelineDetails;
 import com.hcltech.rmg.interfaces.retry.RetryPolicyConfig;
 
 import java.time.Duration;
-import java.util.concurrent.CompletableFuture;
 
-import static com.hcltech.rmg.domainpipeline.PipelineTestStages.async;
-import static com.hcltech.rmg.domainpipeline.PipelineTestStages.sync;
+import static com.hcltech.rmg.domainpipeline.PipelineStringTestStages.async;
+import static com.hcltech.rmg.domainpipeline.PipelineStringTestStages.sync;
 
 /**
  * Flink frankly sucks when it comes to dependency injection. This is because the job manager has to serialise the tasks

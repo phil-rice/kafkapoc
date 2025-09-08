@@ -1,4 +1,4 @@
-package com.hcltech.rmg.tools;
+package com.hcltech.rmg.common;
 
 public record TestDomainMessage(String domainId, long count) {
 }

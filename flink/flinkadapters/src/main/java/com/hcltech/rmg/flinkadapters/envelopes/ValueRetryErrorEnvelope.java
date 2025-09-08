@@ -4,4 +4,5 @@ import java.io.Serializable;
 
 public interface ValueRetryErrorEnvelope extends Serializable {
     String domainId();
+    PartLane partitionLane();
 }

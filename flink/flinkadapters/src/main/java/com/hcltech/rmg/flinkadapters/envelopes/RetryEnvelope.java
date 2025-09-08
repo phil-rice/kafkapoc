@@ -9,6 +9,12 @@ public record RetryEnvelope<T>(ValueEnvelope<T> envelope,
         return envelope.domainId();
     }
 
+    @Override
+    public PartLane partitionLane() {
+        return envelope.partitionLane();
+    }
+
+
     public <T1> RetryEnvelope<T1> mapData(java.util.function.Function<T, T1> mapper) {
         return new RetryEnvelope<>(envelope.mapData(mapper), stageName, retryCount);
     }

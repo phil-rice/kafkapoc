@@ -1,14 +1,17 @@
 package com.hcltech.rmg.domainpipeline;
 
+import com.hcltech.rmg.common.TestDomainMessage;
+import com.hcltech.rmg.common.TestDomainTracker;
 import com.hcltech.rmg.interfaces.builder.PipelineBuilder;
 import com.hcltech.rmg.interfaces.repository.IPipelineRepository;
 import com.hcltech.rmg.interfaces.repository.PipelineDetails;
 import com.hcltech.rmg.interfaces.retry.RetryPolicyConfig;
 
 import java.time.Duration;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
 
-import static com.hcltech.rmg.domainpipeline.PipelineTestStages.delay;
-import static com.hcltech.rmg.domainpipeline.PipelineTestStages.sync;
+import static com.hcltech.rmg.domainpipeline.PipelineTestDomainTestStages.*;
 
 /**
  * Flink frankly sucks when it comes to dependency injection. This is because the job manager has to serialise the tasks
@@ -20,27 +23,28 @@ import static com.hcltech.rmg.domainpipeline.PipelineTestStages.sync;
  * <p>
  * This is a training / test repository. It allows us to develop and test against a sample.
  */
-public class DomainRepository implements IPipelineRepository<String, String> {
-    public static DomainRepository instance = new DomainRepository();
+public class TestDomainRepository implements IPipelineRepository<TestDomainTracker, TestDomainTracker> {
+    public static TestDomainRepository instance = new TestDomainRepository();
 
 
-    public static PipelineDetails<String, String> details;
+    public static PipelineDetails<TestDomainTracker, TestDomainTracker> details;
 
     static {
+        ScheduledExecutorService ses = Executors.newScheduledThreadPool(100);
         RetryPolicyConfig retryPolicyConfig = new RetryPolicyConfig(Duration.ofSeconds(1), 2.0, Duration.ofSeconds(10), 5, .5);
-        details = PipelineBuilder.<String>builder(
+        details = PipelineBuilder.<TestDomainTracker>builder(
                         (stage, e) -> stage + " " + e.getClass().getSimpleName() + "-" + e.getLocalizedMessage(),
                         retryPolicyConfig,
                         2000)
-                .stage("validate", String.class, sync("validate", "validate-"))
-                .stage("cepEnrichment", String.class, sync("cepEnrichment", "cep enrichment-"))
-                .stage("enrichment", String.class, delay("enrichment", 500))
-                .stage("bizLogic", String.class, delay("bizLogic", 500))
+                .stage("validate", TestDomainTracker.class, sync("validate"))
+                .stage("cepEnrichment", TestDomainTracker.class, sync("cepEnrichment"))
+                .stage("enrichment", TestDomainTracker.class, delayAsync("enrichment", 500,ses))
+                .stage("bizLogic", TestDomainTracker.class, delayAsync("bizLogic", 500,ses))
                 .build();
     }
 
     @Override
-    public PipelineDetails<String, String> pipelineDetails() {
+    public PipelineDetails<TestDomainTracker, TestDomainTracker> pipelineDetails() {
         return details;
     }
 }

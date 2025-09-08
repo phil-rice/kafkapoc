@@ -1,5 +1,7 @@
 package com.hcltech.rmg.tools;
 
+import com.hcltech.rmg.common.TestDomainMessage;
+
 import java.util.List;
 import java.util.SplittableRandom;
 import java.util.concurrent.atomic.AtomicLong;

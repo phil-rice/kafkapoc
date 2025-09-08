@@ -1,4 +1,4 @@
-package com.hcltech.rmg.flinkadapters.context;
+package com.hcltech.rmg.flinkadapters.codec;
 
 import com.hcltech.rmg.common.codec.Codec;
 import com.hcltech.rmg.flinkadapters.envelopes.Envelopes;

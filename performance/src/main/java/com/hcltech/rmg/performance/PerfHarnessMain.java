@@ -1,15 +1,23 @@
 package com.hcltech.rmg.performance;
 
-import com.hcltech.rmg.domainpipeline.DomainRepository;
+import com.hcltech.rmg.common.TestDomainMessage;
+import com.hcltech.rmg.common.TestDomainTracker;
+import com.hcltech.rmg.common.codec.Codec;
+import com.hcltech.rmg.domainpipeline.TestDomainRepository;
 import com.hcltech.rmg.flinkadapters.envelopes.ErrorEnvelope;
 import com.hcltech.rmg.flinkadapters.envelopes.RetryEnvelope;
-import com.hcltech.rmg.flinkadapters.envelopes.ValueEnvelope;
+import com.hcltech.rmg.flinkadapters.kafka.RawKafkaData;
+import com.hcltech.rmg.flinkadapters.kafka.RawKafkaDataDeserializer;
+import com.hcltech.rmg.flinkadapters.kafka.ToEnvelopeMapForTestDomainTracker;
 import com.hcltech.rmg.flinkadapters.transformers.FlinkPipelineLift;
 import org.apache.flink.api.common.TaskInfo;
 import org.apache.flink.api.common.eventtime.WatermarkStrategy;
 import org.apache.flink.api.common.functions.OpenContext;
 import org.apache.flink.api.common.typeinfo.TypeHint;
 import org.apache.flink.api.common.typeinfo.TypeInformation;
+import org.apache.flink.configuration.Configuration;
+import org.apache.flink.configuration.MemorySize;
+import org.apache.flink.configuration.TaskManagerOptions;
 import org.apache.flink.connector.kafka.source.KafkaSource;
 import org.apache.flink.connector.kafka.source.enumerator.initializer.OffsetsInitializer;
 import org.apache.flink.streaming.api.datastream.DataStreamSource;
@@ -17,18 +25,36 @@ import org.apache.flink.streaming.api.environment.StreamExecutionEnvironment;
 import org.apache.flink.streaming.api.functions.sink.legacy.RichSinkFunction;
 import org.apache.flink.util.OutputTag;
 
+import java.util.concurrent.atomic.AtomicLong;
+import java.util.function.Function;
+
 public final class PerfHarnessMain {
 
     public static void main(String[] args) throws Exception {
+        final String repoClass = TestDomainRepository.class.getName();
+
         // ---- config via -D or defaults ----
         final String bootstrap = System.getProperty("kafka.bootstrap", "localhost:9092");
         final String topic = "test-topic";
         final String groupId = "test-perf-" + System.currentTimeMillis();
-        final String repoClass = DomainRepository.class.getName();
         final int partitions = Integer.getInteger("kafka.partitions", 12); // pass if you want 1:1 mapping
+        final int lanes = 1; //per partition
 
+//        Configuration cfg = new Configuration();
+//
+//// Local-mode knobs that actually apply:
+//        cfg.setString("taskmanager.memory.task.heap.size", "2g");
+//        cfg.setString("taskmanager.memory.task.off-heap.size", "256mb");
+//        cfg.setString("taskmanager.memory.managed.size", "512mb");
+//        cfg.setString("taskmanager.memory.network.min", "512mb");
+//        cfg.setString("taskmanager.memory.network.max", "512mb");
+//        cfg.setString("taskmanager.network.memory.buffers-per-channel", "1");
+//        cfg.setString("taskmanager.network.memory.floating-buffers-per-gate", "4");
+//        cfg.setString("taskmanager.numberOfTaskSlots", "4");
 
-        // ---- flink env ----
+//        StreamExecutionEnvironment env =
+//                StreamExecutionEnvironment.createLocalEnvironmentWithWebUI(cfg);
+//
         StreamExecutionEnvironment env = StreamExecutionEnvironment.getExecutionEnvironment();
         env.setParallelism(partitions > 0 ? partitions : env.getParallelism());
         env.getConfig().setAutoWatermarkInterval(0);
@@ -41,25 +67,25 @@ public final class PerfHarnessMain {
         com.hcltech.rmg.interfaces.repository.IPipelineRepository.load(repoClass).pipelineDetails();
 
         // ---- kafka source (value-only strings) ----
-        KafkaSource<String> source = KafkaSource.<String>builder()
+        KafkaSource<RawKafkaData> source = KafkaSource.<RawKafkaData>builder()
                 .setBootstrapServers(bootstrap)
                 .setTopics(topic)
                 .setGroupId(groupId)
+                .setDeserializer(new RawKafkaDataDeserializer())
                 .setStartingOffsets(OffsetsInitializer.earliest())
-                .setValueOnlyDeserializer(new org.apache.flink.api.common.serialization.SimpleStringSchema())
+//                .setValueOnlyDeserializer(new org.apache.flink.api.common.serialization.SimpleStringSchema())
                 // partition discovery optional (for growing topics):
                 .setProperty("partition.discovery.interval.ms", "60000")
                 .build();
 
-        DataStreamSource<String> raw = env.fromSource(source, WatermarkStrategy.noWatermarks(), "kafka-" + topic);
+        DataStreamSource<RawKafkaData> raw = env.fromSource(source, WatermarkStrategy.noWatermarks(), "kafka-" + topic);
 
-        if (partitions > 0) raw.setParallelism(partitions); // ~1 subtask per partition
+        if (partitions > 0)
+            raw.setParallelism(partitions);
 
         // ---- decode -> ValueEnvelope<String>  (domainId == payload here; adapt if different) ----
         var envelopes = raw
-                .map(v -> new ValueEnvelope<String>("load", /*domainId*/ v, /*data*/ v, System.currentTimeMillis()))
-                .returns(TypeInformation.of(new TypeHint<ValueEnvelope<String>>() {
-                }))
+                .map(new ToEnvelopeMapForTestDomainTracker("domainType", TestDomainTracker.class.getName(), lanes))
                 .name("to-envelope");
 
         // ---- side-output tags (errors/retries) ----
@@ -77,10 +103,11 @@ public final class PerfHarnessMain {
         //  - Kafka preserves per-partition order
         //  - We keep one subtask per partition (no keyBy shuffle)
         //  - We’ll use orderedWait inside the lift for async stages (per-subtask order)
-        var main = FlinkPipelineLift.lift(envelopes, repoClass, RETRIES, ERRORS);
+        int timeOutBufferMs = 2000;
+        var main = FlinkPipelineLift.lift(envelopes, repoClass, RETRIES, ERRORS, lanes, false, timeOutBufferMs);
 
         // ---- progress sinks (prints every N items per lane) ----
-        main.addSink(new Every<>("main", 5)).name("main-counter");
+        main.addSink(new Every<>("main", 1000)).name("main-counter");
         main.getSideOutput(ERRORS).addSink(new Every<>("error", 50)).name("error-counter");
         main.getSideOutput(RETRIES).addSink(new Every<>("retry", 100)).name("retry-counter");
 
@@ -95,18 +122,15 @@ public final class PerfHarnessMain {
     static final class Every<T> extends RichSinkFunction<T> implements java.io.Serializable {
         private final String lane;
         private final long every;
-        private transient long c;
+        private final static AtomicLong c = new AtomicLong(0);
         private transient TaskInfo taskInfo;
-        private  long start;
-        private  long initialStart;
-        private  long lastCount;
+        private static long start = System.currentTimeMillis();
+        private static final long initialStart = start;
+        private static long lastCount = 0;
 
         Every(String lane, long every) {
             this.lane = lane;
             this.every = every;
-            this.start = System.currentTimeMillis();
-            this.initialStart = start;
-            this.lastCount = 0;
         }
 
         @Override
@@ -117,13 +141,12 @@ public final class PerfHarnessMain {
 
         @Override
         public void invoke(T value, Context context) {
-            c++;
-            if (c % every == 0) {
+            if (c.incrementAndGet() % every == 0) {
                 var now = System.currentTimeMillis();
                 var duration = now - start;
-                var localPerS = (c - lastCount) * 1000f / duration;
-                var fullPerS = c * 1000f / (now - initialStart);
-                lastCount = c;
+                var localPerS = (c.get() - lastCount) * 1000f / duration;
+                var fullPerS = c.get() * 1000f / (now - initialStart);
+                lastCount = c.get();
                 start = now;
                 System.out.println("[" + lane + "] processed=" + c +
                         " perSec=" + localPerS + "/" + fullPerS +

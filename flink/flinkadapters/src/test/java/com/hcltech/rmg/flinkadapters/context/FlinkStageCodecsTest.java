@@ -3,6 +3,7 @@ package com.hcltech.rmg.flinkadapters.context;
 
 import com.hcltech.rmg.common.codec.Codec;
 import com.hcltech.rmg.common.codec.JacksonTreeCodec;
+import com.hcltech.rmg.flinkadapters.codec.FlinkStageCodecs;
 import com.hcltech.rmg.flinkadapters.envelopes.RetryEnvelope;
 import com.hcltech.rmg.flinkadapters.envelopes.ValueEnvelope;
 import org.junit.jupiter.api.Test;

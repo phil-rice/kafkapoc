@@ -7,7 +7,7 @@ import com.hcltech.rmg.interfaces.pipeline.IOneToOneSyncPipeline;
 
 import java.util.concurrent.CompletableFuture;
 
-public interface PipelineTestStages {
+public interface PipelineStringTestStages {
 
 
     public static IOneToOnePipeline<String, String> delay(String stageName, long ms) {

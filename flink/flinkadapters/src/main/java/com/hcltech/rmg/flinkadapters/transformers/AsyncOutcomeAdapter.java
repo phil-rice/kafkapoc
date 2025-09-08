@@ -3,6 +3,8 @@ package com.hcltech.rmg.flinkadapters.transformers;
 import com.hcltech.rmg.flinkadapters.envelopes.RetryEnvelope;
 import com.hcltech.rmg.flinkadapters.envelopes.ValueEnvelope;
 import com.hcltech.rmg.flinkadapters.envelopes.ValueRetryErrorEnvelope;
+import com.hcltech.rmg.interfaces.outcome.Outcome;
+import com.hcltech.rmg.interfaces.outcome.RetrySpec;
 import com.hcltech.rmg.interfaces.pipeline.IOneToManyPipeline;
 import com.hcltech.rmg.interfaces.pipeline.IOneToOnePipeline;
 import com.hcltech.rmg.interfaces.repository.IPipelineRepository;
@@ -13,6 +15,8 @@ import org.apache.flink.streaming.api.functions.async.RichAsyncFunction;
 
 import java.util.List;
 import java.util.Objects;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 public final class AsyncOutcomeAdapter<From, To> extends RichAsyncFunction<ValueRetryErrorEnvelope, ValueRetryErrorEnvelope> {
 
@@ -20,6 +24,7 @@ public final class AsyncOutcomeAdapter<From, To> extends RichAsyncFunction<Value
     private final String repositoryName;
     private transient PipelineStageDetails<From, To> pipelineStageDetails;
     private transient IOneToManyPipeline<From, To> pipeline;
+    private transient PipelineStageDetails<From, To> details;
 
     public AsyncOutcomeAdapter(String stageName, String repositoryName) {
         this.stageName = stageName;
@@ -30,8 +35,7 @@ public final class AsyncOutcomeAdapter<From, To> extends RichAsyncFunction<Value
     @Override
     public void open(OpenContext context) {
         var stages = IPipelineRepository.load(repositoryName).pipelineDetails().stages();
-        @SuppressWarnings("unchecked")
-        PipelineStageDetails<From, To> details = (PipelineStageDetails<From, To>) stages.get(stageName);
+        details = (PipelineStageDetails<From, To>) stages.get(stageName);
         if (details == null) {
             throw new IllegalArgumentException("Cannot find details for " + stageName +
                     " in repository " + repositoryName + " legal names are " + stages.keySet());
@@ -69,7 +73,9 @@ public final class AsyncOutcomeAdapter<From, To> extends RichAsyncFunction<Value
     private void processValueEnvelope(ValueEnvelope<From> in,
                                       ResultFuture<ValueRetryErrorEnvelope> rf,
                                       int retryCountOnFail) {
-        pipeline.process(in.data()).whenComplete((outcome, err) -> {
+        pipeline.process(in.data())
+                .completeOnTimeout(Outcome.retry(new RetrySpec("timeout")),details.timeOutMs(), TimeUnit.MILLISECONDS )
+                .whenComplete((outcome, err) -> {
             if (outcome.isValue()) {
                 rf.complete(com.hcltech.rmg.common.ListComprehensions.map(
                         outcome.valueOrThrow(), in::withData));

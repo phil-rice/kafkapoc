@@ -5,6 +5,7 @@ import com.hcltech.rmg.flinkadapters.envelopes.RetryEnvelope;
 import com.hcltech.rmg.flinkadapters.envelopes.ValueEnvelope;
 import com.hcltech.rmg.flinkadapters.envelopes.ValueRetryErrorEnvelope;
 import com.hcltech.rmg.interfaces.pipeline.IAsyncPipeline;
+import com.hcltech.rmg.interfaces.pipeline.IPipeline;
 import com.hcltech.rmg.interfaces.pipeline.ISyncPipeline;
 import com.hcltech.rmg.interfaces.repository.IPipelineRepository;
 import com.hcltech.rmg.interfaces.repository.PipelineDetails;
@@ -20,59 +21,84 @@ import java.util.Map;
 import java.util.concurrent.TimeUnit;
 
 public final class FlinkPipelineLift {
+
+    /**
+     * Partition-local pipeline with async "lanes" (no keyBy, no shuffle).
+     *
+     * @param input           stream of ValueEnvelope&lt;From&gt; (parallelism inherited from source, e.g., partitions)
+     * @param repository      fully-qualified class name for the IPipelineRepository implementation
+     * @param retriesTag      side-output tag for retries
+     * @param errorsTag       side-output tag for errors
+     * @param lanes           async capacity per subtask (your “lanes per partition”)
+     * @param orderedAsync    true = orderedWait (may HOL-block), false = unorderedWait (preferred)
+     * @param timeoutBufferMs extra slack added to operator timeout (backstop > internal CF timeout)
+     */
     public static <From, To> SingleOutputStreamOperator<ValueEnvelope<To>> lift(
             DataStream<ValueEnvelope<From>> input,
             String repository,
             OutputTag<RetryEnvelope<Object>> retriesTag,
-            OutputTag<ErrorEnvelope<Object>> errorsTag
+            OutputTag<ErrorEnvelope<Object>> errorsTag,
+            int lanes,
+            boolean orderedAsync,
+            int timeoutBufferMs
     ) {
+        // 0) Load pipeline definition once on JM
         PipelineDetails<Object, Object> details = IPipelineRepository.load(repository).pipelineDetails();
 
-        // 1) Widen the stream to the common supertype the async fn expects
-        TypeInformation<ValueRetryErrorEnvelope> vreType =
+        // 1) Widen to common super type used by adapters; keep inherited parallelism (no rescale)
+        final TypeInformation<ValueRetryErrorEnvelope> vreType =
                 TypeExtractor.getForClass(ValueRetryErrorEnvelope.class);
 
-        DataStream<ValueRetryErrorEnvelope> current =
-                input
-                        .map(v -> (ValueRetryErrorEnvelope) v)
-                        .returns(vreType)
-                        .keyBy(ValueRetryErrorEnvelope::domainId); // assuming all envelopes expose domainId()
+        SingleOutputStreamOperator<ValueRetryErrorEnvelope> current = input
+                .map(v -> (ValueRetryErrorEnvelope) v)
+                .returns(vreType)
+                .name("partition-start");
 
-        // 2) Run each async stage; hint the OUT type after orderedWait
+        // 2) Run each stage; keep inherited parallelism; add capacity on async
         for (Map.Entry<String, PipelineStageDetails<?, ?>> e : details.stages().entrySet()) {
             final String stageName = e.getKey();
-            final long stageTimeOutMs = e.getValue().timeOutMs();
+            final long stageTimeoutMs = e.getValue().timeOutMs();
+            final long operatorTimeoutMs = stageTimeoutMs + Math.max(timeoutBufferMs, 0);
 
-            if (e.getValue().pipeline() instanceof ISyncPipeline<?, ?>)
+            IPipeline<?, ?> pipeline = e.getValue().pipeline();
+            if (pipeline instanceof ISyncPipeline<?, ?>) {
                 current = current
                         .flatMap(new SyncOutcomeAdapter<>(stageName, repository))
                         .name(stageName).uid(stageName)
                         .returns(vreType);
-            else if (e.getValue().pipeline() instanceof IAsyncPipeline<?, ?>)
-                current = AsyncDataStream
-                        .orderedWait(
+            } else if (pipeline instanceof IAsyncPipeline<?, ?> && orderedAsync) {
+                current = AsyncDataStream.orderedWait(
                                 current,
                                 new AsyncOutcomeAdapter<>(stageName, repository),
-                                stageTimeOutMs,
-                                TimeUnit.MILLISECONDS
-                        )
-                        .name(stageName)
-                        .uid(stageName)
-                        .returns(vreType); // <— important: OUT is also ValueRetryErrorEnvelope
-            else
-                throw new IllegalArgumentException("Pipeline for stage " + stageName + " should be a ISyncPipeline or IAsyncPipeline, was " +
-                        e.getValue().pipeline().getClass().getName());
+                                operatorTimeoutMs, TimeUnit.MILLISECONDS,
+                                lanes)
+                        .name(stageName).uid(stageName)
+                        .returns(vreType);
+            } else if (pipeline instanceof IAsyncPipeline<?, ?> && !orderedAsync) {
+
+                current = AsyncDataStream.unorderedWait(
+                                current,
+                                new AsyncOutcomeAdapter<>(stageName, repository),
+                                operatorTimeoutMs, TimeUnit.MILLISECONDS,
+                                lanes) // capacity
+                        .name(stageName).uid(stageName)
+                        .returns(vreType);
+            } else {
+                throw new IllegalArgumentException(
+                        "Pipeline stage '" + stageName + "' must be ISyncPipeline or IAsyncPipeline, but was "
+                                + pipeline.getClass().getName());
+            }
         }
 
-        // 3) Final split
+        // 3) Final split; still inherit parallelism (no .setParallelism)
         SingleOutputStreamOperator<ValueEnvelope<Object>> result = current
                 .process(new SplitToEnvelopes<Object>(retriesTag, errorsTag))
-                .name("split-final")
-                .uid("split-final");
+                .name("split-final").uid("split-final");
 
         @SuppressWarnings("unchecked")
-        var typedResult = (SingleOutputStreamOperator<ValueEnvelope<To>>) (DataStream<?>) result;
-        return typedResult;
+        SingleOutputStreamOperator<ValueEnvelope<To>> typed =
+                (SingleOutputStreamOperator<ValueEnvelope<To>>) (DataStream<?>) result;
+        return typed;
     }
 
     private FlinkPipelineLift() {
