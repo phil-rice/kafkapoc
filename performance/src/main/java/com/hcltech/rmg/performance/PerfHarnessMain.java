@@ -38,23 +38,9 @@ public final class PerfHarnessMain {
         final String topic = "test-topic";
         final String groupId = "test-perf-" + System.currentTimeMillis();
         final int partitions = Integer.getInteger("kafka.partitions", 12); // pass if you want 1:1 mapping
-        final int lanes = 1; //per partition
+        final int lanes = 1000; //per partition
 
-//        Configuration cfg = new Configuration();
-//
-//// Local-mode knobs that actually apply:
-//        cfg.setString("taskmanager.memory.task.heap.size", "2g");
-//        cfg.setString("taskmanager.memory.task.off-heap.size", "256mb");
-//        cfg.setString("taskmanager.memory.managed.size", "512mb");
-//        cfg.setString("taskmanager.memory.network.min", "512mb");
-//        cfg.setString("taskmanager.memory.network.max", "512mb");
-//        cfg.setString("taskmanager.network.memory.buffers-per-channel", "1");
-//        cfg.setString("taskmanager.network.memory.floating-buffers-per-gate", "4");
-//        cfg.setString("taskmanager.numberOfTaskSlots", "4");
 
-//        StreamExecutionEnvironment env =
-//                StreamExecutionEnvironment.createLocalEnvironmentWithWebUI(cfg);
-//
         StreamExecutionEnvironment env = StreamExecutionEnvironment.getExecutionEnvironment();
         env.setParallelism(partitions > 0 ? partitions : env.getParallelism());
         env.getConfig().setAutoWatermarkInterval(0);
@@ -107,7 +93,7 @@ public final class PerfHarnessMain {
         var main = FlinkPipelineLift.lift(envelopes, repoClass, RETRIES, ERRORS, lanes, false, timeOutBufferMs);
 
         // ---- progress sinks (prints every N items per lane) ----
-        main.addSink(new Every<>("main", 1000)).name("main-counter");
+        main.addSink(new Every<>("main", 10000 / lanes)).name("main-counter");
         main.getSideOutput(ERRORS).addSink(new Every<>("error", 50)).name("error-counter");
         main.getSideOutput(RETRIES).addSink(new Every<>("retry", 100)).name("retry-counter");
 
@@ -127,6 +113,7 @@ public final class PerfHarnessMain {
         private static long start = System.currentTimeMillis();
         private static final long initialStart = start;
         private static long lastCount = 0;
+        private static Object lock = new Object();
 
         Every(String lane, long every) {
             this.lane = lane;
@@ -142,15 +129,20 @@ public final class PerfHarnessMain {
         @Override
         public void invoke(T value, Context context) {
             if (c.incrementAndGet() % every == 0) {
-                var now = System.currentTimeMillis();
-                var duration = now - start;
-                var localPerS = (c.get() - lastCount) * 1000f / duration;
-                var fullPerS = c.get() * 1000f / (now - initialStart);
-                lastCount = c.get();
-                start = now;
-                System.out.println("[" + lane + "] processed=" + c +
-                        " perSec=" + localPerS + "/" + fullPerS +
-                        " task=" + taskInfo.getIndexOfThisSubtask() + " --- " + taskInfo.getTaskName() + " thread=" + Thread.currentThread().getName());
+                synchronized (lock) {
+                    if (c.get() % every != 0) {
+                        return;
+                    }
+                    var now = System.currentTimeMillis();
+                    var duration = now - start;
+                    var localPerS = (c.get() - lastCount) * 1000f / duration;
+                    var fullPerS = c.get() * 1000f / (now - initialStart);
+                    lastCount = c.get();
+                    start = now;
+                    System.out.println("[" + lane + "] processed=" + c +
+                            " perSec=" + localPerS + "/" + fullPerS +
+                            " task=" + taskInfo.getIndexOfThisSubtask() + " --- " + taskInfo.getTaskName() + " thread=" + Thread.currentThread().getName());
+                }
             }
         }
     }
