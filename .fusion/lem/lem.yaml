@@ -1,0 +1,136 @@
+source:
+  type: kafka
+  topic: 'samples'
+
+
+ai:
+  myfineTunedAi:
+    type: azureai
+    endpoint: https://apimgenaieuwrungateway.azure-api.net/me-dev
+    deployment: myfinetunedmodel
+    apiVersion: '2024-02-01'
+    nonfunctionals:
+      retry:
+        initialInterval: 1000
+        maximumInterval: 60000
+        maximumAttempts: 15
+        nonRecoverableErrors:
+          - Not Found
+          - Permission violation
+      throttle:
+        max: 10
+        tokensPer100ms: 0.1
+      concurrencyLimit: 10
+    auth:
+      method: Header
+      credentials:
+        - header: api-key
+          value: AZUREAI_TOKEN
+        - header: ocp-apim-subscription-key
+          value: AZUREAI_TOKEN
+  azureAi:
+    type: azureai
+    endpoint: https://apimgenaieuwrungateway.azure-api.net/me-dev
+    deployment: gpt-4o
+    apiVersion: '2024-02-01'
+    nonfunctionals:
+      retry:
+        initialInterval: 1000
+        maximumInterval: 60000
+        maximumAttempts: 15
+        nonRecoverableErrors:
+          - Not Found
+          - Permission violation
+      throttle:
+        max: 10
+        tokensPer100ms: 0.1
+      concurrencyLimit: 10
+    auth:
+      method: Header
+      credentials:
+        - header: api-key
+          value: AZUREAI_TOKEN
+        - header: ocp-apim-subscription-key
+          value: AZUREAI_TOKEN
+
+# Write a template engine
+# String substitution using {{var}} syntax
+# The variables allow for . notation. e,g {{module.name}} or {{original.json}}
+# type templateFn = (template: string, context: Record<string, any>) => string
+# Lots of tests. Showing how it works.
+
+# Parse the yaml. ASk Jane. js-yaml is the library we use
+prompts:
+  rippledownFindDiff: |
+    You are helping produce a decision tree with ripple down rules. The condition in the decision tree is a CEL expression that will evaluate to true or false
+    
+    Given two JSON objects the original and the new one, produce a CEL expression that will evaluate to true for the new object but false for the original object
+    
+    There are two types of output: positive and negative. Ideally the result is a positive output. A positive output is one that uses fields from the new object to
+    create a CEL expression that will evaluate to true for the new object but false for the original object.
+    A negative output is one that uses fields from the original object to create a CEL expression that will evaluate to false for the original object but true for
+    the new object
+    
+    We want a 'comment' that we will attach to the new object. This should explain why the new object is different to the original object. The comment should be concise and to the point.
+    
+    
+    You are evaluating the inputs in the context of the module called {{module.name}}
+    
+    The purpose of this module is {{module.purpose}}
+    
+    The original object is:
+      {{original.json}}
+    It has the comment {{original.comment}} which explains why this comes to the conclusion it does
+    
+    Remember for rippledown rules, the idea is to find a simple condition that explains why the new object is different to the original object.
+    
+    The new object is:
+      {{new.json}}
+
+    Give your output as a json object with three fields: type, comment and expression.
+    The type field is either "positive" or "negative". The expression field is the CEL expression
+
+modules:
+  notification:
+    purpose: |
+      The notification modules works out which messages are sent to interested parties
+      
+      We include information about the buisness logic here so that the LLM can pick sensible reasons for why this message is different to others
+    exemplars:
+      topic: 'exemplars-notification'
+    aspects:
+      bizLogic:
+        maxAttempts: 5
+        projection:
+          type: celInlineDiff
+          expression: 'some cel expression, that projects the incoming message to the expected format which we json diff'
+        llm:
+          ai: azureai
+          response: json
+          responseSchema: schema/rippledownFindDiffResult.json
+          prompt:
+            - role: system
+              content: {{prompts.rippledownFindDiff}}
+            - role: user
+              content: New object is {{new.json}}
+
+  billing:
+    purpose: |
+      The billing module works out how much to charge for a shipment
+      
+      We include information about the buisness logic here so that the LLM can pick sensible reasons for why this message is different to others
+    exemplars:
+      topic: 'exemplars-billing'
+    aspects:
+      bizLogic:
+        maxAttempts: 5
+        projection:
+          type: celFileDiff
+          file: cel/file_diff_for_billing.cel
+        llm:
+          ai: azureai
+          response: json
+          responseSchema: schema/rippledownFindDiffResult.json
+          prompt:
+            - role: system
+              content: {{rippledownFindDiff}}

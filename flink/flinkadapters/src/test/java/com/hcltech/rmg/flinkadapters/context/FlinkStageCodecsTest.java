@@ -6,6 +6,7 @@ import com.hcltech.rmg.common.codec.JacksonTreeCodec;
 import com.hcltech.rmg.flinkadapters.codec.FlinkStageCodecs;
 import com.hcltech.rmg.flinkadapters.envelopes.RetryEnvelope;
 import com.hcltech.rmg.flinkadapters.envelopes.ValueEnvelope;
+import com.hcltech.rmg.flinkadapters.kafka.RawKafkaData;
 import org.junit.jupiter.api.Test;
 
 import java.util.Map;
@@ -16,7 +17,8 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 class FlinkStageCodecsTest {
 
     // --- Simple domain type for tests ---
-  record MyEvent(String id, int amount) {}
+    record MyEvent(String id, int amount) {
+    }
 
     @Test
     void valueEnvelope_roundTrips_withSharedMapper() throws Exception {
@@ -27,7 +29,8 @@ class FlinkStageCodecsTest {
 
         // build envelope
         MyEvent ev = new MyEvent("E-123", 42);
-        ValueEnvelope<MyEvent> ve = new ValueEnvelope<>("Order", "id", ev, 1693651200123L);
+        RawKafkaData rkd = new RawKafkaData("{\"id\":\"E-123\",\"amount\":42}", "key-1", 2, 1001L, 1693651200000L);
+        ValueEnvelope<MyEvent> ve = new ValueEnvelope<>("Order", "id", ev, 1, rkd);
 
         // encode -> Map<String,Object>
         String encoded = bundle.valueEnvelope().encode(ve);
@@ -44,7 +47,8 @@ class FlinkStageCodecsTest {
         FlinkStageCodecs<MyEvent> bundle = FlinkStageCodecs.fromPayloadCodec(payload);
 
         MyEvent ev = new MyEvent("E-999", 7);
-        ValueEnvelope<MyEvent> ve = new ValueEnvelope<>("Payment", "domId", ev, 1693651300456L);
+        RawKafkaData rkd = new RawKafkaData("{\"id\":\"E-123\",\"amount\":42}", "key-1", 2, 1001L, 1693651200000L);
+        ValueEnvelope<MyEvent> ve = new ValueEnvelope<>("Payment", "domId", ev, 1, rkd);
         RetryEnvelope<MyEvent> re = new RetryEnvelope<>(ve, "stageName", 3);
 
         String encoded = bundle.retryEnvelope().encode(re);

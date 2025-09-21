@@ -33,7 +33,7 @@ public class RetryBucketsSoakMain {
         IMetrics metrics = IMetrics.memoryMetrics(counters);
 
         // ----- time service -----
-        ITimeService time = System::currentTimeMillis;
+        ITimeService time = ITimeService.real;
 
         // ----- ladder -----
         List<WorkLeaseStage> stages = new ArrayList<>();

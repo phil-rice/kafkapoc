@@ -4,6 +4,7 @@ import com.hcltech.rmg.common.codec.Codec;
 import com.hcltech.rmg.flinkadapters.envelopes.Envelopes;
 import com.hcltech.rmg.flinkadapters.envelopes.RetryEnvelope;
 import com.hcltech.rmg.flinkadapters.envelopes.ValueEnvelope;
+import com.hcltech.rmg.flinkadapters.kafka.RawKafkaData;
 
 import java.io.Serializable;
 import java.util.Map;

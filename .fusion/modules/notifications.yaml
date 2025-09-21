@@ -2,7 +2,8 @@ module:
   notification:
     arrival: # This is the name of the event that we are handling. It is used to identify the event in the system
       validation:
-         -type: schema
+         - type: schema
+           file: 'schemas/arrival_notification.json' # This is a json schema that validates the incoming message
 
       enrich:
         - type: task # This means we are calling a task. Note that tasks take time. We will continue the processing when the task returns. Also note that tasks have retry logic... perhaps they take up to 15 mins, or never terminate

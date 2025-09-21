@@ -1,6 +1,6 @@
 package com.hcltech.rmg.domainpipeline;
 
-import com.hcltech.rmg.common.TestDomainMessage;
+import com.hcltech.rmg.common.ITimeService;
 import com.hcltech.rmg.common.TestDomainTracker;
 import com.hcltech.rmg.interfaces.builder.PipelineBuilder;
 import com.hcltech.rmg.interfaces.repository.IPipelineRepository;
@@ -8,6 +8,7 @@ import com.hcltech.rmg.interfaces.repository.PipelineDetails;
 import com.hcltech.rmg.interfaces.retry.RetryPolicyConfig;
 
 import java.time.Duration;
+import java.util.List;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 
@@ -31,15 +32,19 @@ public class TestDomainRepository implements IPipelineRepository<TestDomainTrack
 
     static {
         ScheduledExecutorService ses = Executors.newScheduledThreadPool(100);
+        PipelineContext context = new PipelineContext(ses, ITimeService.real);
         RetryPolicyConfig retryPolicyConfig = new RetryPolicyConfig(Duration.ofSeconds(1), 2.0, Duration.ofSeconds(10), 5, .5);
         details = PipelineBuilder.<TestDomainTracker>builder(
                         (stage, e) -> stage + " " + e.getClass().getSimpleName() + "-" + e.getLocalizedMessage(),
                         retryPolicyConfig,
                         2000)
-                .stage("validate", TestDomainTracker.class, sync("validate"))
-                .stage("cepEnrichment", TestDomainTracker.class, sync("cepEnrichment"))
-                .stage("enrichment", TestDomainTracker.class, delayAsync("enrichment", 500,ses))
-                .stage("bizLogic", TestDomainTracker.class, delayAsync("bizLogic", 500,ses))
+                .stage("loadConfig", TestDomainTracker.class, sync(context, "loadConfig"))
+                .stage("validate", TestDomainTracker.class, sync(context, "validate"))
+                .stage("transform", TestDomainTracker.class, sync(context, "transform"))
+                .stage("cepEnrichment", TestDomainTracker.class, sync(context, "cepEnrichment"))
+                .stage("enrichment", TestDomainTracker.class, delayAsync(context, "enrichment", 500))
+                .stage("bizLogic", TestDomainTracker.class, delayAsync(context, "bizLogic", 500))
+                .stage("check", TestDomainTracker.class, check(t -> t.duration() > 990, "Was too quick {1}. {0}", t -> List.of(t,t.duration())))
                 .build();
     }
 

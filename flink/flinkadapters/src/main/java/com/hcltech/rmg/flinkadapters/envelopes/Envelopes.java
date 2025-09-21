@@ -1,6 +1,7 @@
 package com.hcltech.rmg.flinkadapters.envelopes;
 
 import com.hcltech.rmg.common.codec.Codec;
+import com.hcltech.rmg.flinkadapters.kafka.RawKafkaData;
 
 import java.util.Map;
 
@@ -19,10 +20,11 @@ public interface Envelopes {
 }
 
 record ValueEnvelopeStringCodec<T>(Codec<ValueEnvelope<Map<String, Object>>, String> valueCodec,
-                                   Codec<T, Map<String, Object>> dataCodec) implements Codec<ValueEnvelope<T>, String> {
+                                   Codec<T, Map<String, Object>> dataCodec,
+                                   Codec<RawKafkaData, Map<String, Object>> rkdCodec) implements Codec<ValueEnvelope<T>, String> {
 
     ValueEnvelopeStringCodec(Codec<T, Map<String, Object>> dataCodec) {
-        this((Codec) Codec.clazzCodec(ValueEnvelope.class), dataCodec);
+        this((Codec) Codec.clazzCodec(ValueEnvelope.class), dataCodec, (Codec) Codec.clazzCodec(RawKafkaData.class));
     }
 
     @Override
@@ -42,11 +44,13 @@ record ValueEnvelopeStringCodec<T>(Codec<ValueEnvelope<Map<String, Object>>, Str
 }
 
 record RetryEnvelopeStringCodec<T>(Codec<RetryEnvelope<Map<String, Object>>, String> retryCodec,
-                                   Codec<T, Map<String, Object>> dataCodec) implements Codec<RetryEnvelope<T>, String> {
+                                   Codec<T, Map<String, Object>> dataCodec,
+                                   Codec<RawKafkaData, Map<String, Object>> rkdCodec) implements Codec<RetryEnvelope<T>, String> {
 
     RetryEnvelopeStringCodec(Codec<T, Map<String, Object>> dataCodec) {
-        this((Codec) Codec.clazzCodec(RetryEnvelope.class), dataCodec);
+        this((Codec) Codec.clazzCodec(RetryEnvelope.class), dataCodec, (Codec) Codec.clazzCodec(RawKafkaData.class));
     }
+
 
     @Override
     public String encode(RetryEnvelope<T> value) throws Exception {

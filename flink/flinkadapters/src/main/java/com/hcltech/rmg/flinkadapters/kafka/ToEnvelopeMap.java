@@ -17,7 +17,9 @@ public abstract class ToEnvelopeMap<T> extends RichMapFunction<RawKafkaData, Val
     private transient Codec<T, String> codec;
     private transient Class<T> clazz;
 
-    abstract  String domainIdExtractor(T t);
+    abstract String domainIdExtractor(T t);
+
+    abstract T withInitialValues(T t);
 
     public ToEnvelopeMap(String domainType, String clazzName, int lanes) {
         this.domainType = domainType;
@@ -33,10 +35,11 @@ public abstract class ToEnvelopeMap<T> extends RichMapFunction<RawKafkaData, Val
 
     @Override
     public ValueEnvelope<T> map(RawKafkaData r) throws Exception {
-        var msg = codec.decode(r.value());     // decode bytes/JSON → domain
+        var rawMsg = codec.decode(r.value());     // decode bytes/JSON → domain
+        var msg = withInitialValues(rawMsg);      // ensure all fields are set
         var domainId = domainIdExtractor(msg);
         int lane = Math.floorMod(domainId.hashCode(), lanes);
-        var env = r.toValueEnvelope(codec, domainType, lane, this::domainIdExtractor);
+        var env = new ValueEnvelope<T>(domainType, domainId, msg, lane, r);
         return env;
     }
 }

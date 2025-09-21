@@ -1,8 +1,7 @@
 package com.hcltech.rmg.performance;
 
-import com.hcltech.rmg.common.TestDomainMessage;
+import com.hcltech.rmg.common.ITimeService;
 import com.hcltech.rmg.common.TestDomainTracker;
-import com.hcltech.rmg.common.codec.Codec;
 import com.hcltech.rmg.domainpipeline.TestDomainRepository;
 import com.hcltech.rmg.flinkadapters.envelopes.ErrorEnvelope;
 import com.hcltech.rmg.flinkadapters.envelopes.RetryEnvelope;
@@ -15,9 +14,6 @@ import org.apache.flink.api.common.eventtime.WatermarkStrategy;
 import org.apache.flink.api.common.functions.OpenContext;
 import org.apache.flink.api.common.typeinfo.TypeHint;
 import org.apache.flink.api.common.typeinfo.TypeInformation;
-import org.apache.flink.configuration.Configuration;
-import org.apache.flink.configuration.MemorySize;
-import org.apache.flink.configuration.TaskManagerOptions;
 import org.apache.flink.connector.kafka.source.KafkaSource;
 import org.apache.flink.connector.kafka.source.enumerator.initializer.OffsetsInitializer;
 import org.apache.flink.streaming.api.datastream.DataStreamSource;
@@ -26,7 +22,6 @@ import org.apache.flink.streaming.api.functions.sink.legacy.RichSinkFunction;
 import org.apache.flink.util.OutputTag;
 
 import java.util.concurrent.atomic.AtomicLong;
-import java.util.function.Function;
 
 public final class PerfHarnessMain {
 
@@ -38,7 +33,7 @@ public final class PerfHarnessMain {
         final String topic = "test-topic";
         final String groupId = "test-perf-" + System.currentTimeMillis();
         final int partitions = Integer.getInteger("kafka.partitions", 12); // pass if you want 1:1 mapping
-        final int lanes = 1000; //per partition
+        final int lanes = 10; //per partition
 
 
         StreamExecutionEnvironment env = StreamExecutionEnvironment.getExecutionEnvironment();
@@ -93,7 +88,7 @@ public final class PerfHarnessMain {
         var main = FlinkPipelineLift.lift(envelopes, repoClass, RETRIES, ERRORS, lanes, false, timeOutBufferMs);
 
         // ---- progress sinks (prints every N items per lane) ----
-        main.addSink(new Every<>("main", 10000 / lanes)).name("main-counter");
+        main.addSink(new Every<>("main", lanes * 20)).name("main-counter");
         main.getSideOutput(ERRORS).addSink(new Every<>("error", 50)).name("error-counter");
         main.getSideOutput(RETRIES).addSink(new Every<>("retry", 100)).name("retry-counter");
 
