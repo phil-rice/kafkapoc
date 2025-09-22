@@ -1,5 +1,9 @@
 package com.hcltech.rmg.cepstate.worklease;
 
+import org.jetbrains.annotations.Nullable;
+
+import java.io.Serializable;
+
 /**
  * Coordinates exclusive processing of a domain item while preserving partition order.
  *
@@ -17,56 +21,13 @@ package com.hcltech.rmg.cepstate.worklease;
  * </ul>
  *
  */
-public interface WorkLease {
+public interface WorkLease<Msg> extends Serializable {
+    /** Returns a fencing token if acquired (domain idle), else null (message queued). */
+    @Nullable String tryAcquire(String domainId, Msg message); // nullable
 
-    /**
-     * Attempt to acquire the lease for {@code (domainId, offset)}.
-     * <p>Atomic rules:</p>
-     * <ul>
-     *   <li>If no active lease and backlog empty → acquire now and return a non-null token.</li>
-     *   <li>Else → enqueue {@code offset} (FIFO) and return {@code null}.</li>
-     * </ul>
-     * <p>
-     * Behind the scenes this will check to see if the message has been processed (idempotent check)
-     * or if there is already a lease for the domain id. In the later case it will queue the offset
-     * <p>
-     * if this returns null the calling code should stop
-     *
-     * @param domainId application key that must be processed serially on this partition
-     * @param offset   partition-local Kafka offset of the record
-     * @return opaque fencing token if acquired; {@code null} if queued
-     */
-    AcquireResult tryAcquire(String domainId, long offset);
+    /** Finish current item successfully. Returns next message+new token if backlog exists, else null. */
+     HandBackTokenResult<Msg> succeed(String domainId, String token); // nullable
 
-    /**
-     * Work finished successfully.
-     * <p>Atomically releases the lease; if backlog is non-empty, hands the lease
-     * to the next offset so it can be picked up on the next poll.</p>
-     * <p>
-     * Behind the scenes, if some other offset for the same domain id tried to get a lease and failed, it will be triggered
-     * <p>
-     * The calling code shouldn't do anything after this.
-     *
-     * @param domainId same id passed to {@link #tryAcquire}
-     * @param token    fencing token previously returned by {@link #tryAcquire}
-     *                 <p>
-     *                 Note if the token fails to match we do nothing. It is probably because another retry has taken over the lease.
-     */
-    SuceedResult succeed(String domainId, String token);
-
-    /**
-     * Work failed (or is being deferred). Caller retains the lease; new offsets keep queueing.
-     * <p>Any retry schedule (ladder/backoff), timers, and pause/resume decisions are handled outside this interface.</p>
-     * <p>
-     * Behind the scenes this method will either trigger a retry in the future or give up
-     * <p>
-     * The calling code should stop after calling this
-     *
-     * @param domainId same id passed to {@link #tryAcquire}
-     * @param token    fencing token previously returned by {@link #tryAcquire}
-     *                 <p>
-     *                 Note if the token fails to match we do nothing. It is probably because another retry has taken over the lease.
-     */
-    FailResult fail(String domainId, String token);
+    /** Finish current item as failed/deferred. Same handoff semantics as succeed. */
+     HandBackTokenResult<Msg> fail(String domainId, String token); // nullable
 }
-

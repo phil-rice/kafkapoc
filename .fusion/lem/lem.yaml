@@ -108,11 +108,18 @@ modules:
           ai: azureai
           response: json
           responseSchema: schema/rippledownFindDiffResult.json
-          prompt:
-            - role: system
-              content: {{prompts.rippledownFindDiff}}
-            - role: user
-              content: New object is {{new.json}}
+          condition:
+            prompt:
+              - role: system
+                content: {{prompts.rippledownFindDiff}}
+              - role: user
+                content: New object is {{new.json}}
+          conclusion:
+            prompt:
+              - role: system
+                content: {{prompts.rippledownFindConclusion}}
+              - role: user
+                content: Input object is {{input.json}} and the expected output is {{expected.json}}
 
   billing:
     purpose: |

@@ -1,5 +1,8 @@
 package com.hcltech.rmg.flinkadapters.transformers;
 
+import com.hcltech.rmg.cepstate.worklease.ITokenGenerator;
+import com.hcltech.rmg.cepstate.worklease.WorkLease;
+import com.hcltech.rmg.common.ITimeService;
 import com.hcltech.rmg.flinkadapters.envelopes.ErrorEnvelope;
 import com.hcltech.rmg.flinkadapters.envelopes.RetryEnvelope;
 import com.hcltech.rmg.flinkadapters.envelopes.ValueEnvelope;
@@ -25,6 +28,7 @@ public final class FlinkPipelineLift {
     /**
      * Partition-local pipeline with async "lanes" (no keyBy, no shuffle).
      *
+     * @param workLease       optional WorkLease to ensure within domain ordering.
      * @param input           stream of ValueEnvelope&lt;From&gt; (parallelism inherited from source, e.g., partitions)
      * @param repository      fully-qualified class name for the IPipelineRepository implementation
      * @param retriesTag      side-output tag for retries
@@ -34,14 +38,20 @@ public final class FlinkPipelineLift {
      * @param timeoutBufferMs extra slack added to operator timeout (backstop > internal CF timeout)
      */
     public static <From, To> SingleOutputStreamOperator<ValueEnvelope<To>> lift(
+            String workLeaseName,
             DataStream<ValueEnvelope<From>> input,
+
             String repository,
             OutputTag<RetryEnvelope<Object>> retriesTag,
             OutputTag<ErrorEnvelope<Object>> errorsTag,
             int lanes,
+            int maxRetries,
             boolean orderedAsync,
             int timeoutBufferMs
     ) {
+        ITimeService timeService = ITimeService.real;
+        ITokenGenerator tokenGenerator = ITokenGenerator.generator();
+        WorkLease worklease = WorkLease.fromName(workLeaseName, tokenGenerator, timeService, maxRetries);
         // 0) Load pipeline definition once on JM
         PipelineDetails<Object, Object> details = IPipelineRepository.load(repository).pipelineDetails();
 

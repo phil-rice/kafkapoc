@@ -18,5 +18,6 @@ dependency-reduced-pom.xml
 Thumbs.db
 # Logs
 *.log
+node_modules/
 
 state/
