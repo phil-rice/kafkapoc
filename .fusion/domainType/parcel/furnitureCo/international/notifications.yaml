@@ -1,0 +1,14 @@
+module:
+  notification:
+    departure:
+      logic:
+        - type: celInline
+          inline: |
+            input.eventType == "departed"
+              ? [{
+                  type: "notification",
+                  channel: "email",
+                  to: "sender",
+                  message: "International insurance surcharge applied due to high declared value."
+                }]
+              : null

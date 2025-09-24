@@ -1,0 +1,16 @@
+module:
+  billing:
+    delayed:
+      logic:
+        - type: celInline
+          inline: |
+            input.eventType == "delayed"
+              ? [{
+                  type: "billing",
+                  accountId: input.accountId,
+                  amountGBP: -2,
+                  code: "SLA-REBATE",
+                  description: "Proactive SLA delay rebate",
+                  taxable: false
+                }]
+              : null

@@ -1,0 +1,16 @@
+module:
+  billing:
+    arrival:
+      logic:
+        - type: celInline
+          inline: |
+            input.eventType == "arrived"
+              ? [{
+                  type: "billing",
+                  accountId: input.accountId,
+                  amountGBP: 0.5,
+                  code: "TRACK-ARR",
+                  description: "Tracking surcharge on arrival scan",
+                  taxable: true
+                }]
+              : null

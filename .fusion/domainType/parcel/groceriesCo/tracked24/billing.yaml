@@ -1,0 +1,31 @@
+module:
+  billing:
+    arrival:
+      logic:
+        - type: celInline
+          inline: |
+            input.eventType == "arrived"
+              ? [{
+                  type: "billing",
+                  accountId: input.accountId,
+                  amountGBP: 0.4,
+                  code: "CONTRACT-SCAN",
+                  description: "Contracted per-scan fee",
+                  taxable: true
+                }]
+              : null
+
+    signedFor:
+      logic:
+        - type: celInline
+          inline: |
+            input.eventType == "signedFor"
+              ? [{
+                  type: "billing",
+                  accountId: input.accountId,
+                  amountGBP: 1.2,
+                  code: "POD-FEE",
+                  description: "Proof of delivery (signature) fee",
+                  taxable: true
+                }]
+              : null

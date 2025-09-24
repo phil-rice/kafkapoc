@@ -1,0 +1,14 @@
+module:
+  notification:
+    delayed:
+      logic:
+        - type: celInline
+          inline: |
+            input.eventType == "delayed"
+              ? [{
+                  type: "notification",
+                  channel: "email",
+                  to: "recipient",
+                  message: "FurnitureCo shipment delayed due to route capacity. New ETA tomorrow."
+                }]
+              : null

@@ -1,0 +1,27 @@
+module:
+  notification:
+    arrival:
+      logic:
+        - type: celInline
+          inline: |
+            input.eventType == "arrived"
+              ? [{
+                  type: "notification",
+                  channel: "email",
+                  to: "sender",
+                  message: "International parcel arrived at customs; processing fee applied."
+                }]
+              : null
+
+    delayed:
+      logic:
+        - type: celInline
+          inline: |
+            input.eventType == "delayed"
+              ? [{
+                  type: "notification",
+                  channel: "email",
+                  to: "recipient",
+                  message: "International parcel delayed due to weather; new ETA pending."
+                }]
+              : null

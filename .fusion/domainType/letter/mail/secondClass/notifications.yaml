@@ -1,0 +1,14 @@
+module:
+  notification:
+    departure:
+      logic:
+        - type: celInline
+          inline: |
+            input.eventType == "departed"
+              ? [{
+                  type: "notification",
+                  channel: "email",
+                  to: "recipient",
+                  message: "Your second-class letter has departed the sorting centre."
+                }]
+              : null

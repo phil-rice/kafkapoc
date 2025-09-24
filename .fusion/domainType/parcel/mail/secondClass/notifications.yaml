@@ -1,0 +1,27 @@
+module:
+  notification:
+    arrival:
+      logic:
+        - type: celInline
+          inline: |
+            input.eventType == "arrived"
+              ? [{
+                  type: "notification",
+                  channel: "email",
+                  to: "sender",
+                  message: "Surcharge applied due to heavy/volumetric weight."
+                }]
+              : null
+
+    departure:
+      logic:
+        - type: celInline
+          inline: |
+            input.eventType == "departed"
+              ? [{
+                  type: "notification",
+                  channel: "email",
+                  to: "recipient",
+                  message: "Your parcel left the origin depot."
+                }]
+              : null

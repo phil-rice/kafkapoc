@@ -1,0 +1,14 @@
+module:
+  notification:
+    arrival:
+      logic:
+        - type: celInline
+          inline: |
+            input.eventType == "arrived"
+              ? [{
+                  type: "notification",
+                  channel: "email",
+                  to: "recipient",
+                  message: "International letter received in-country; last-mile handoff pending."
+                }]
+              : null

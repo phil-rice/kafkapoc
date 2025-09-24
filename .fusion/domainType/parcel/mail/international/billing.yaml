@@ -1,0 +1,16 @@
+module:
+  billing:
+    arrival:
+      logic:
+        - type: celInline
+          inline: |
+            input.eventType == "arrived"
+              ? [{
+                  type: "billing",
+                  accountId: input.accountId,
+                  amountGBP: 12,
+                  code: "INTL-CUST",
+                  description: "Customs processing fee",
+                  taxable: false
+                }]
+              : null
