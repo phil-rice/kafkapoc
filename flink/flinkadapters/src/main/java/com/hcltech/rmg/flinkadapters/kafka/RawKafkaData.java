@@ -9,7 +9,7 @@ public record RawKafkaData(String value, String key, int partition, long offset,
     public <T> ValueEnvelope<T> toValueEnvelope(Codec<T, String> payloadCodec, String domainType, int lane, Function<T, String> domainIdExtractor) {
         try {
             T data = value == null ? null : payloadCodec.decode(value);
-            return new ValueEnvelope<>(domainType, domainIdExtractor.apply(data), data, lane, this);
+            return new ValueEnvelope<>(domainType, domainIdExtractor.apply(data), null, data, lane, this);
         } catch (Exception e) {
             //We will need to work out how to deal with this...
             throw new RuntimeException("Failed to decode Kafka message value", e);

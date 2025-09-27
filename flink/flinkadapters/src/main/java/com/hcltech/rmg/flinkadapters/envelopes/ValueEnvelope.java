@@ -2,7 +2,7 @@ package com.hcltech.rmg.flinkadapters.envelopes;
 
 import com.hcltech.rmg.flinkadapters.kafka.RawKafkaData;
 
-public record ValueEnvelope<T>(String domainType, String domainId, T data, int lane,
+public record ValueEnvelope<T>(String domainType, String domainId, String token, T data, int lane,
                                RawKafkaData rawKafkaData) implements ValueRetryErrorEnvelope, ValueRetryEnvelope, ValueErrorEnvelope<T> {
     public <T1> ValueEnvelope<T1> mapData(java.util.function.Function<T, T1> mapper) {
         return withData(mapper.apply(data));
@@ -11,8 +11,14 @@ public record ValueEnvelope<T>(String domainType, String domainId, T data, int l
     public PartLane partitionLane() {
         return new PartLane(rawKafkaData.partition(), lane);
     }
+
+    @Override
+    public ValueRetryErrorEnvelope withToken(String token) {
+        return new ValueEnvelope<>(domainType, domainId, token, data, lane, rawKafkaData);
+    }
+
     public <T1> ValueEnvelope<T1> withData(T1 newData) {
-        return new ValueEnvelope<>(domainType, domainId, newData, lane, rawKafkaData);
+        return new ValueEnvelope<>(domainType, domainId, token, newData, lane, rawKafkaData);
     }
 
 

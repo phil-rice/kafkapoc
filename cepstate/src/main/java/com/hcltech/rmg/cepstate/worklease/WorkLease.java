@@ -30,4 +30,8 @@ public interface WorkLease<Msg> extends Serializable {
 
     /** Finish current item as failed/deferred. Same handoff semantics as succeed. */
      HandBackTokenResult<Msg> fail(String domainId, String token); // nullable
+
+    static <Msg>WorkLease<Msg> memory(ITokenGenerator tokenGen) {
+        return new MemoryWorkLease<>(tokenGen);
+    }
 }

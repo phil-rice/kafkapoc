@@ -1,6 +1,5 @@
 package com.hcltech.rmg.performance;
 
-import com.hcltech.rmg.common.ITimeService;
 import com.hcltech.rmg.common.TestDomainTracker;
 import com.hcltech.rmg.domainpipeline.TestDomainRepository;
 import com.hcltech.rmg.flinkadapters.envelopes.ErrorEnvelope;
@@ -33,7 +32,7 @@ public final class PerfHarnessMain {
         final String topic = "test-topic";
         final String groupId = "test-perf-" + System.currentTimeMillis();
         final int partitions = Integer.getInteger("kafka.partitions", 12); // pass if you want 1:1 mapping
-        final int lanes = 10; //per partition
+        final int lanes = 200; //per partition
 
 
         StreamExecutionEnvironment env = StreamExecutionEnvironment.getExecutionEnvironment();
@@ -85,7 +84,8 @@ public final class PerfHarnessMain {
         //  - We keep one subtask per partition (no keyBy shuffle)
         //  - We’ll use orderedWait inside the lift for async stages (per-subtask order)
         int timeOutBufferMs = 2000;
-        var main = FlinkPipelineLift.lift(envelopes, repoClass, RETRIES, ERRORS, lanes, false, timeOutBufferMs);
+        int maxRetries = 3;
+        var main = FlinkPipelineLift.lift(envelopes, repoClass, RETRIES, ERRORS, lanes, maxRetries, false, timeOutBufferMs);
 
         // ---- progress sinks (prints every N items per lane) ----
         main.addSink(new Every<>("main", lanes * 20)).name("main-counter");

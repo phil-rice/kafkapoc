@@ -15,6 +15,7 @@ import java.util.Set;
  *
  */
 public final class WorkLeaseRecord {
+
     private LeaseRecord leaseRecordOrNull;
     private final Set<Long> processed;
     private final Set<Long> failed;
@@ -55,6 +56,7 @@ public final class WorkLeaseRecord {
     public void clearLeaseRecord() {
         this.leaseRecordOrNull = null;
     }
+
     public void addToFailed(Long offset) {
         failed.add(offset);
     }

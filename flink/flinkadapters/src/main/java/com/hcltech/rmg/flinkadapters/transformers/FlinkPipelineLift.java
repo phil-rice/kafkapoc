@@ -38,9 +38,7 @@ public final class FlinkPipelineLift {
      * @param timeoutBufferMs extra slack added to operator timeout (backstop > internal CF timeout)
      */
     public static <From, To> SingleOutputStreamOperator<ValueEnvelope<To>> lift(
-            String workLeaseName,
             DataStream<ValueEnvelope<From>> input,
-
             String repository,
             OutputTag<RetryEnvelope<Object>> retriesTag,
             OutputTag<ErrorEnvelope<Object>> errorsTag,
@@ -51,7 +49,7 @@ public final class FlinkPipelineLift {
     ) {
         ITimeService timeService = ITimeService.real;
         ITokenGenerator tokenGenerator = ITokenGenerator.generator();
-        WorkLease worklease = WorkLease.fromName(workLeaseName, tokenGenerator, timeService, maxRetries);
+        WorkLease worklease = WorkLease.memory( tokenGenerator);
         // 0) Load pipeline definition once on JM
         PipelineDetails<Object, Object> details = IPipelineRepository.load(repository).pipelineDetails();
 

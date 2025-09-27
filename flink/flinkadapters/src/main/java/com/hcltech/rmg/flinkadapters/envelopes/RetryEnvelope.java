@@ -26,4 +26,10 @@ public record RetryEnvelope<T>(ValueEnvelope<T> envelope,
     public RetryEnvelope<T> failedRetryEnvelope() {
         return new RetryEnvelope<>(envelope, stageName, retryCount + 1);
     }
+
+    @Override
+    public ValueRetryErrorEnvelope withToken(String token) {
+        if (token.equals(envelope.token())) return this;
+        throw new RuntimeException("Cannot change token of RetryEnvelope");
+    }
 }

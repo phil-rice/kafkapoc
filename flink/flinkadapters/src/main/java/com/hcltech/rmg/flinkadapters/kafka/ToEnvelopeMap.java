@@ -39,7 +39,7 @@ public abstract class ToEnvelopeMap<T> extends RichMapFunction<RawKafkaData, Val
         var msg = withInitialValues(rawMsg);      // ensure all fields are set
         var domainId = domainIdExtractor(msg);
         int lane = Math.floorMod(domainId.hashCode(), lanes);
-        var env = new ValueEnvelope<T>(domainType, domainId, msg, lane, r);
+        var env = new ValueEnvelope<T>(domainType, domainId, null, rawMsg, lane, r);
         return env;
     }
 }

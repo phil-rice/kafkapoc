@@ -10,6 +10,7 @@ public record ErrorEnvelope<T>(ValueEnvelope<T> envelope,
     public String domainId() {
         return envelope.domainId();
     }
+
     @Override
     public PartLane partitionLane() {
         return envelope.partitionLane();
@@ -21,5 +22,11 @@ public record ErrorEnvelope<T>(ValueEnvelope<T> envelope,
 
     public <T1> ErrorEnvelope<T1> withData(T1 newData) {
         return new ErrorEnvelope<>(envelope.withData(newData), stageName, errorMessages);
+    }
+
+    @Override
+    public ValueRetryErrorEnvelope withToken(String token) {
+        if (token.equals(envelope.token())) return this;
+        throw new RuntimeException("Cannot change token of ErrorEnvelope");
     }
 }
