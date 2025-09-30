@@ -1,5 +1,7 @@
+// src/test/java/com/hcltech/rmg/xml/AbstractXmlTypeClassTest.java
 package com.hcltech.rmg.xml;
 
+import com.hcltech.rmg.common.errorsor.ErrorsOr;
 import org.junit.jupiter.api.Test;
 
 import java.util.LinkedHashSet;
@@ -30,9 +32,7 @@ public abstract class AbstractXmlTypeClassTest<S> {
         return (Map<String, Object>) o;
     }
 
-    /**
-     * Extracts element text whether it's stored as a map {"text": "..."} or as a plain String.
-     */
+    /** Extracts element text whether stored as {"text": "..."} or a plain String. */
     private static String elementText(Object nodeOrText) {
         if (nodeOrText == null) return null;
         if (nodeOrText instanceof String s) return s;
@@ -43,9 +43,7 @@ public abstract class AbstractXmlTypeClassTest<S> {
         return null;
     }
 
-    /**
-     * Reads an attribute value from a CEL-friendly node: {"attr": {"id": "...", ...}, ...}
-     */
+    /** Reads an attribute value from a CEL-friendly node: {"attr":{"id":"..."}...}. */
     private static String attr(Object node, String name) {
         if (!(node instanceof Map<?,?> m)) return null;
         Object a = m.get("attr");
@@ -87,11 +85,17 @@ public abstract class AbstractXmlTypeClassTest<S> {
         S schemaA = schemas.get("a.xsd");
         assertNotNull(schemaA);
 
-        String missingAttr = "<a><x>ok</x></a>"; // 'id' required
-        assertThrows(RuntimeException.class, () -> eng.parseAndValidate(missingAttr, schemaA));
+        // 'id' required
+        String missingAttr = "<a><x>ok</x></a>";
+        ErrorsOr<Map<String,Object>> eo1 = eng.parseAndValidate(missingAttr, schemaA);
+        assertTrue(eo1.isError(), "Expected schema violation for missing 'id'");
+        assertFalse(eo1.errorsOrThrow().isEmpty(), "Errors list should not be empty (missing 'id')");
 
-        String missingChild = "<a id=\"A1\"/>";  // 'x' required
-        assertThrows(RuntimeException.class, () -> eng.parseAndValidate(missingChild, schemaA));
+        // 'x' required
+        String missingChild = "<a id=\"A1\"/>";
+        ErrorsOr<Map<String,Object>> eo2 = eng.parseAndValidate(missingChild, schemaA);
+        assertTrue(eo2.isError(), "Expected schema violation for missing child 'x'");
+        assertFalse(eo2.errorsOrThrow().isEmpty(), "Errors list should not be empty (missing 'x')");
     }
 
     @Test
@@ -107,6 +111,8 @@ public abstract class AbstractXmlTypeClassTest<S> {
         assertEquals("42", elementText(b.get("y")));
 
         // bad: non-int content
-        assertThrows(RuntimeException.class, () -> eng.parseAndValidate("<b><y>notAnInt</y></b>", schemaB));
+        ErrorsOr<Map<String,Object>> bad = eng.parseAndValidate("<b><y>notAnInt</y></b>", schemaB);
+        assertTrue(bad.isError(), "Expected schema violation for non-integer y");
+        assertFalse(bad.errorsOrThrow().isEmpty(), "Errors list should not be empty (non-integer y)");
     }
 }

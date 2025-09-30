@@ -1,5 +1,6 @@
 package com.hcltech.rmg.xml;
 
+import com.hcltech.rmg.common.errorsor.ErrorsOr;
 import com.hcltech.rmg.xml.exceptions.LoadSchemaException;
 import com.hcltech.rmg.xml.exceptions.XmlValidationException;
 import org.codehaus.stax2.XMLInputFactory2;
@@ -20,13 +21,13 @@ import java.util.Map;
 /**
  * Woodstox/StAX2 implementation that compiles XSD to XMLValidationSchema
  * and validates as you pull events (single pass, no DOM).
- *
+ * <p>
  * Output map shape is produced by CelFriendlyStreamingMapBuilder:
- *   - element keys: CEL-safe identifiers
- *   - attributes under "attr" sub-map
- *   - text under "text"
- *   - repeats: always lists
- *   - order: LinkedHashMap (stable)
+ * - element keys: CEL-safe identifiers
+ * - attributes under "attr" sub-map
+ * - text under "text"
+ * - repeats: always lists
+ * - order: LinkedHashMap (stable)
  */
 public final class WoodstoxXmlTypeClass implements XmlTypeClass<XMLValidationSchema> {
 
@@ -54,7 +55,7 @@ public final class WoodstoxXmlTypeClass implements XmlTypeClass<XMLValidationSch
     }
 
     @Override
-    public Map<String, Object> parseAndValidate(String xml, XMLValidationSchema schema) {
+    public ErrorsOr<Map<String, Object>> parseAndValidate(String xml, XMLValidationSchema schema) {
         XMLStreamReader2 r = null;
         try {
             r = (XMLStreamReader2) factory.createXMLStreamReader(new StringReader(xml));
@@ -66,32 +67,36 @@ public final class WoodstoxXmlTypeClass implements XmlTypeClass<XMLValidationSch
 
             // Stream to CEL-friendly map
             CelFriendlyStreamingMapBuilder b = new CelFriendlyStreamingMapBuilder();
-            for (;;) {
+            for (; ; ) {
                 switch (r.getEventType()) {
                     case XMLStreamConstants.START_ELEMENT -> b.onStart(r);
-                    case XMLStreamConstants.CHARACTERS, XMLStreamConstants.CDATA, XMLStreamConstants.SPACE -> b.onText(r);
+                    case XMLStreamConstants.CHARACTERS, XMLStreamConstants.CDATA, XMLStreamConstants.SPACE ->
+                            b.onText(r);
                     case XMLStreamConstants.END_ELEMENT -> b.onEnd(r);
                     default -> { /* ignore: COMMENT, DTD, PI */ }
                 }
                 if (!r.hasNext()) break;
                 r.next();
             }
-            return Collections.unmodifiableMap(b.result());
-        } catch (RuntimeException e) {
-            throw e; // already our unchecked types or user code
+            return ErrorsOr.lift(Collections.unmodifiableMap(b.result()));
         } catch (Exception e) {
-            throw new XmlValidationException("XML parse/validate failure", e);
+            return ErrorsOr.error("Parsing xml {0}: {1}", e);
         } finally {
-            if (r != null) try { r.close(); } catch (Exception ignore) {}
+            if (r != null) try {
+                r.close();
+            } catch (Exception ignore) {
+            }
         }
     }
 
-    /** Fail-fast with location-aware message from Woodstox validation. */
+    /**
+     * Fail-fast with location-aware message from Woodstox validation.
+     */
     private static final class ThrowingProblems implements ValidationProblemHandler {
         @Override
         public void reportProblem(XMLValidationProblem p) {
             int line = p.getLocation() != null ? p.getLocation().getLineNumber() : -1;
-            int col  = p.getLocation() != null ? p.getLocation().getColumnNumber() : -1;
+            int col = p.getLocation() != null ? p.getLocation().getColumnNumber() : -1;
             String msg = "[" + p.getSeverity() + "] line " + line + ", col " + col + ": " + p.getMessage();
             throw new XmlValidationException(msg);
         }

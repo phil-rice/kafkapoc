@@ -1,18 +1,24 @@
 package com.hcltech.rmg.common.errorsor;
 
+import java.text.MessageFormat;
 import java.util.*;
 import java.util.function.*;
 
 public interface ErrorsOr<T> {
 
     boolean isError();
+
     boolean isValue();
 
     Optional<T> getValue();
+
     List<String> getErrors();
 
-    /** throws an exception if a value */
+    /**
+     * throws an exception if a value
+     */
     <T1> ErrorsOr<T1> errorCast();
+
     // --- Helpers ---
     static <T> ErrorsOr<T> lift(T value) {
         return new Value<>(value);
@@ -20,6 +26,10 @@ public interface ErrorsOr<T> {
 
     static <T> ErrorsOr<T> error(String error) {
         return new Error<>(List.of(error));
+    }
+
+    static <T> ErrorsOr<T> error(String pattern, Exception e) {
+        return new Error<>(List.of(MessageFormat.format(pattern, e.getClass().getSimpleName(), e.getMessage())));
     }
 
     static <T> ErrorsOr<T> errors(List<String> errors) {
