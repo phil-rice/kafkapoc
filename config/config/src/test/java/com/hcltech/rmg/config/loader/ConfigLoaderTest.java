@@ -1,8 +1,10 @@
 package com.hcltech.rmg.config.loader;
 
 import com.hcltech.rmg.config.aspect.AspectMap;
+import com.hcltech.rmg.config.bizlogic.CelFileLogic;
 import com.hcltech.rmg.config.bizlogic.CelInlineLogic;
 import com.hcltech.rmg.config.config.Config;
+import com.hcltech.rmg.config.enrich.ApiEnrichment;
 import com.hcltech.rmg.config.validation.CelValidation;
 import org.junit.jupiter.api.Test;
 
@@ -17,33 +19,46 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 class ConfigLoaderTest {
 
     @Test
-    void loads_minimal_equals_expected() throws Exception {
+    void loads_minimal_config() throws IOException {
         try (var in = resourceStream("config/good-minimal.json")) {
-            Config actual = ConfigLoader.validated(ConfigLoader.fromJson(in));
-            assertEquals(minimalConfig(), actual);
+            var actual = ConfigLoader.validated(ConfigLoader.fromJson(in));
+            var expected = Config.empty();
+            assertEquals(expected, actual);
         }
     }
 
     @Test
-    void loads_complex_equals_expected() throws Exception {
-        try (var in = resourceStream("config/good-complex.json")) {
-            Config actual = ConfigLoader.validated(ConfigLoader.fromJson(in));
-            assertEquals(complexExpected(), actual);
-        }
-    }
-
-    @Test
-    void loads_bizlogic_inline_equals_expected() throws Exception {
+    void loads_bizlogic_inline_cel() throws IOException {
         try (var in = resourceStream("config/good-bizlogic-inline.json")) {
             var actual = ConfigLoader.validated(ConfigLoader.fromJson(in));
-            var expected = new Config(Map.of(
-                    "E",
-                    new AspectMap(
-                            v(),                      // no validations
-                            t(),                      // no transforms
-                            e(),                      // no enrichments
-                            b(kv("notification", new CelInlineLogic("true?[]:null")))
-                    )
+            var expected = new Config(Map.ofEntries(
+                    entry("E",
+                            new AspectMap(
+                                    v(),
+                                    t(),
+                                    e(),
+                                    b(kv("notification", new CelInlineLogic("true?[]:null")))
+                            ))
+            ));
+            assertEquals(expected, actual);
+        }
+    }
+
+    @Test
+    void loads_complex_config() throws IOException {
+        try (var in = resourceStream("config/good-complex.json")) {
+            var actual = ConfigLoader.validated(ConfigLoader.fromJson(in));
+            var expected = new Config(Map.ofEntries(
+                    entry("readyForDelivery",
+                            new AspectMap(
+                                    v(kv("notification", new CelValidation("a + b > 0"))),
+                                    t(kv("notification", new com.hcltech.rmg.config.transformation.XsltTransform("xforms/ready.xslt", "schemas/ready.xml"))),
+                                    e(kv("api", new ApiEnrichment("http://example", Map.of("q", "1")))),
+                                    b(
+                                      kv("fileLogic", new CelFileLogic("logic.cel")),
+                                      kv("inlineLogic", new CelInlineLogic("a + b"))
+                                    )
+                            ))
             ));
             assertEquals(expected, actual);
         }

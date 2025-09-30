@@ -1,4 +1,4 @@
-package com.hcltech.rmg.execution.bizlogic.cel;
+package com.hcltech.rmg.execution.bizlogic;
 
 import com.hcltech.rmg.celcore.RuleBuilderFactory;
 import com.hcltech.rmg.celcore.cache.InMemoryRuleCache;

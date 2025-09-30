@@ -2,7 +2,9 @@
   "events": {
     "readyForDelivery": {
       "bizlogic": {
-        "notification": { "type": "celFile" }
+        "notification": {
+          "type": "celFile"
+        }
       }
     }
   }

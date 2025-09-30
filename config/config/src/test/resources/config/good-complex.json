@@ -3,30 +3,34 @@
     "readyForDelivery": {
       "validation": {
         "notification": {
-          "type": "jsonSchema",
-          "schema": "schemas/ready.json"
+          "type": "cel",
+          "cel": "a + b > 0"
         }
       },
       "transformation": {
         "notification": {
-          "type": "xslt",
+          "type": "xml",
           "file": "xforms/ready.xslt",
           "schema": "schemas/ready.xml"
         }
       },
       "enrichment": {
-        "notification": {
+        "api": {
           "type": "api",
-          "api": "getRecipient",
+          "api": "http://example",
           "params": {
-            "id": "${inp.recipientId}"
+            "q": "1"
           }
         }
       },
       "bizlogic": {
-        "notification": {
+        "fileLogic": {
           "type": "celFile",
-          "file": "cel/ready.cel"
+          "file": "logic.cel"
+        },
+        "inlineLogic": {
+          "type": "cel",
+          "cel": "a + b"
         }
       }
     }

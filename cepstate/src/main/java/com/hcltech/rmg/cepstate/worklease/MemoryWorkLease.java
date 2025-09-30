@@ -1,13 +1,16 @@
 package com.hcltech.rmg.cepstate.worklease;
 
-import java.util.*;
+import java.util.ArrayDeque;
+import java.util.Deque;
+import java.util.Map;
+import java.util.Objects;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentLinkedQueue;
 
 public final class MemoryWorkLease<Msg> implements WorkLease<Msg> {
 
     private static final class LeaseState<M> {
-        String token;                 // non-null while leased
+        String token;                       // non-null while leased
         final Deque<M> q = new ArrayDeque<>(); // backlog (future items only)
     }
 
@@ -30,11 +33,14 @@ public final class MemoryWorkLease<Msg> implements WorkLease<Msg> {
         for (int i = 0; i < max; i++) {
             String d = trash.poll();
             if (d == null) break;
+
             // Atomically: if still idle, remove; else keep it
-            var record = byDomain.get(d);
-            boolean canBeDeleted = record.q.isEmpty() && record.token == null;
-            if (canBeDeleted)
-                byDomain.remove(d, record);
+            byDomain.computeIfPresent(d, (key, s) -> {
+                synchronized (s) {
+                    boolean canBeDeleted = s.q.isEmpty() && s.token == null;
+                    return canBeDeleted ? null : s; // returning null removes the entry
+                }
+            });
         }
     }
 
@@ -53,7 +59,10 @@ public final class MemoryWorkLease<Msg> implements WorkLease<Msg> {
                 return s.token;
             }
 
-            s.q.addLast(message);                  // executor holds current payload; we store future
+            s.q.addLast(message);  // executor holds current payload; we store future
+            if (observer != null) {
+                observer.onEnqueued(domainId, message);
+            }
             return null;
         }
     }
@@ -85,14 +94,13 @@ public final class MemoryWorkLease<Msg> implements WorkLease<Msg> {
                 String nextTok = tokenGen.next(domainId); // advance epoch
                 s.token = nextTok;
 //                System.out.println("  Give: " + domainId + " → " + s.token+ " domain id hash" + domainId.hashCode());
-
                 return HandBackTokenResult.handedOff(nextMsg, nextTok);
             }
 
-            // queue empty → end lease epoch; remove only if mapping is still 's'
+            // queue empty → end lease epoch; schedule cleanup via trash
 //            System.out.println("  Release: " + domainId+ " domain id hash" + domainId.hashCode());
-//            byDomain.remove(domainId, s);
             s.token = null;
+            trash.offer(domainId);             // <-- ensure eventual removal in drainTrash()
             return HandBackTokenResult.ended();
         }
     }

@@ -35,7 +35,9 @@ parameters:
 
 modules:
   - notification
+  - notification-police
   - billing
+  - tracking
   - preAdvice
 
 
@@ -50,11 +52,17 @@ files:
 
 
 module:
-  validate:
+  notification:
     parcelArrived:
       validate:
         type: xmlSchema
         schema: parcelSchema.xml
+      enrichment:
+        type: referenceLookup
+        kafkaTopic:sl;adk
+      bizlogic:
+         type: celInfile
+         cel:
     parcelDeparted:
       validate:
         type: xmlSchema

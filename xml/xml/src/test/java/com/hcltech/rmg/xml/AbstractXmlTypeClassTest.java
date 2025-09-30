@@ -69,7 +69,7 @@ public abstract class AbstractXmlTypeClassTest<S> {
         assertNotNull(schemaA);
 
         String good = "<a id=\"A1\"><x>ok</x></a>";
-        Map<String,Object> out = eng.parseAndValidate(good, schemaA);
+        Map<String,Object> out = eng.parseAndValidate(good, schemaA).valueOrThrow();
 
         Map<String,Object> a = asMap(out.get("a"));
         assertNotNull(a, "root element 'a' missing");
@@ -101,7 +101,7 @@ public abstract class AbstractXmlTypeClassTest<S> {
         assertNotNull(schemaB);
 
         // good: <b><y>42</y></b>
-        Map<String,Object> ok = eng.parseAndValidate("<b><y>42</y></b>", schemaB);
+        Map<String,Object> ok = eng.parseAndValidate("<b><y>42</y></b>", schemaB).valueOrThrow();
         Map<String,Object> b = asMap(ok.get("b"));
         assertNotNull(b, "root element 'b' missing");
         assertEquals("42", elementText(b.get("y")));

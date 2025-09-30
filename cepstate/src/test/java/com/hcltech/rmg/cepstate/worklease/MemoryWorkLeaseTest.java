@@ -17,7 +17,6 @@ final class MemoryWorkLeaseTest {
         String t2 = wl.tryAcquire("d1", "m2");
         assertNull(t2, "second acquire while leased should queue and return null");
     }
-
     @Test
     void succeed_handsOffWithNewToken_then_endWhenEmpty() {
         var wl = new MemoryWorkLease<String>(ITokenGenerator.incrementingGenerator());
@@ -38,10 +37,11 @@ final class MemoryWorkLeaseTest {
         HandBackTokenResult<String> r2 = wl.succeed("d1", r1.token());
         assertEquals(CompletionStatus.ENDED, r2.status());
 
-        // further completes -> NOOP_IDLE (state was cleaned)
+        // further completes -> NOOP_WRONG_TOKEN (domain still present but idle)
         HandBackTokenResult<String> r3 = wl.succeed("d1", r1.token());
-        assertEquals(CompletionStatus.NOOP_IDLE, r3.status());
+        assertEquals(CompletionStatus.NOOP_WRONG_TOKEN, r3.status());
     }
+
 
     @Test
     void fail_behavesLikeSucceed_forHandoffAndEnd() {
@@ -169,22 +169,24 @@ final class MemoryWorkLeaseTest {
     }
 
     @Test
-    void endedThenReacquire_startsNewEpoch_and_oldTokenSeesIdle() {
+    void endedThenReacquire_startsNewEpoch_and_oldTokenIsWrong() {
         var wl = new MemoryWorkLease<String>(ITokenGenerator.incrementingGenerator());
 
         String t1 = wl.tryAcquire("d", "m1");
         var end = wl.succeed("d", t1); // no backlog → ENDED
         assertEquals(CompletionStatus.ENDED, end.status());
 
-        // Old token now sees NOOP_IDLE
+        // Old token now sees NOOP_WRONG_TOKEN (domain entry still exists with token == null)
         var noop = wl.succeed("d", t1);
-        assertEquals(CompletionStatus.NOOP_IDLE, noop.status());
+        assertEquals(CompletionStatus.NOOP_WRONG_TOKEN, noop.status());
 
         // Reacquire starts new epoch
         String t2 = wl.tryAcquire("d", "m2");
         assertNotNull(t2);
         assertNotEquals(t1, t2);
+         assertEquals("d-2", t2);
     }
+
 
     @Test
     void wrongTokenNeverShrinksQueueWhileLeased() {

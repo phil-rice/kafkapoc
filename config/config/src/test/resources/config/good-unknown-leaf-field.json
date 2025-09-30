@@ -2,7 +2,11 @@
   "events": {
     "readyForDelivery": {
       "validation": {
-        "notification": { "type": "xmlSchema", "schema": "somefile","unknown": "something" }
+        "notification": {
+          "type": "cel",
+          "cel": "somecel",
+          "unknown": "something"
+        }
       }
     }
   }

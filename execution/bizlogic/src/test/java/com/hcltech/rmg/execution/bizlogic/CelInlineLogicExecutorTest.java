@@ -1,6 +1,10 @@
-package com.hcltech.rmg.execution.bizlogic.cel;
+package com.hcltech.rmg.execution.bizlogic;
 
-import com.hcltech.rmg.celcore.*;
+import com.hcltech.rmg.celcore.CompiledRule;
+import com.hcltech.rmg.celcore.RuleBuilderFactory;
+import com.hcltech.rmg.celcore.RuleBuilder;
+import com.hcltech.rmg.celcore.RuleExecutor;
+import com.hcltech.rmg.celcore.RuleUsage;
 import com.hcltech.rmg.celcore.cache.InMemoryRuleCache;
 import com.hcltech.rmg.celcore.cache.RuleCache;
 import com.hcltech.rmg.common.errorsor.ErrorsOr;
@@ -13,7 +17,7 @@ import java.util.function.Function;
 
 import static org.junit.jupiter.api.Assertions.*;
 
-class CelInlineLogicExecutorTest {
+public class CelInlineLogicExecutorTest {
 
     // ---------- Helpers ----------
 
@@ -26,7 +30,8 @@ class CelInlineLogicExecutorTest {
                     @Override public List<String> contextPaths() { return List.of(); }
                 };
             }
-            @Override public RuleExecutor<String, List<String>> executor() {
+            @Override public
+            RuleExecutor<String, List<String>> executor() {
                 return (inp, ctx) -> ErrorsOr.lift(List.of("executed:" + src));
             }
         };
