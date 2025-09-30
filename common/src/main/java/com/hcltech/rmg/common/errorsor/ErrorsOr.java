@@ -11,6 +11,8 @@ public interface ErrorsOr<T> {
     Optional<T> getValue();
     List<String> getErrors();
 
+    /** throws an exception if a value */
+    <T1> ErrorsOr<T1> errorCast();
     // --- Helpers ---
     static <T> ErrorsOr<T> lift(T value) {
         return new Value<>(value);

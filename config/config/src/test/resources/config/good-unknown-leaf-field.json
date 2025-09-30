@@ -1,0 +1,9 @@
+{
+  "events": {
+    "readyForDelivery": {
+      "validation": {
+        "notification": { "type": "xmlSchema", "schema": "somefile","unknown": "something" }
+      }
+    }
+  }
+}

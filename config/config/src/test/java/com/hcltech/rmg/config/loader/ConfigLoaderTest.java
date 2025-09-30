@@ -1,0 +1,78 @@
+package com.hcltech.rmg.config.loader;
+
+import com.hcltech.rmg.config.aspect.AspectMap;
+import com.hcltech.rmg.config.bizlogic.CelInlineLogic;
+import com.hcltech.rmg.config.config.Config;
+import com.hcltech.rmg.config.validation.CelValidation;
+import org.junit.jupiter.api.Test;
+
+import java.io.IOException;
+import java.util.Map;
+
+import static com.hcltech.rmg.config.fixture.ConfigTestFixture.*;
+import static java.util.Map.entry;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+
+class ConfigLoaderTest {
+
+    @Test
+    void loads_minimal_equals_expected() throws Exception {
+        try (var in = resourceStream("config/good-minimal.json")) {
+            Config actual = ConfigLoader.validated(ConfigLoader.fromJson(in));
+            assertEquals(minimalConfig(), actual);
+        }
+    }
+
+    @Test
+    void loads_complex_equals_expected() throws Exception {
+        try (var in = resourceStream("config/good-complex.json")) {
+            Config actual = ConfigLoader.validated(ConfigLoader.fromJson(in));
+            assertEquals(complexExpected(), actual);
+        }
+    }
+
+    @Test
+    void loads_bizlogic_inline_equals_expected() throws Exception {
+        try (var in = resourceStream("config/good-bizlogic-inline.json")) {
+            var actual = ConfigLoader.validated(ConfigLoader.fromJson(in));
+            var expected = new Config(Map.of(
+                    "E",
+                    new AspectMap(
+                            v(),                      // no validations
+                            t(),                      // no transforms
+                            e(),                      // no enrichments
+                            b(kv("notification", new CelInlineLogic("true?[]:null")))
+                    )
+            ));
+            assertEquals(expected, actual);
+        }
+    }
+
+    @Test
+    void fails_on_bad_missing_leaf() {
+        assertThrows(Exception.class, () -> {
+            try (var in = resourceStream("config/bad-missing-leaf.json")) {
+                // CelFileLogic ctor should fail while parsing
+                ConfigLoader.fromJson(in);
+            }
+        });
+    }
+
+    @Test
+    void succeeds_on_good_unknown_leaf_field_as_given() throws IOException {
+        try (var in = resourceStream("config/good-unknown-leaf-field.json")) {
+            var actual = ConfigLoader.validated(ConfigLoader.fromJson(in));
+            var expected = new Config(Map.ofEntries(
+                    entry("readyForDelivery",
+                            new AspectMap(
+                                    v(kv("notification", new CelValidation("somecel"))),
+                                    t(),
+                                    e(),
+                                    b()
+                            ))
+            ));
+            assertEquals(expected, actual);
+        }
+    }
+}

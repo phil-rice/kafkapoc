@@ -1,0 +1,34 @@
+{
+  "events": {
+    "readyForDelivery": {
+      "validation": {
+        "notification": {
+          "type": "jsonSchema",
+          "schema": "schemas/ready.json"
+        }
+      },
+      "transformation": {
+        "notification": {
+          "type": "xslt",
+          "file": "xforms/ready.xslt",
+          "schema": "schemas/ready.xml"
+        }
+      },
+      "enrichment": {
+        "notification": {
+          "type": "api",
+          "api": "getRecipient",
+          "params": {
+            "id": "${inp.recipientId}"
+          }
+        }
+      },
+      "bizlogic": {
+        "notification": {
+          "type": "celFile",
+          "file": "cel/ready.cel"
+        }
+      }
+    }
+  }
+}

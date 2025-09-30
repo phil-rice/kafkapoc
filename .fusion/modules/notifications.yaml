@@ -2,22 +2,22 @@ module:
   notification:
     arrival: # This is the name of the event that we are handling. It is used to identify the event in the system
       validation:
-         - type: schema
+           type: schema
            file: 'schemas/arrival_notification.json' # This is a json schema that validates the incoming message
 
       enrich:
-        - type: task # This means we are calling a task. Note that tasks take time. We will continue the processing when the task returns. Also note that tasks have retry logic... perhaps they take up to 15 mins, or never terminate
+          type: task # This means we are calling a task. Note that tasks take time. We will continue the processing when the task returns. Also note that tasks have retry logic... perhaps they take up to 15 mins, or never terminate
           task: look_up_address # This is a task that looks up the recipient of the notification based on the message type
           params: [ ] # We could have passed parameters here, but actually the defaults are fine. Params is optional, this is just for conversation
 
       logic: # This calculates side effects based on the message type
-        - type: celFile
+          type: celFile
           file: 'cel/arrival_notification.cel' # The name of a file that holds cel
 
 
     departure: # Here we can see we have two different ways to define the logic. We execute both
       logic:
-        - type: celInline
+          type: celInline
           inline: | # Here we have some inline cel. It is creating a single side effect
             recipient.country == "uk" && product.type == "registeredDelivery"
               ? [{
@@ -30,7 +30,5 @@ module:
                 recipient: "{{ my_email }}"
             }]
               : null}
-        - type: celFile
-          file: 'cel/departure_notification.cel' # The name of a file that holds cel
 
 
