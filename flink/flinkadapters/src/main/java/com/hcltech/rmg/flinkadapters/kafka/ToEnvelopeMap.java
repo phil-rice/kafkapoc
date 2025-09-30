@@ -7,6 +7,23 @@ import org.apache.flink.api.common.functions.RichMapFunction;
 
 import java.util.function.Function;
 
+/**
+ * MapFunction that converts RawKafkaData to ValueEnvelope<T>.
+ * <p>
+ * Usage:
+ * <pre>
+ *   DataStream&lt;RawKafkaData&gt; rawStream = ...
+ *   DataStream&lt;ValueEnvelope&lt;MyDomain&gt;&gt; envStream = rawStream.map(new ToEnvelopeMap&lt;MyDomain&gt;("MyDomainType", MyDomain.class.getName(), 100) {
+ *       &#64;Override
+ *       String domainIdExtractor(MyDomain d) { return d.getId(); }
+ *
+ *       &#64;Override
+ *       MyDomain withInitialValues(MyDomain d) { ... } // set defaults if needed
+ *   });
+ * </pre>
+ *
+ * @param <T> The domain type inside the envelope
+ */
 public abstract class ToEnvelopeMap<T> extends RichMapFunction<RawKafkaData, ValueEnvelope<T>> implements java.io.Serializable {
 
     private final String domainType;

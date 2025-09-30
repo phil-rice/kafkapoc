@@ -6,15 +6,15 @@ import com.hcltech.rmg.flinkadapters.kafka.RawKafkaData;
 import java.util.Map;
 
 public interface Envelopes {
-    public static <T> Codec<ValueEnvelope<T>, String> valueEnvelopeStringCodec(Codec<T, Map<String, Object>> dataCodec) {
+    static <T> Codec<ValueEnvelope<T>, String> valueEnvelopeStringCodec(Codec<T, Map<String, Object>> dataCodec) {
         return new ValueEnvelopeStringCodec<T>(dataCodec);
     }
 
-    public static <T> Codec<RetryEnvelope<T>, String> retryEnvelopeStringCodec(Codec<T, Map<String, Object>> dataCodec) {
+    static <T> Codec<RetryEnvelope<T>, String> retryEnvelopeStringCodec(Codec<T, Map<String, Object>> dataCodec) {
         return new RetryEnvelopeStringCodec<>(dataCodec);
     }
 
-    public static <T> Codec<ErrorEnvelope<T>, String> errorEnvelopeStringCodec(Codec<T, Map<String, Object>> dataCodec) {
+     static <T> Codec<ErrorEnvelope<T>, String> errorEnvelopeStringCodec(Codec<T, Map<String, Object>> dataCodec) {
         return new ErrorEnvelopeStringCodec<>(dataCodec);
     }
 }
