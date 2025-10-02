@@ -1,6 +1,7 @@
 package com.hcltech.rmg.flinkadapters.envelopes;
 
 import com.hcltech.rmg.common.codec.Codec;
+import com.hcltech.rmg.common.errorsor.ErrorsOr;
 import com.hcltech.rmg.flinkadapters.kafka.RawKafkaData;
 
 import java.util.Map;
@@ -14,7 +15,7 @@ public interface Envelopes {
         return new RetryEnvelopeStringCodec<>(dataCodec);
     }
 
-     static <T> Codec<ErrorEnvelope<T>, String> errorEnvelopeStringCodec(Codec<T, Map<String, Object>> dataCodec) {
+    static <T> Codec<ErrorEnvelope<T>, String> errorEnvelopeStringCodec(Codec<T, Map<String, Object>> dataCodec) {
         return new ErrorEnvelopeStringCodec<>(dataCodec);
     }
 }
@@ -28,18 +29,15 @@ record ValueEnvelopeStringCodec<T>(Codec<ValueEnvelope<Map<String, Object>>, Str
     }
 
     @Override
-    public String encode(ValueEnvelope<T> value) throws Exception {
-        Map<String, Object> dataAsMaps = dataCodec.encode(value.data());
-        ValueEnvelope<Map<String, Object>> newEnv = value.withData(dataAsMaps);
-        return valueCodec.encode(newEnv);
+    public ErrorsOr<String> encode(ValueEnvelope<T> value) {
+        return dataCodec.encode(value.data()).flatMap(dataAsMaps -> valueCodec.encode(value.withData(dataAsMaps)));
     }
 
 
     @Override
-    public ValueEnvelope<T> decode(String encoded) throws Exception {
-        var envWithMaps = valueCodec.decode(encoded);
-        var data = dataCodec.decode(envWithMaps.data());
-        return envWithMaps.withData(data);
+    public ErrorsOr<ValueEnvelope<T>> decode(String encoded) {
+        return valueCodec.decode(encoded).flatMap(envWithMaps ->
+                dataCodec.decode(envWithMaps.data()).map(envWithMaps::withData));
     }
 }
 
@@ -53,20 +51,19 @@ record RetryEnvelopeStringCodec<T>(Codec<RetryEnvelope<Map<String, Object>>, Str
 
 
     @Override
-    public String encode(RetryEnvelope<T> value) throws Exception {
+    public ErrorsOr<String> encode(RetryEnvelope<T> value) {
         T data = value.envelope().data();
-        Map<String, Object> dataAsMaps = dataCodec.encode(data);
-        RetryEnvelope<Map<String, Object>> newEnv = value.withData(dataAsMaps);
-        return retryCodec.encode(newEnv);
+        return dataCodec.encode(data).flatMap(dataAsMaps ->
+                retryCodec.encode(value.withData(dataAsMaps)));
     }
 
     @Override
-    public RetryEnvelope<T> decode(String encoded) throws Exception {
-        var envWithMaps = retryCodec.decode(encoded);
-        var data = dataCodec.decode(envWithMaps.envelope().data());
-        return envWithMaps.withData(data);
+    public ErrorsOr<RetryEnvelope<T>> decode(String encoded) {
+        return retryCodec.decode(encoded).flatMap(envWithMaps ->
+                dataCodec.decode(envWithMaps.envelope().data()).map(envWithMaps::withData));
     }
 }
+
 
 record ErrorEnvelopeStringCodec<T>(Codec<ErrorEnvelope<Map<String, Object>>, String> errorCodec,
                                    Codec<T, Map<String, Object>> dataCodec) implements Codec<ErrorEnvelope<T>, String> {
@@ -76,16 +73,18 @@ record ErrorEnvelopeStringCodec<T>(Codec<ErrorEnvelope<Map<String, Object>>, Str
     }
 
     @Override
-    public String encode(ErrorEnvelope<T> value) throws Exception {
-        Map<String, Object> dataAsMaps = dataCodec.encode(value.envelope().data());
-        ErrorEnvelope<Map<String, Object>> newEnv = value.withData(dataAsMaps);
-        return errorCodec.encode(newEnv);
+    public ErrorsOr<String> encode(ErrorEnvelope<T> value) {
+        return dataCodec.encode((T) value.envelope().data()).flatMap(dataAsMaps -> {
+            ErrorEnvelope<Map<String, Object>> newEnv = value.withData(dataAsMaps);
+            return errorCodec.encode(newEnv);
+
+        });
     }
 
     @Override
-    public ErrorEnvelope<T> decode(String encoded) throws Exception {
-        var envWithMaps = errorCodec.decode(encoded);
-        var data = dataCodec.decode(envWithMaps.envelope().data());
-        return envWithMaps.withData(data);
+    public ErrorsOr<ErrorEnvelope<T>> decode(String encoded) {
+        return errorCodec.decode(encoded).flatMap(envWithMaps ->
+                dataCodec.decode((Map<String, Object>) envWithMaps.envelope().data())
+                        .map(envWithMaps::withData));
     }
 }

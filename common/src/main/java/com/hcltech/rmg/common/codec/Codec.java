@@ -1,25 +1,27 @@
 package com.hcltech.rmg.common.codec;
 
 
+import com.hcltech.rmg.common.errorsor.ErrorsOr;
+
 import java.util.List;
 import java.util.Map;
 import java.util.function.Function;
 
 public interface Codec<From, To> {
 
-    To encode(From from) throws Exception;
+    ErrorsOr<To> encode(From from) ;
 
-    From decode(To to) throws Exception;
+    ErrorsOr<From> decode(To to) ;
 
     default Codec<To, From> invert() {
         return new Codec<To, From>() {
             @Override
-            public From encode(To p) throws Exception {
+            public ErrorsOr<From> encode(To p) {
                 return Codec.this.decode(p);
             }
 
             @Override
-            public To decode(From from) throws Exception {
+            public ErrorsOr<To> decode(From from) {
                 return Codec.this.encode(from);
             }
         };

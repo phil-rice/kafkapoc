@@ -58,7 +58,7 @@ public record RocksCepState<Optics, C>(RocksDB db, Codec<List<IOpticsEvent<Optic
             var state = interpreter.lift(defaultValue);
             while (it.isValid()) {
                 // Each value is a batch (List<OpticsEvent<C>>) for a single sequence
-                List<IOpticsEvent<Optics>> batch = eventCodec.decode(it.value());
+                List<IOpticsEvent<Optics>> batch = eventCodec.decode(it.value()).valueOrThrow();
                 if (!batch.isEmpty()) {
                     state = interpreter.apply(batch, state); // fold this batch only
                 }
@@ -80,7 +80,7 @@ public record RocksCepState<Optics, C>(RocksDB db, Codec<List<IOpticsEvent<Optic
             long next = last + 1;
 
             // store this batch at the next sequence
-            wb.put(evtKey(domainId, next), eventCodec.encode(mutations));
+            wb.put(evtKey(domainId, next), eventCodec.encode(mutations).valueOrThrow());
             // persist last sequence (next) atomically with the batch append
             wb.put(seqKey(domainId), longBE(next));
 

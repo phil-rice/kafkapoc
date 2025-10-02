@@ -1,6 +1,7 @@
 package com.hcltech.rmg.cepstate.rocks;
 
 import com.hcltech.rmg.common.codec.Codec;
+import com.hcltech.rmg.common.errorsor.ErrorsOr;
 import com.hcltech.rmg.optics.IOpticsEvent;
 import com.hcltech.rmg.optics.Interpreter;
 import org.apache.commons.jxpath.JXPathContext;
@@ -22,15 +23,18 @@ import static org.mockito.Mockito.*;
 
 /**
  * Integration tests for RocksCepState (JXPath flavor):
- *  - real RocksDB
- *  - name-based codec mapping "event1" -> IOpticsEvent<JXPathContext> instance
- *  - mocked Interpreter<JXPathContext, TestState>
+ * - real RocksDB
+ * - name-based codec mapping "event1" -> IOpticsEvent<JXPathContext> instance
+ * - mocked Interpreter<JXPathContext, TestState>
  */
 public class RocksCepStateIT {
 
-    static { RocksDB.loadLibrary(); }
+    static {
+        RocksDB.loadLibrary();
+    }
 
-    @TempDir Path dbDir;
+    @TempDir
+    Path dbDir;
 
     private RocksDB db;
     private Interpreter<JXPathContext, TestState> interpreter; // mocked
@@ -131,6 +135,7 @@ public class RocksCepStateIT {
         inOrder.verify(interpreter).getFrom(m2);
         verifyNoMoreInteractions(interpreter);
     }
+
     @Test
     void domainIsolation_iteratesOnlyWithinDomainRange() throws Exception {
         String A = "tenantA";
@@ -206,7 +211,8 @@ public class RocksCepStateIT {
 
     // -------------------- Helpers --------------------
 
-    static record TestState(String a, Integer b, String c) {}
+    static record TestState(String a, Integer b, String c) {
+    }
 
     private static Map<String, IOpticsEvent<JXPathContext>> buildEvents() {
         Map<String, IOpticsEvent<JXPathContext>> m = new LinkedHashMap<>();
@@ -219,7 +225,9 @@ public class RocksCepStateIT {
         return m;
     }
 
-    /** Name-based codec using identity of event instances (round-trips exact objects). */
+    /**
+     * Name-based codec using identity of event instances (round-trips exact objects).
+     */
     static final class NamedEventCodec implements Codec<List<IOpticsEvent<JXPathContext>>, byte[]> {
         private final Map<String, IOpticsEvent<JXPathContext>> nameToEvent;
         private final IdentityHashMap<IOpticsEvent<JXPathContext>, String> eventToName;
@@ -231,7 +239,7 @@ public class RocksCepStateIT {
         }
 
         @Override
-        public byte[] encode(List<IOpticsEvent<JXPathContext>> value) {
+        public ErrorsOr<byte[]> encode(List<IOpticsEvent<JXPathContext>> value) {
             String joined = value.stream()
                     .map(e -> {
                         String name = eventToName.get(e);
@@ -239,12 +247,12 @@ public class RocksCepStateIT {
                         return name;
                     })
                     .collect(Collectors.joining("\n"));
-            return joined.getBytes(StandardCharsets.UTF_8);
+            return ErrorsOr.lift(joined.getBytes(StandardCharsets.UTF_8));
         }
 
         @Override
-        public List<IOpticsEvent<JXPathContext>> decode(byte[] bytes) {
-            if (bytes == null || bytes.length == 0) return List.of();
+        public ErrorsOr<List<IOpticsEvent<JXPathContext>>> decode(byte[] bytes) {
+            if (bytes == null || bytes.length == 0) return ErrorsOr.lift(List.of());
             String s = new String(bytes, StandardCharsets.UTF_8);
             List<IOpticsEvent<JXPathContext>> out = new ArrayList<>();
             for (String token : s.split("\n", -1)) {
@@ -253,7 +261,7 @@ public class RocksCepStateIT {
                 if (ev == null) throw new IllegalArgumentException("Unknown event name: " + token);
                 out.add(ev);
             }
-            return List.copyOf(out);
+            return ErrorsOr.lift(List.copyOf(out));
         }
     }
 

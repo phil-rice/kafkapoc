@@ -93,16 +93,16 @@ public class ProducerApp {
         Properties applicationProperties = loadApplicationProperties();
 
         // Inputs
-        String bootstrap   = get("kafka.bootstrap.servers", applicationProperties, "localhost:9092");
-        String topic       = get("kafka.topic", applicationProperties, "test-topic");
-        int partitions     = Integer.parseInt(get("kafka.partitions", applicationProperties, "12"));
-        short rf           = Short.parseShort(get("kafka.replication.factor", applicationProperties, "1"));
+        String bootstrap = get("kafka.bootstrap.servers", applicationProperties, "localhost:9092");
+        String topic = get("kafka.topic", applicationProperties, "test-topic");
+        int partitions = Integer.parseInt(get("kafka.partitions", applicationProperties, "12"));
+        short rf = Short.parseShort(get("kafka.replication.factor", applicationProperties, "1"));
 
-        int count          = Integer.parseInt(get("generator.count", applicationProperties, "100000"));
-        int domainCount    = Integer.parseInt(get("generator.domain.count", applicationProperties, "1000"));
-        int recordEvery    = Integer.parseInt(get("logging.record.every", applicationProperties, "1000"));
-        int parallelism    = Integer.parseInt(get("generator.parallelism", applicationProperties, "100"));
-        long seed          = Long.parseLong(get("generator.seed", applicationProperties, "12345"));
+        int count = Integer.parseInt(get("generator.count", applicationProperties, "100000"));
+        int domainCount = Integer.parseInt(get("generator.domain.count", applicationProperties, "1000"));
+        int recordEvery = Integer.parseInt(get("logging.record.every", applicationProperties, "1000"));
+        int parallelism = Integer.parseInt(get("generator.parallelism", applicationProperties, "100"));
+        long seed = Long.parseLong(get("generator.seed", applicationProperties, "12345"));
 
         // Ensure topic exists / sized
         ensureTopic(bootstrap, topic, partitions, rf);
@@ -117,7 +117,7 @@ public class ProducerApp {
         Semaphore gate = new Semaphore(parallelism);
 
         try (KafkaProducer<String, String> producer = newKafkaProducer(applicationProperties)) {
-            var it = generator.randomUniformStream(domainCount).limit(count).iterator();
+            var it = generator.randomUniformStream(domainCount, TestDomainMessage::new).limit(count).iterator();
 
             while (it.hasNext()) {
                 if (firstError.get() != null) break; // stop feeding on first failure
@@ -125,7 +125,7 @@ public class ProducerApp {
                 var message = it.next();
                 long n = message.count();
                 String key = String.valueOf(message.domainId());
-                String value = codec.encode(message);
+                String value = codec.encode(message).valueOrThrow();
 
                 gate.acquireUninterruptibly(); // cap in-flight sends
 
@@ -163,7 +163,7 @@ public class ProducerApp {
         double durationS = (System.currentTimeMillis() - startMs) / 1000.0;
         long sentCount = sent.get();
         log.info("Done. Sent {} messages to topic {}. Took {}s (~{} msg/s)",
-                sentCount, topic, durationS, durationS > 0 ? (long)(sentCount / durationS) : sentCount);
+                sentCount, topic, durationS, durationS > 0 ? (long) (sentCount / durationS) : sentCount);
     }
 
     // -------------------- Helpers --------------------

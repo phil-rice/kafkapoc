@@ -1,6 +1,7 @@
 package com.hcltech.rmg.common.codec;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.hcltech.rmg.common.errorsor.ErrorsOr;
 
 public final class JacksonJsonCodec implements Codec<Object, String>, HasObjectMapper {
     private final ObjectMapper mapper;
@@ -11,14 +12,21 @@ public final class JacksonJsonCodec implements Codec<Object, String>, HasObjectM
     }
 
     @Override
-    public String encode(Object value) throws Exception {
-        return mapper.writeValueAsString(value);
+    public ErrorsOr<String> encode(Object value) {
+        try {
+            return ErrorsOr.lift(mapper.writeValueAsString(value));
+        } catch (Exception e) {
+            return ErrorsOr.error("", e);
+        }
     }
 
     @Override
-    public Object decode(String json) throws Exception {
-        // Decodes to Maps/Lists/Strings/Numbers/Booleans/null
-        return mapper.readValue(json, Object.class);
+    public ErrorsOr<Object> decode(String json) {
+        try {
+            return ErrorsOr.lift(mapper.readValue(json, Object.class));
+        } catch (Exception e) {
+            return ErrorsOr.error("", e);
+        }
     }
 
     @Override

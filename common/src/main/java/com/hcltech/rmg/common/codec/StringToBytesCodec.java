@@ -1,5 +1,7 @@
 package com.hcltech.rmg.common.codec;
 
+import com.hcltech.rmg.common.errorsor.ErrorsOr;
+
 import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
 import java.util.Objects;
@@ -18,13 +20,16 @@ public final class StringToBytesCodec<T> implements Codec<T, byte[]> {
     }
 
     @Override
-    public byte[] encode(T from) throws Exception {
-        String s = delegate.encode(from);
-        return s.getBytes(charset);
+    public ErrorsOr<byte[]> encode(T from) {
+        try {
+            return delegate.encode(from).map(x -> x.getBytes(charset));
+        } catch (Exception e) {
+            return ErrorsOr.error("Failed to encode to bytes: " + e.getMessage());
+        }
     }
 
     @Override
-    public T decode(byte[] to) throws Exception {
+    public ErrorsOr<T> decode(byte[] to) {
         String s = new String(to, charset);
         return delegate.decode(s);
     }

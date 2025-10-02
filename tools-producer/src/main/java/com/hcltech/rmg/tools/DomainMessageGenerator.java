@@ -6,6 +6,8 @@ import java.util.List;
 import java.util.SplittableRandom;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicLongArray;
+import java.util.function.BiFunction;
+import java.util.function.Function;
 import java.util.function.Supplier;
 import java.util.stream.IntStream;
 import java.util.stream.Stream;
@@ -27,27 +29,27 @@ public final class DomainMessageGenerator {
     /**
      * Infinite stream, uniform random selection across N domains. Offsets are per-domain monotonic.
      */
-    public Stream<TestDomainMessage> randomUniformStream(int domainCount) {
+    public <T> Stream<T> randomUniformStream(int domainCount, BiFunction<String, Long, T> mapper) {
         if (domainCount <= 0) throw new IllegalArgumentException("domainCount must be > 0");
         var domainIds = IntStream.range(0, domainCount)
                 .mapToObj(i -> "d-" + i)
                 .toList();
-        return randomUniformStream(domainIds);
+        return randomUniformStream(domainIds, mapper);
     }
 
     /**
      * Infinite stream, uniform random selection across provided domains. Offsets are per-domain monotonic.
      */
-    public Stream<TestDomainMessage> randomUniformStream(List<String> domainIds) {
+    public <T> Stream<T> randomUniformStream(List<String> domainIds, BiFunction<String, Long, T> mapper) {
         if (domainIds == null || domainIds.isEmpty()) throw new IllegalArgumentException("domainIds empty");
         var offsets = new AtomicLongArray(domainIds.size()); // starts at 0
         var rng = new SplittableRandom(seed);
 
-        Supplier<TestDomainMessage> next = () -> {
+        Supplier<T> next = () -> {
             // pick a domain uniformly
             int idx = rng.nextInt(domainIds.size());
-            long off = offsets.getAndIncrement(idx); // 0,1,2,... per domain
-            return new TestDomainMessage(domainIds.get(idx), counter.getAndIncrement());
+            return mapper.apply(idx + "", offsets.getAndIncrement(idx));
+//            return new TestDomainMessage(domainIds.get(idx), counter.getAndIncrement());
         };
 
         // Stream.generate is safe here because our supplier is thread-safe.
@@ -56,13 +58,6 @@ public final class DomainMessageGenerator {
         return Stream.generate(next);
     }
 
-    /**
-     * Finite batch helper (handy for tests).
-     */
-    public Stream<TestDomainMessage> randomUniformBatch(int domainCount, long count) {
-        return randomUniformStream(domainCount).limit(count);
-    }
 
-    private DomainMessageGenerator() {
-    }
+
 }

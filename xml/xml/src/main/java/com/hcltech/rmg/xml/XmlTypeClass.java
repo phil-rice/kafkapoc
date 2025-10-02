@@ -8,7 +8,7 @@ import java.io.InputStream;
 import java.util.List;
 import java.util.Map;
 
-public interface XmlTypeClass<Schema> {
+public interface XmlTypeClass<Schema> extends XmlKeyExtractor{
     Schema loadSchema(String schemaName, InputStream schemaStream);
 
     ErrorsOr<Map<String, Object>> parseAndValidate(String xml, Schema schema);

@@ -42,7 +42,7 @@ class JacksonTreeCodecTest {
         JacksonTreeCodec<Person> codec = new JacksonTreeCodec<>(Person.class);
         Person p = new Person("Alice", 30);
 
-        Map<String, Object> encoded = codec.encode(p);
+        Map<String, Object> encoded = codec.encode(p).valueOrThrow();
 
         assertEquals("Alice", encoded.get("name"));
         assertEquals(30, encoded.get("age"));
@@ -53,7 +53,7 @@ class JacksonTreeCodecTest {
         JacksonTreeCodec<Person> codec = new JacksonTreeCodec<>(Person.class);
         Map<String, Object> map = Map.of("name", "Bob", "age", 40);
 
-        Person decoded = codec.decode(map);
+        Person decoded = codec.decode(map).valueOrThrow();
 
         assertEquals(new Person("Bob", 40), decoded);
     }
@@ -63,8 +63,8 @@ class JacksonTreeCodecTest {
         JacksonTreeCodec<Person> codec = new JacksonTreeCodec<>(Person.class);
         Person original = new Person("Carol", 25);
 
-        Map<String, Object> encoded = codec.encode(original);
-        Person decoded = codec.decode(encoded);
+        Map<String, Object> encoded = codec.encode(original).valueOrThrow();
+        Person decoded = codec.decode(encoded).valueOrThrow();
 
         assertEquals(original, decoded);
     }
@@ -78,7 +78,7 @@ class JacksonTreeCodecTest {
                 "extra", "ignored"
         );
 
-        Person decoded = codec.decode(map);
+        Person decoded = codec.decode(map).valueOrThrow();
 
         assertEquals(new Person("Dan", 50), decoded);
     }
@@ -88,7 +88,7 @@ class JacksonTreeCodecTest {
         JacksonTreeCodec<Person> codec = new JacksonTreeCodec<>(Person.class);
         Person p = new Person(null, 0);
 
-        Map<String, Object> encoded = codec.encode(p);
+        Map<String, Object> encoded = codec.encode(p).valueOrThrow();
 
         assertTrue(encoded.containsKey("name"));
         assertNull(encoded.get("name"));

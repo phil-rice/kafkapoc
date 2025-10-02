@@ -19,11 +19,11 @@ class JacksonJsonCodecTest {
         payload.put("list", java.util.List.of(1, 2, 3));
         payload.put("null", null); // allowed now
 
-        String json = c.encode(payload);
+        String json = c.encode(payload).valueOrThrow();
         assertNotNull(json);
         assertTrue(json.contains("\"n\":123"));
 
-        Object decoded = c.decode(json);
+        Object decoded = c.decode(json).valueOrThrow();
         assertInstanceOf(Map.class, decoded);
         Map<?, ?> m = (Map<?, ?>) decoded;
 

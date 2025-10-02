@@ -13,21 +13,19 @@ import org.codehaus.stax2.validation.XMLValidationSchemaFactory;
 
 import javax.xml.stream.XMLInputFactory;
 import javax.xml.stream.XMLStreamConstants;
+import javax.xml.stream.XMLStreamException;
 import java.io.InputStream;
 import java.io.StringReader;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.Map;
 
 /**
  * Woodstox/StAX2 implementation that compiles XSD to XMLValidationSchema
  * and validates as you pull events (single pass, no DOM).
- * <p>
- * Output map shape is produced by CelFriendlyStreamingMapBuilder:
- * - element keys: CEL-safe identifiers
- * - attributes under "attr" sub-map
- * - text under "text"
- * - repeats: always lists
- * - order: LinkedHashMap (stable)
+ *
+ * Key extraction is done with a simple slash path passed into extractId(),
+ * e.g. "Envelope/Body/Order/Id". Matching is by local name only.
  */
 public final class WoodstoxXmlTypeClass implements XmlTypeClass<XMLValidationSchema> {
 
@@ -42,12 +40,13 @@ public final class WoodstoxXmlTypeClass implements XmlTypeClass<XMLValidationSch
         factory.setXMLResolver((publicId, systemId, baseURI, ns) -> null); // no external fetches
     }
 
+    // --- XmlTypeClass ---
+
     @Override
     public XMLValidationSchema loadSchema(String schemaName, InputStream schemaStream) {
         try (schemaStream) {
             XMLValidationSchemaFactory f =
                     XMLValidationSchemaFactory.newInstance(XMLValidationSchema.SCHEMA_ID_W3C_SCHEMA);
-            // Woodstox 7.x: create from InputStream (single-file XSD path)
             return f.createSchema(schemaStream);
         } catch (Exception e) {
             throw new LoadSchemaException("Failed to compile XSD for " + schemaName, e);
@@ -65,15 +64,13 @@ public final class WoodstoxXmlTypeClass implements XmlTypeClass<XMLValidationSch
             v.validateAgainst(schema);
             v.setValidationProblemHandler(new ThrowingProblems());
 
-            // Stream to CEL-friendly map
             CelFriendlyStreamingMapBuilder b = new CelFriendlyStreamingMapBuilder();
-            for (; ; ) {
+            for (;;) {
                 switch (r.getEventType()) {
                     case XMLStreamConstants.START_ELEMENT -> b.onStart(r);
-                    case XMLStreamConstants.CHARACTERS, XMLStreamConstants.CDATA, XMLStreamConstants.SPACE ->
-                            b.onText(r);
+                    case XMLStreamConstants.CHARACTERS, XMLStreamConstants.CDATA, XMLStreamConstants.SPACE -> b.onText(r);
                     case XMLStreamConstants.END_ELEMENT -> b.onEnd(r);
-                    default -> { /* ignore: COMMENT, DTD, PI */ }
+                    default -> { /* ignore COMMENT, DTD, PI */ }
                 }
                 if (!r.hasNext()) break;
                 r.next();
@@ -82,16 +79,83 @@ public final class WoodstoxXmlTypeClass implements XmlTypeClass<XMLValidationSch
         } catch (Exception e) {
             return ErrorsOr.error("Parsing xml {0}: {1}", e);
         } finally {
-            if (r != null) try {
-                r.close();
-            } catch (Exception ignore) {
-            }
+            if (r != null) try { r.close(); } catch (Exception ignore) {}
         }
     }
 
-    /**
-     * Fail-fast with location-aware message from Woodstox validation.
-     */
+    // --- XmlKeyExtractor ---
+
+    @Override
+    public ErrorsOr<String> extractId(String xml, String idPath) {
+        if (xml == null) return ErrorsOr.error("XML was null");
+        String[] path = Arrays.stream(idPath.split("/"))
+                .map(String::trim)
+                .filter(s -> !s.isEmpty())
+                .toArray(String[]::new);
+        if (path.length == 0) return ErrorsOr.error("idPath cannot be empty");
+
+        XMLStreamReader2 r = null;
+        try {
+            r = (XMLStreamReader2) factory.createXMLStreamReader(new StringReader(xml));
+            int matchIdx = 0;
+
+            for (;;) {
+                final int ev = r.getEventType();
+                if (ev == XMLStreamConstants.START_ELEMENT) {
+                    final String local = r.getLocalName();
+                    if (localEquals(local, path[matchIdx])) {
+                        if (matchIdx == path.length - 1) {
+                            String id = readElementText(r);
+                            if (id == null || id.isEmpty()) {
+                                return ErrorsOr.error("Key element <%s> was empty", new RuntimeException("empty key"));
+                            }
+                            return ErrorsOr.lift(id);
+                        } else {
+                            matchIdx++;
+                        }
+                    }
+                } else if (ev == XMLStreamConstants.END_ELEMENT) {
+                    if (matchIdx > 0 && localEquals(r.getLocalName(), path[matchIdx - 1])) {
+                        matchIdx--;
+                    }
+                }
+                if (!r.hasNext()) break;
+                r.next();
+            }
+            return ErrorsOr.error("Key not found at path: " + idPath);
+        } catch (XMLStreamException e) {
+            return ErrorsOr.error("XML key extraction failed: {0}: {1}", e);
+        } finally {
+            if (r != null) try { r.close(); } catch (Exception ignore) {}
+        }
+    }
+
+    // --- helpers ---
+
+    private static boolean localEquals(String a, String b) {
+        return a != null && a.equals(b);
+    }
+
+    private static String readElementText(XMLStreamReader2 r) throws XMLStreamException {
+        StringBuilder sb = new StringBuilder(64);
+        int depth = 1;
+        while (r.hasNext()) {
+            int ev = r.next();
+            switch (ev) {
+                case XMLStreamConstants.START_ELEMENT -> depth++;
+                case XMLStreamConstants.CHARACTERS, XMLStreamConstants.CDATA -> sb.append(r.getText());
+                case XMLStreamConstants.END_ELEMENT -> {
+                    depth--;
+                    if (depth == 0) {
+                        return sb.toString().trim();
+                    }
+                }
+                default -> { /* ignore others */ }
+            }
+        }
+        return sb.toString().trim();
+    }
+
     private static final class ThrowingProblems implements ValidationProblemHandler {
         @Override
         public void reportProblem(XMLValidationProblem p) {

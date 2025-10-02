@@ -52,7 +52,7 @@ class IOpticsEventCodecTest {
         var c = codec();
 
         IOpticsEvent<JXPathContext> in = new SetEvent<>("user/name", "Alice");
-        String json = c.encode(in);
+        String json = c.encode(in).valueOrThrow();
 
         // sanity: wrapper JSON should contain type + payload and inner fields
         assertTrue(json.contains("\"type\":\"set\""));
@@ -60,7 +60,7 @@ class IOpticsEventCodecTest {
         assertTrue(json.contains("\"path\":\"user/name\""));
         assertTrue(json.contains("\"value\":\"Alice\""));
 
-        IOpticsEvent<JXPathContext> out = c.decode(json);
+        IOpticsEvent<JXPathContext> out = c.decode(json).valueOrThrow();
         assertInstanceOf(SetEvent.class, out);
 
         SetEvent<?> se = (SetEvent<?>) out;
@@ -73,14 +73,14 @@ class IOpticsEventCodecTest {
         Codec<IOpticsEvent<JXPathContext>, String> c = codec();
 
         IOpticsEvent<JXPathContext> in = new AppendEvent<>("scores", 99);
-        String json = c.encode(in);
+        String json = c.encode(in).valueOrThrow();
 
         assertTrue(json.contains("\"type\":\"append\""));
         assertTrue(json.contains("\"payload\""));
         assertTrue(json.contains("\"path\":\"scores\""));
         assertTrue(json.contains("\"value\":99"));
 
-        IOpticsEvent<JXPathContext> out = c.decode(json);
+        IOpticsEvent<JXPathContext> out = c.decode(json).valueOrThrow();
         assertInstanceOf(AppendEvent.class, out);
 
         AppendEvent<?> ae = (AppendEvent<?>) out;
@@ -95,14 +95,14 @@ class IOpticsEventCodecTest {
         Codec<IOpticsEvent<JXPathContext>, String> c = codec();
 
         // encode a set event
-        String json = c.encode(new SetEvent<>("user/name", "Bob"));
+        String json = c.encode(new SetEvent<>("user/name", "Bob")).valueOrThrow();
 
         // fresh context
         Map<String, Object> root = new LinkedHashMap<>();
         root.put("user", new LinkedHashMap<String, Object>());
         JXPathContext ctx = JXPathContext.newContext(root);
 
-        IOpticsEvent<JXPathContext> decoded = c.decode(json);
+        IOpticsEvent<JXPathContext> decoded = c.decode(json).valueOrThrow();
         decoded.apply(ctx);
 
         assertEquals("Bob", ctx.getValue("user/name"));
@@ -121,7 +121,8 @@ class IOpticsEventCodecTest {
 
         IOpticsEvent<JXPathContext> ev = new UnknownEvent();
 
-        IllegalArgumentException ex = assertThrows(IllegalArgumentException.class, () -> c.encode(ev));
-        assertTrue(ex.getMessage().toLowerCase().contains("unknown event type"));
+        var ex = c.encode(ev).errorsOrThrow();
+        assertEquals(List.of("Failed to encode polymorphic type: IllegalArgumentException: Unknown event type: class com.hcltech.rmg.optics.IOpticsEventCodecTest$1UnknownEvent"), ex);
+
     }
 }

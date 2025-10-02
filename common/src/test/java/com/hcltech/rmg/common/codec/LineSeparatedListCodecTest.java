@@ -9,7 +9,8 @@ import static org.junit.jupiter.api.Assertions.*;
 
 class LineSeparatedListCodecTest {
 
-    record Person(String name, int age) {}
+    record Person(String name, int age) {
+    }
 
     @Test
     void roundTrip_people() throws Exception {
@@ -17,13 +18,13 @@ class LineSeparatedListCodecTest {
         Codec<List<Person>, String> lines = new LineSeparatedListCodec<>(personJson);
 
         List<Person> input = List.of(new Person("Alice", 40), new Person("Bob", 31));
-        String wire = lines.encode(input);
+        String wire = lines.encode(input).valueOrThrow();
 
         assertTrue(wire.contains("\n"));
         assertTrue(wire.contains("\"name\":\"Alice\""));
         assertTrue(wire.contains("\"name\":\"Bob\""));
 
-        List<Person> back = lines.decode(wire);
+        List<Person> back = lines.decode(wire).valueOrThrow();
         assertEquals(input, back);
     }
 
@@ -32,10 +33,10 @@ class LineSeparatedListCodecTest {
         Codec<Integer, String> intJson = Codec.clazzCodec(Integer.class);
         Codec<List<Integer>, String> lines = new LineSeparatedListCodec<>(intJson);
 
-        String wire = lines.encode(List.of());
+        String wire = lines.encode(List.of()).valueOrThrow();
         assertEquals("", wire);
 
-        List<Integer> back = lines.decode(wire);
+        List<Integer> back = lines.decode(wire).valueOrThrow();
         assertTrue(back.isEmpty());
     }
 
@@ -44,7 +45,7 @@ class LineSeparatedListCodecTest {
         Codec<Integer, String> intJson = Codec.clazzCodec(Integer.class);
         Codec<List<Integer>, String> lines = new LineSeparatedListCodec<>(intJson);
 
-        List<Integer> back = lines.decode("1\n2\n3\n");
+        List<Integer> back = lines.decode("1\n2\n3\n").valueOrThrow();
         assertEquals(List.of(1, 2, 3), back);
     }
 
@@ -55,10 +56,10 @@ class LineSeparatedListCodecTest {
         Codec<List<String>, String> lines = new LineSeparatedListCodec<>(stringJson);
 
         List<String> input = List.of("", "x", "");
-        String wire = lines.encode(input);
+        String wire = lines.encode(input).valueOrThrow();
         assertEquals("\"\"\n\"x\"\n\"\"", wire);
 
-        List<String> back = lines.decode(wire);
+        List<String> back = lines.decode(wire).valueOrThrow();
         assertEquals(input, back);
     }
 
@@ -67,8 +68,8 @@ class LineSeparatedListCodecTest {
         Codec<Integer, String> intJson = Codec.clazzCodec(Integer.class);
         Codec<List<Integer>, String> lines = Codec.lines(intJson);
 
-        String wire = lines.encode(List.of(10, 20));
+        String wire = lines.encode(List.of(10, 20)).valueOrThrow();
         assertEquals("10\n20", wire);
-        assertEquals(List.of(10, 20), lines.decode(wire));
+        assertEquals(List.of(10, 20), lines.decode(wire).valueOrThrow());
     }
 }

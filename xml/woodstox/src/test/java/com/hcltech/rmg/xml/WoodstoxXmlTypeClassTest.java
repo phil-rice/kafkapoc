@@ -6,6 +6,7 @@ import org.codehaus.stax2.validation.XMLValidationSchema;
 import org.junit.jupiter.api.Test;
 
 import java.io.InputStream;
+import java.nio.charset.StandardCharsets;
 import java.util.List;
 import java.util.Map;
 
@@ -26,7 +27,6 @@ public class WoodstoxXmlTypeClassTest extends AbstractXmlTypeClassTest<XMLValida
             ErrorsOr<Map<String, Object>> eo = eng.parseAndValidate("<a id=\"1\"><x>x</x></a>", schema);
             Map<String, Object> map = eo.valueOrThrow(); // unwrap value
 
-            // Keep this assertion from your original test
             assertNotNull(map.get("a"));
         }
     }
@@ -44,14 +44,10 @@ public class WoodstoxXmlTypeClassTest extends AbstractXmlTypeClassTest<XMLValida
             List<String> errs = eo.errorsOrThrow(); // unwrap errors
 
             assertFalse(errs.isEmpty(), "Errors list should not be empty");
-            // Message is produced via ErrorsOr.error("Parsing xml {0}: {1}", e)
-            // so it should start with the exception class name
             assertTrue(errs.get(0).startsWith("Parsing xml XmlValidationException:"),
                     "Should contain XmlValidationException: " + errs.get(0));
         }
     }
-
-
 
     @Test
     void malformed_schema_returns_LoadSchemaException() {
@@ -70,8 +66,8 @@ public class WoodstoxXmlTypeClassTest extends AbstractXmlTypeClassTest<XMLValida
                   </xs:element>
                 </xs:schem>  <!-- wrong closing tag -->
                 """;
+        var in = new java.io.ByteArrayInputStream(badXsd.getBytes(StandardCharsets.UTF_8));
 
-        var in = new java.io.ByteArrayInputStream(badXsd.getBytes(java.nio.charset.StandardCharsets.UTF_8));
         assertThrows(
                 com.hcltech.rmg.xml.exceptions.LoadSchemaException.class,
                 () -> eng.loadSchema("malformed.xsd", in),
@@ -96,8 +92,52 @@ public class WoodstoxXmlTypeClassTest extends AbstractXmlTypeClassTest<XMLValida
 
             assertTrue(eo.isError(), "XXE/DOCTYPE should be rejected");
             String msg = eo.errorsOrThrow().get(0);
-            // We don't rely on exact wording across Woodstox versions—just sanity-check:
             assertTrue(msg.startsWith("Parsing xml"), "Expected formatted error message: " + msg);
         }
+    }
+
+    // -----------------------------
+    // NEW: extractId(...) test cases
+    // -----------------------------
+
+    @Test
+    void extractId_happy_path_with_simple_path() {
+        var eng = new WoodstoxXmlTypeClass();
+
+        String xml = """
+                <Envelope>
+                  <Body>
+                    <Order>
+                      <Id>ABC-123</Id>
+                    </Order>
+                  </Body>
+                </Envelope>
+                """;
+
+        ErrorsOr<String> id = eng.extractId(xml, "Envelope/Body/Order/Id");
+        assertTrue(id.isValue(), "Expected id to be extracted");
+        assertEquals("ABC-123", id.valueOrThrow());
+    }
+
+    @Test
+    void extractId_returns_error_when_not_found() {
+        var eng = new WoodstoxXmlTypeClass();
+
+        String xml = "<root><child>v</child></root>";
+        ErrorsOr<String> id = eng.extractId(xml, "root/missing");
+
+        assertTrue(id.isError(), "Expected error when id path not found");
+        String msg = id.errorsOrThrow().get(0);
+        assertTrue(msg.contains("Key not found"), "Message should indicate missing key path: " + msg);
+    }
+
+    @Test
+    void extractId_returns_error_when_empty_text() {
+        var eng = new WoodstoxXmlTypeClass();
+
+        String xml = "<root><id>   </id></root>";
+        ErrorsOr<String> id = eng.extractId(xml, "root/id");
+
+        assertTrue(id.isError(), "Expected error for empty id element");
     }
 }

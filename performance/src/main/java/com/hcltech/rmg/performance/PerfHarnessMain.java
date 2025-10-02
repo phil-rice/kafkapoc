@@ -32,7 +32,7 @@ public final class PerfHarnessMain {
         final String topic = "test-topic";
         final String groupId = "test-perf-" + System.currentTimeMillis();
         final int partitions = Integer.getInteger("kafka.partitions", 12); // pass if you want 1:1 mapping
-        final int lanes = 200; //per partition
+        final int lanes = 2000; //per partition
 
 
         StreamExecutionEnvironment env = StreamExecutionEnvironment.getExecutionEnvironment();

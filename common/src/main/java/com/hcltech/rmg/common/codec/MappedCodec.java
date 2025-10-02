@@ -1,5 +1,7 @@
 package com.hcltech.rmg.common.codec;
 
+import com.hcltech.rmg.common.errorsor.ErrorsOr;
+
 public class MappedCodec<T, T1, To> implements Codec<T1, To> {
     private final Codec<T, To> base;
     private final Codec<T1, T> mapCodec;
@@ -10,14 +12,12 @@ public class MappedCodec<T, T1, To> implements Codec<T1, To> {
     }
 
     @Override
-    public To encode(T1 from) throws Exception {
-        T encode = mapCodec.encode(from);
-        return base.encode(encode);
+    public ErrorsOr<To> encode(T1 from) {
+        return mapCodec.encode(from).flatMap(base::encode);
     }
 
     @Override
-    public T1 decode(To to) throws Exception {
-        T decode = base.decode(to);
-        return mapCodec.decode(decode);
+    public ErrorsOr<T1> decode(To to) {
+        return base.decode(to).flatMap(mapCodec::decode);
     }
 }

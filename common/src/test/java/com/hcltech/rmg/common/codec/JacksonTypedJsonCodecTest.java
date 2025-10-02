@@ -7,27 +7,28 @@ import static org.junit.jupiter.api.Assertions.*;
 
 class JacksonTypedJsonCodecTest {
 
-    record Person(String name, int age) {}
+    record Person(String name, int age) {
+    }
 
     @Test
     void roundTrip_typed_record() throws Exception {
         Codec<Person, String> c = new JacksonTypedJsonCodec<>(Person.class);
 
         Person alice = new Person("Alice", 42);
-        String json = c.encode(alice);
+        String json = c.encode(alice).valueOrThrow();
 
         assertTrue(json.contains("\"name\":\"Alice\""));
         assertTrue(json.contains("\"age\":42"));
 
-        Person back = c.decode(json);
+        Person back = c.decode(json).valueOrThrow();
         assertEquals(alice, back);
     }
 
     @Test
     void helper_method_codec_json_typed() throws Exception {
         Codec<Person, String> c = Codec.clazzCodec(Person.class);
-        String json = c.encode(new Person("Bob", 30));
-        Person back = c.decode(json);
+        String json = c.encode(new Person("Bob", 30)).valueOrThrow();
+        Person back = c.decode(json).valueOrThrow();
 
         assertEquals(new Person("Bob", 30), back);
         assertEquals(JacksonTypedJsonCodec.class, c.getClass());
