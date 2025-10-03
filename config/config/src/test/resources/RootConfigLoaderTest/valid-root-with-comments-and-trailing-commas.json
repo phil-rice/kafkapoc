@@ -1,0 +1,9 @@
+{
+  // comment allowed by BaseConfigLoader
+  "parameterConfig": {
+    "parameters": [
+      { "legalValue": ["dev","qa","prod"], "defaultValue": "dev", "description": "env", },
+    ],
+  },
+  "xmlSchemaPath": "schemas/with-comments.xsd",
+}

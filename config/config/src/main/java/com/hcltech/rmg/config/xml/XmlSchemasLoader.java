@@ -1,8 +1,8 @@
 package com.hcltech.rmg.config.xml;
 
-import com.hcltech.rmg.config.config.Config;
-import com.hcltech.rmg.config.config.ConfigVisitor;
-import com.hcltech.rmg.config.config.ConfigWalker;
+import com.hcltech.rmg.config.config.BehaviorConfig;
+import com.hcltech.rmg.config.config.BehaviorConfigVisitor;
+import com.hcltech.rmg.config.config.BehaviorConfigWalker;
 import com.hcltech.rmg.config.transformation.XsltTransform;
 import com.hcltech.rmg.common.resources.LoadFromInputStream;
 import com.hcltech.rmg.common.resources.ResourceCompiler;
@@ -22,9 +22,9 @@ public interface XmlSchemasLoader {
     /**
      * 1) Collect all schema names referenced in the config (deduped, order-preserving).
      */
-    static Set<String> collectSchemaNames(Config config) {
+    static Set<String> collectSchemaNames(BehaviorConfig config) {
         final Set<String> names = new LinkedHashSet<>();
-        ConfigWalker.walk(config, new ConfigVisitor() {
+        BehaviorConfigWalker.walk(config, new BehaviorConfigVisitor() {
             @Override
             public void onXsltTransform(String eventName, String name, XsltTransform t) {
                 final String s = t.schema();
@@ -75,12 +75,12 @@ public interface XmlSchemasLoader {
     /**
      * 3) Stitch: collect from config, then compile with the given prefix (auto parallelism).
      */
-    static Map<String, Schema> loadSchemas(Config config, String resourcePrefix) {
+    static Map<String, Schema> loadSchemas(BehaviorConfig config, String resourcePrefix) {
         return compileSchemas(resourcePrefix, collectSchemaNames(config), 0);
     }
 
     // Optional convenience overload if you want the caller to control parallelism:
-    static Map<String, Schema> loadSchemas(Config config, String resourcePrefix, int parallelism) {
+    static Map<String, Schema> loadSchemas(BehaviorConfig config, String resourcePrefix, int parallelism) {
         return compileSchemas(resourcePrefix, collectSchemaNames(config), parallelism);
     }
 }

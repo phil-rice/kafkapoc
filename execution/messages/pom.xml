@@ -11,8 +11,8 @@
         <relativePath>../../pom.xml</relativePath>
     </parent>
 
-    <artifactId>config</artifactId>
-    <name>config</name>
+    <artifactId>messages</artifactId>
+    <name>messages</name>
     <packaging>jar</packaging>
 
     <properties>
@@ -27,7 +27,7 @@
         </dependency>
         <dependency>
             <groupId>com.hcltech.rmg</groupId>
-            <artifactId>consumer</artifactId>
+            <artifactId>config</artifactId>
             <version>${project.version}</version>
         </dependency>
         <dependency>
@@ -35,18 +35,13 @@
             <artifactId>parameters</artifactId>
             <version>${project.version}</version>
         </dependency>
+
         <dependency>
             <groupId>com.hcltech.rmg</groupId>
-            <artifactId>cepstate_rocksdb</artifactId>
+            <artifactId>config</artifactId>
             <version>${project.version}</version>
-        </dependency>
-        <dependency>
-            <groupId>org.rocksdb</groupId>
-            <artifactId>rocksdbjni</artifactId>
-        </dependency>
-        <dependency>
-            <groupId>org.apache.kafka</groupId>
-            <artifactId>kafka-clients</artifactId>
+            <type>test-jar</type>
+            <scope>test</scope>
         </dependency>
         <dependency>
             <groupId>org.slf4j</groupId>
@@ -76,13 +71,22 @@
         <plugins>
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
-                <artifactId>maven-jar-plugin</artifactId>
-                <version>3.4.1</version>
+                <artifactId>maven-shade-plugin</artifactId>
                 <executions>
                     <execution>
+                        <phase>package</phase>
                         <goals>
-                            <goal>test-jar</goal>
+                            <goal>shade</goal>
                         </goals>
+                        <configuration>
+                            <createDependencyReducedPom>true</createDependencyReducedPom>
+                            <transformers>
+                                <transformer
+                                        implementation="org.apache.maven.plugins.shade.resource.ManifestResourceTransformer">
+                                    <mainClass>com.example.kafka.consumer.Main</mainClass>
+                                </transformer>
+                            </transformers>
+                        </configuration>
                     </execution>
                 </executions>
             </plugin>

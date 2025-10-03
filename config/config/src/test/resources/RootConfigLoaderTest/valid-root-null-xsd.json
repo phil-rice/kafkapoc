@@ -1,0 +1,8 @@
+{
+  "parameterConfig": {
+    "parameters": [
+      { "legalValue": ["a", "b"], "defaultValue": "a", "description": "example parameter" }
+    ]
+  },
+  "xmlSchemaPath": null
+}

@@ -1,0 +1,5 @@
+{
+  "parameterConfig": { "parameters": [] },
+  "xmlSchemaPath": "schemas/ok.xsd",
+  "unexpectedField": "should be ignored"
+}

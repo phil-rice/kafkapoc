@@ -4,9 +4,9 @@ import com.hcltech.rmg.celcore.RuleBuilderFactory;
 import com.hcltech.rmg.celcore.cache.InMemoryRuleCache;
 import com.hcltech.rmg.celcore.cache.RuleCache;
 import com.hcltech.rmg.common.errorsor.ErrorsOr;
-import com.hcltech.rmg.config.config.Config;
-import com.hcltech.rmg.config.config.ConfigVisitor;
-import com.hcltech.rmg.config.config.ConfigWalker;
+import com.hcltech.rmg.config.config.BehaviorConfig;
+import com.hcltech.rmg.config.config.BehaviorConfigVisitor;
+import com.hcltech.rmg.config.config.BehaviorConfigWalker;
 import com.hcltech.rmg.config.validation.CelValidation;
 import com.hcltech.rmg.execution.aspects.RegisteredAspectExecutor;
 
@@ -27,13 +27,13 @@ public class CelValidationExecutor<Inp> implements RegisteredAspectExecutor<CelV
         return ruleCache.get(key).flatMap(r -> r.executor().execute(input, context));
     }
 
-    public static <Inp> CelValidationExecutor<Inp> create(RuleBuilderFactory ruleBuilderFactory, Config config) {
+    public static <Inp> CelValidationExecutor<Inp> create(RuleBuilderFactory ruleBuilderFactory, BehaviorConfig config) {
         var keyToCel = new HashMap<String, String>();
 
-        ConfigWalker.walk(config, new ConfigVisitor() {
+        BehaviorConfigWalker.walk(config, new BehaviorConfigVisitor() {
             @Override
             public void onCelValidation(String eventName, String moduleName, CelValidation v) {
-                String key = Config.configKey(moduleName, Config.validationAspectName, eventName);
+                String key = BehaviorConfig.configKey(moduleName, BehaviorConfig.validationAspectName, eventName);
                 keyToCel.put(key, v.cel());
             }
         });

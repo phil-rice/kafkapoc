@@ -1,7 +1,7 @@
 package com.hcltech.rmg.config.xml;
 
 import com.hcltech.rmg.config.aspect.AspectMap;
-import com.hcltech.rmg.config.config.Config;
+import com.hcltech.rmg.config.config.BehaviorConfig;
 import com.hcltech.rmg.config.fixture.ConfigTestFixture;
 import com.hcltech.rmg.config.transformation.XsltTransform;
 import org.junit.jupiter.api.Test;
@@ -16,7 +16,7 @@ class XmlSchemasLoaderCollectNamesTest {
     @Test
     void returns_empty_when_no_xslt_transforms() {
         // given: a config with no transformation aspects
-        Config config = ConfigTestFixture.configWith("evt", new AspectMap(ConfigTestFixture.v(), ConfigTestFixture.t(), ConfigTestFixture.e(), ConfigTestFixture.b()));
+        BehaviorConfig config = ConfigTestFixture.configWith("evt", new AspectMap(ConfigTestFixture.v(), ConfigTestFixture.t(), ConfigTestFixture.e(), ConfigTestFixture.b()));
 
         // when
         Set<String> names = XmlSchemasLoader.collectSchemaNames(config);
@@ -36,7 +36,7 @@ class XmlSchemasLoaderCollectNamesTest {
                 ),
                 ConfigTestFixture.e(), ConfigTestFixture.b()
         );
-        Config config = ConfigTestFixture.configWith("evt", am);
+        BehaviorConfig config = ConfigTestFixture.configWith("evt", am);
 
         // when
         Set<String> names = XmlSchemasLoader.collectSchemaNames(config);
@@ -69,7 +69,7 @@ class XmlSchemasLoaderCollectNamesTest {
                 ConfigTestFixture.e(), ConfigTestFixture.b()
         );
 
-        Config config = new Config(java.util.Map.of(
+        BehaviorConfig config = new BehaviorConfig(java.util.Map.of(
                 "alpha", evt1,
                 "beta", evt2
         ));

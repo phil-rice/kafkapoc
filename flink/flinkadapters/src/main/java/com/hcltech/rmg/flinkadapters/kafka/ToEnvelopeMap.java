@@ -5,8 +5,6 @@ import com.hcltech.rmg.flinkadapters.envelopes.ValueEnvelope;
 import org.apache.flink.api.common.functions.OpenContext;
 import org.apache.flink.api.common.functions.RichMapFunction;
 
-import java.util.function.Function;
-
 /**
  * MapFunction that converts RawKafkaData to ValueEnvelope<T>.
  * <p>

@@ -20,8 +20,10 @@
         <module>consumer</module>
         <module>common</module>
 
-        <module>execution/execution</module>
         <module>execution/bizlogic</module>
+        <module>execution/execution</module>
+        <module>execution/messages</module>
+        <module>execution/parameters</module>
         <module>execution/transformation</module>
         <module>execution/validation</module>
 
@@ -31,6 +33,7 @@
 
         <module>optics</module>
         <module>performance</module>
+        <module>kafka</module>
         <module>kafkaconsumer</module>
         <module>tools-producer</module>
         <module>xml/xml</module>

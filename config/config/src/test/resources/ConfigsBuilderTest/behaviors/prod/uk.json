@@ -1,0 +1,10 @@
+{
+  "events": {
+    "evt-prod-uk": {
+      "validation": {},
+      "transformation": {},
+      "enrichment": {},
+      "bizlogic": {}
+    }
+  }
+}

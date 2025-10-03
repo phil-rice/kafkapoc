@@ -4,8 +4,8 @@ import com.hcltech.rmg.config.aspect.AspectMap;
 import com.hcltech.rmg.config.bizlogic.BizLogicAspect;
 import com.hcltech.rmg.config.bizlogic.CelFileLogic;
 import com.hcltech.rmg.config.bizlogic.CelInlineLogic;
-import com.hcltech.rmg.config.config.Config;
-import com.hcltech.rmg.config.config.ConfigVisitor;
+import com.hcltech.rmg.config.config.BehaviorConfig;
+import com.hcltech.rmg.config.config.BehaviorConfigVisitor;
 import com.hcltech.rmg.config.enrich.ApiEnrichment;
 import com.hcltech.rmg.config.enrich.EnrichmentAspect;
 import com.hcltech.rmg.config.transformation.TransformationAspect;
@@ -93,18 +93,18 @@ public final class ConfigTestFixture {
 
     /* ------------ Prebaked mini-fixtures ------------ */
 
-    public static Config minimalConfig() {
-        return new Config(Map.of());
+    public static BehaviorConfig minimalConfig() {
+        return new BehaviorConfig(Map.of());
     }
 
-    public static Config complexExpected() {
+    public static BehaviorConfig complexExpected() {
         AspectMap expectedAspectMap = new AspectMap(
                 v(kv("notification", new CelValidation("somecel"))),
                 t(kv("notification", new XsltTransform("xforms/ready.xslt", "schemas/ready.xml"))),
                 e(kv("notification", new ApiEnrichment("getRecipient", Map.of("id", "${inp.recipientId}")))),
                 b(kv("notification", new CelFileLogic("cel/ready.cel")))
         );
-        return new Config(Map.ofEntries(entry("readyForDelivery", expectedAspectMap)));
+        return new BehaviorConfig(Map.ofEntries(entry("readyForDelivery", expectedAspectMap)));
     }
 
     public static AspectMap fullAspectMapExample() {
@@ -121,19 +121,19 @@ public final class ConfigTestFixture {
         );
     }
 
-    public static Config configWith(String eventName, AspectMap map) {
-        return new Config(Map.of(eventName, map));
+    public static BehaviorConfig configWith(String eventName, AspectMap map) {
+        return new BehaviorConfig(Map.of(eventName, map));
     }
 
     /* ------------ Visitor & assertions support ------------ */
 
     /** Recording visitor used across tests. */
-    public static final class RecordingVisitor implements ConfigVisitor {
+    public static final class RecordingVisitorBehavior implements BehaviorConfigVisitor {
         public final List<String> calls = new ArrayList<>();
 
         private void hit(String m) { calls.add(m); }
 
-        @Override public void onConfig(Config config) { hit("onConfig"); }
+        @Override public void onConfig(BehaviorConfig config) { hit("onConfig"); }
 
         @Override public void onEvent(String eventName, AspectMap aspects) {
             hit("onEvent(" + eventName + ")");

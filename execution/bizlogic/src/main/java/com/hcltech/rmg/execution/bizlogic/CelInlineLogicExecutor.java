@@ -5,9 +5,9 @@ import com.hcltech.rmg.celcore.cache.InMemoryRuleCache;
 import com.hcltech.rmg.celcore.cache.RuleCache;
 import com.hcltech.rmg.common.errorsor.ErrorsOr;
 import com.hcltech.rmg.config.bizlogic.CelInlineLogic;
-import com.hcltech.rmg.config.config.Config;
-import com.hcltech.rmg.config.config.ConfigVisitor;
-import com.hcltech.rmg.config.config.ConfigWalker;
+import com.hcltech.rmg.config.config.BehaviorConfig;
+import com.hcltech.rmg.config.config.BehaviorConfigVisitor;
+import com.hcltech.rmg.config.config.BehaviorConfigWalker;
 import com.hcltech.rmg.execution.aspects.RegisteredAspectExecutor;
 
 import java.util.*;
@@ -27,13 +27,13 @@ public class CelInlineLogicExecutor<Inp> implements RegisteredAspectExecutor<Cel
         return ruleCache.get(key).flatMap(r -> r.executor().execute(input, context));
     }
 
-    public static <Inp> CelInlineLogicExecutor<Inp> create(RuleBuilderFactory ruleBuilderFactory, Config config) {
+    public static <Inp> CelInlineLogicExecutor<Inp> create(RuleBuilderFactory ruleBuilderFactory, BehaviorConfig config) {
         var keyToCel = new HashMap<String, String>();
 
-        ConfigWalker.walk(config, new ConfigVisitor() {
+        BehaviorConfigWalker.walk(config, new BehaviorConfigVisitor() {
             @Override
             public void onCelInlineLogic(String eventName, String moduleName, CelInlineLogic b) {
-                    String key = Config.configKey(moduleName, Config.bizlogicAspectName, eventName);
+                    String key = BehaviorConfig.configKey(moduleName, BehaviorConfig.bizlogicAspectName, eventName);
                 keyToCel.put(key, b.cel());
             }
 

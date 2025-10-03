@@ -1,0 +1,11 @@
+{
+  // allowed comment
+  "events": {
+    "evt-dev-uk-comments": { // trailing comma below is allowed
+      "validation": {},
+      "transformation": {},
+      "enrichment": {},
+      "bizlogic": {},
+    }
+  }
+}
