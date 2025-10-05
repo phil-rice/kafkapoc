@@ -2,6 +2,7 @@ package com.hcltech.rmg.common.errorsor;
 
 import java.util.List;
 import java.util.Optional;
+import java.util.function.Function;
 
 public final class Error<T> implements ErrorsOr<T> {
     private final List<String> errors;
@@ -34,6 +35,11 @@ public final class Error<T> implements ErrorsOr<T> {
     @Override
     public ErrorsOr<T> addPrefixIfError(String prefix) {
         return new Error<>(errors.stream().map(e -> prefix + e).toList());
+    }
+
+    @Override
+    public T fold(Function<List<String>, T> onError) {
+        return onError.apply(errors);
     }
 
     @Override

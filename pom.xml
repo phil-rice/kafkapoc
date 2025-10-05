@@ -31,7 +31,6 @@
 
         <module>flink/interfaces</module>
         <module>flink/domainpipeline</module>
-        <module>flink/flinkadaptersold</module>
         <module>flink/flinkadapter</module>
 
         <module>optics</module>

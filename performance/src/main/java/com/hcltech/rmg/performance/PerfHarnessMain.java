@@ -1,169 +1,115 @@
 package com.hcltech.rmg.performance;
 
-import com.hcltech.rmg.appcontainer.impl.AppContainer;
-import com.hcltech.rmg.appcontainer.interfaces.IAppContainer;
-import com.hcltech.rmg.common.TestDomainTracker;
-import com.hcltech.rmg.domainpipeline.TestDomainRepository;
-import com.hcltech.rmg.flinkadapters.xml.KeySniffAndClassify;
-import com.hcltech.rmg.interfaces.repository.IPipelineRepository;
+import com.hcltech.rmg.appcontainer.impl.AppContainerFactory;
+import com.hcltech.rmg.appcontainer.interfaces.AppContainer;
+import com.hcltech.rmg.flinkadapters.InitialEnvelopeMapFunction;
+import com.hcltech.rmg.flinkadapters.KeySniffAndClassify;
 import com.hcltech.rmg.kafka.KafkaSourceForFlink;
 import com.hcltech.rmg.kafka.WatermarkStrategyProvider;
 import com.hcltech.rmg.kafkaconfig.KafkaConfig;
+import com.hcltech.rmg.messages.Envelope;
 import com.hcltech.rmg.messages.ErrorEnvelope;
-import com.hcltech.rmg.messages.RawMessage;
 import com.hcltech.rmg.messages.RetryEnvelope;
-import org.apache.flink.api.common.TaskInfo;
-import org.apache.flink.api.common.functions.OpenContext;
 import org.apache.flink.api.common.typeinfo.TypeHint;
 import org.apache.flink.api.common.typeinfo.TypeInformation;
-import org.apache.flink.api.java.tuple.Tuple2;
 import org.apache.flink.connector.kafka.source.enumerator.initializer.OffsetsInitializer;
-import org.apache.flink.streaming.api.datastream.DataStream;
+import org.apache.flink.streaming.api.datastream.AsyncDataStream;
 import org.apache.flink.streaming.api.environment.StreamExecutionEnvironment;
-import org.apache.flink.streaming.api.functions.sink.legacy.RichSinkFunction;
+import org.apache.flink.streaming.api.functions.async.AsyncFunction;
 import org.apache.flink.util.OutputTag;
+import org.codehaus.stax2.validation.XMLValidationSchema;
 
 import java.time.Duration;
-import java.util.concurrent.atomic.AtomicLong;
+import java.util.Map;
+import java.util.concurrent.TimeUnit;
 
 public final class PerfHarnessMain {
-    public static <CEPState> DataStream<Tuple2<String, RawMessage>> buildPipeline(int lanes) {
 
-        final String repoClass = TestDomainRepository.class.getName();
-        final String containerId = System.getProperty("app.container", "prod");
-        IAppContainer<KafkaConfig> appContainer = AppContainer.resolve(containerId);
-        final KafkaConfig kafkaConfig = appContainer.eventSourceConfig();
-        final String xmlSchemaName = appContainer.rootConfig().xmlSchemaPath();
+    // we’ll create typed tags *inside* buildPipeline to avoid casts per CEPState type
 
-        // ---- config via -D or defaults ----
-        final String bootstrap = kafkaConfig.bootstrapServers();
-        final String topic = kafkaConfig.topic();
-        final String groupId = kafkaConfig.groupId();
-        final int partitions = kafkaConfig.sourceParallelism();
+    public static <CEPState> Pipeline<CEPState> buildPipeline(String containerId, int lanes, AsyncFunction<Envelope<CEPState, Map<String, Object>>, Envelope<CEPState, Map<String, Object>>> mainAsync, long asyncTimeoutMillis, Integer asyncParallelismOverride // null -> default to source parallelism
+    ) {
+        // ---- resolve DI and kafka config ----
+        AppContainer<KafkaConfig, XMLValidationSchema> app = AppContainerFactory.resolve(containerId).valueOrThrow();
+        final KafkaConfig kafka = app.eventSourceConfig();
 
-        var env = StreamExecutionEnvironment.getExecutionEnvironment();
-        env.setParallelism(partitions > 0 ? partitions : env.getParallelism());
+        final int totalPartitions = kafka.sourceParallelism();
+
+        // ---- env config ----
+        StreamExecutionEnvironment env = StreamExecutionEnvironment.getExecutionEnvironment();
+        env.setParallelism(totalPartitions > 0 ? totalPartitions : env.getParallelism());
         env.getConfig().setAutoWatermarkInterval(0);
         env.enableCheckpointing(30_000);
-        // For the perf harness this is fine and reduces GC:
-        // env.getConfig().enableObjectReuse();
 
-        // ---- source: RawMessage via our helper ----
-        var raw = KafkaSourceForFlink.rawKafkaStream(
-                containerId, env, bootstrap, topic, groupId,
-                partitions, OffsetsInitializer.earliest(),
-                Duration.ofSeconds(60), WatermarkStrategyProvider.none());
+        // ---- source ----
+        var raw = KafkaSourceForFlink.rawKafkaStream(containerId, env, kafka.bootstrapServers(), kafka.topic(), kafka.groupId(), totalPartitions, OffsetsInitializer.earliest(), Duration.ofSeconds(60), WatermarkStrategyProvider.none());
 
-        // ---- side-output tags (make payload concrete to avoid generic Kryo) ----
-        OutputTag<RetryEnvelope<CEPState, RawMessage>> RETRIES =
-                new OutputTag<>("retries",
-                        TypeInformation.of(new TypeHint<RetryEnvelope<CEPState, RawMessage>>() {
-                        })) {
-                };
+        // ---- pre: sniff key -> (domainId, raw) ; side output only here (optional to keep) ----
+        // A typed errors tag specifically for this CEPState + payload type
+        OutputTag<ErrorEnvelope<CEPState, Map<String, Object>>> sniffErrorsTag = new OutputTag<>("sniff-errors", TypeInformation.of(new TypeHint<ErrorEnvelope<CEPState, Map<String, Object>>>() {
+        })) {
+        };
 
-        OutputTag<ErrorEnvelope<CEPState, RawMessage>> ERRORS =
-                new OutputTag<>("errors",
-                        TypeInformation.of(new TypeHint<ErrorEnvelope<CEPState, RawMessage>>() {
-                        })) {
-                };
+        var sniff = raw.process(new KeySniffAndClassify<CEPState>(containerId, (OutputTag) sniffErrorsTag, lanes)).name("key-sniff"); // SingleOutputStreamOperator<Tuple2<String, RawMessage>>
 
-        // ---- pre-shuffle: sniff key -> (domainId, raw) ; errors to side-output ----
-        var withKey = raw
-                .process(new KeySniffAndClassify<CEPState>(containerId, ERRORS, lanes))
-                .name("key-sniff"); // DataStream<Tuple2<String, RawMessage>>
+        var sniffErrors = sniff.getSideOutput(sniffErrorsTag); // keep if you want to observe sniff errors
 
-        // (Optional: observe sniff errors here)
-        // withKey.getSideOutput(ERRORS).addSink(...);
+        // ---- map to Envelope (Value/Error) ----
+        var envelopes = sniff.keyBy(t -> t.f0) // domainId
+                .map(new InitialEnvelopeMapFunction<CEPState>(containerId)).name("to-envelope"); // DataStream<Envelope<CEPState, Map<String,Object>>>
 
-        return withKey;
+        // ---- async stage (Envelope -> Envelope) ----
+        // parallelism and capacity calculation
+        int asyncParallelism = (asyncParallelismOverride != null) ? asyncParallelismOverride : totalPartitions;
+        int partitionsPerSubtask = (int) Math.ceil((double) totalPartitions / Math.max(1, asyncParallelism));
+        int capacity = Math.max(1, (int) Math.round(lanes * partitionsPerSubtask * 1.2)); // +20% headroom
+
+        var processed = AsyncDataStream.orderedWait( // or unorderedWait for higher throughput if ordering isn’t required
+                envelopes, mainAsync, asyncTimeoutMillis, TimeUnit.MILLISECONDS, capacity).name("main-async").setParallelism(asyncParallelism);
+
+        // ---- single splitter AFTER async ----
+        OutputTag<ErrorEnvelope<CEPState, Map<String, Object>>> errorsTag = new OutputTag<>("errors", TypeInformation.of(new TypeHint<ErrorEnvelope<CEPState, Map<String, Object>>>() {
+        })) {
+        };
+        OutputTag<RetryEnvelope<CEPState, Map<String, Object>>> retriesTag = new OutputTag<>("retries", TypeInformation.of(new TypeHint<RetryEnvelope<CEPState, Map<String, Object>>>() {
+        })) {
+        };
+
+        var values = processed.process(new SplitEnvelopes<CEPState, Map<String, Object>>(errorsTag, retriesTag)).name("splitter"); // DataStream<ValueEnvelope<CEPState, Map<String,Object>>>
+
+        var allErrors = values.getSideOutput(errorsTag);
+        var allRetries = values.getSideOutput(retriesTag);
+
+        // If you want sniff errors unified later, you can union here (types must match).
+        // For now, we keep Value/Error/Retry from the splitter.
+
+        return new Pipeline<>(env, values, allErrors, allRetries);
     }
 
+    // Example main wiring
     public static void main(String[] args) throws Exception {
-        var lanes = 1200;
-        IPipelineRepository.load(TestDomainRepository.class.getName()).pipelineDetails();
+        final String containerId = System.getProperty("app.container", "prod");
+        final int lanes = 1200;
 
-        var rawMessageAndIdStream = buildPipeline(lanes);
-        var keyed = rawMessageAndIdStream.keyBy(t -> t.f0); // domainId
-        var envelopes = keyed.map()
-                .name("strip-key");
-
-        // ---- source: RawMessage via our new helper ----
-
-        // ---- decode → ValueEnvelope<String> (domainId == payload here; adapt if needed) ----
-        // ToEnvelopeMapForTestDomainTracker should accept RawMessage and pull raw.rawValue().
-        var envelopes = raw
-                .map(new ToEnvelopeMapForTestDomainTracker(
-                        "domainType",
-                        TestDomainTracker.class.getName(),
-                        lanes
-                ))
-                .name("to-envelope");
-
-        // ---- side-output tags (errors/retries) ----
-
-        // ---- lift (non-keyed lift that splits once at end) ----
-        int timeOutBufferMs = 2000;
-        int maxRetries = 3;
-        var main = FlinkPipelineLift.lift(
-                envelopes,
-                repoClass,
-                RETRIES,
-                ERRORS,
-                lanes,
-                maxRetries,
-                false,              // whatever your existing flag means
-                timeOutBufferMs
-        );
-
-        // ---- progress sinks (prints every N items per lane) ----
-        main.addSink(new Every<>("main", lanes * 20)).name("main-counter");
-        main.getSideOutput(ERRORS).addSink(new Every<>("error", 50)).name("error-counter");
-        main.getSideOutput(RETRIES).addSink(new Every<>("retry", 100)).name("retry-counter");
-
-        env.execute("rmg-perf-harness");
-    }
-
-    /**
-     * Tiny sink that logs count every N records.
-     */
-    static final class Every<T> extends RichSinkFunction<T> implements java.io.Serializable {
-        private final String lane;
-        private final long every;
-        private static final AtomicLong c = new AtomicLong(0);
-        private transient TaskInfo taskInfo;
-        private static long start = System.currentTimeMillis();
-        private static final long initialStart = start;
-        private static long lastCount = 0;
-        private static final Object lock = new Object();
-
-        Every(String lane, long every) {
-            this.lane = lane;
-            this.every = every;
-        }
-
-        @Override
-        public void open(OpenContext context) {
-            var ctx = getRuntimeContext();
-            this.taskInfo = ctx.getTaskInfo();
-        }
-
-        @Override
-        public void invoke(T value, Context context) {
-            if (c.incrementAndGet() % every == 0) {
-                synchronized (lock) {
-                    if (c.get() % every != 0) return;
-                    var now = System.currentTimeMillis();
-                    var duration = now - start;
-                    var localPerS = (c.get() - lastCount) * 1000f / duration;
-                    var fullPerS = c.get() * 1000f / (now - initialStart);
-                    lastCount = c.get();
-                    start = now;
-                    System.out.println("[" + lane + "] processed=" + c +
-                            " perSec=" + localPerS + "/" + fullPerS +
-                            " task=" + taskInfo.getIndexOfThisSubtask() + " --- " + taskInfo.getTaskName() +
-                            " thread=" + Thread.currentThread().getName());
-                }
+        // a trivial pass-through async (replace with your real async)
+        AsyncFunction<Envelope<Object, Map<String, Object>>, Envelope<Object, Map<String, Object>>> mainAsync = new org.apache.flink.streaming.api.functions.async.RichAsyncFunction<>() {
+            @Override
+            public void asyncInvoke(Envelope<Object, Map<String, Object>> input, org.apache.flink.streaming.api.functions.async.ResultFuture<Envelope<Object, Map<String, Object>>> result) {
+                result.complete(java.util.Collections.singletonList(input));
             }
-        }
+        };
+
+        var pipe = buildPipeline(containerId, lanes, mainAsync, 2_000, null);
+
+// start time-driven printer (every 2s)
+        PerfStats.start(2000);
+
+// attach sinks (metrics + totals)
+        pipe.values().addSink(new MetricsCountingSink<>("envelopes", MetricsCountingSink.Kind.VALUES)).name("values-metrics");
+        pipe.errors().addSink(new MetricsCountingSink<>("envelopes", MetricsCountingSink.Kind.ERRORS)).name("errors-metrics");
+        pipe.retries().addSink(new MetricsCountingSink<>("envelopes", MetricsCountingSink.Kind.RETRIES)).name("retries-metrics");
+
+        pipe.env().execute("rmg-perf-harness");
     }
+
 }

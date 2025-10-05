@@ -1,9 +1,9 @@
 services:
   kafka:
-    image: apache/kafka:4.0.0   # pin a version you like; update when you choose
+    image: apache/kafka:4.0.0
     container_name: kafka
     ports:
-      - "9092:9092"              # host apps use localhost:9092
+      - "9092:9092"  # host apps use localhost:9092
     environment:
       # Single-node KRaft (no ZooKeeper)
       KAFKA_PROCESS_ROLES: broker,controller
@@ -14,24 +14,34 @@ services:
       KAFKA_CONTROLLER_LISTENER_NAMES: CONTROLLER
       KAFKA_CONTROLLER_QUORUM_VOTERS: 1@kafka:9091
       KAFKA_INTER_BROKER_LISTENER_NAME: DOCKER
-      # Dev-friendly (single broker)
+      # Persist logs in the mounted volume (instead of /tmp)
+      KAFKA_LOG_DIRS: /var/lib/kafka/data
+      # Dev-friendly single broker
       KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
       KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
       KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
-      # optional: KAFKA_AUTO_CREATE_TOPICS_ENABLE: "true"
+      KAFKA_AUTO_CREATE_TOPICS_ENABLE: "true"
     volumes:
       - kafka-data:/var/lib/kafka/data
+    healthcheck:
+      # Succeeds once the broker accepts API calls on its container listener
+      test: [ "CMD", "/opt/kafka/bin/kafka-broker-api-versions.sh", "--bootstrap-server", "localhost:9093" ]
+      interval: 5s
+      timeout: 5s
+      retries: 20
 
-  # Redpanda Console (topic/message browser)
   rp-console:
     image: redpandadata/console:latest
     container_name: rp-console
     ports:
-      - "8081:8080"               # UI at http://localhost:8081
+      - "8081:8080"  # UI at http://localhost:8081
     environment:
-      KAFKA_BROKERS: "kafka:9093" # talk to Kafka over the container-only listener
+      # Talk to the broker via the container-only listener
+      KAFKA_BROKERS: "kafka:9093"
     depends_on:
-      - kafka
+      kafka:
+        condition: service_healthy
+    restart: unless-stopped
 
 volumes:
   kafka-data:

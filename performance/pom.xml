@@ -23,6 +23,11 @@
         </dependency>
         <dependency>
             <groupId>com.hcltech.rmg</groupId>
+            <artifactId>appcontainer_implementation</artifactId>
+            <version>${project.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>com.hcltech.rmg</groupId>
             <artifactId>messages</artifactId>
             <version>${project.version}</version>
         </dependency>

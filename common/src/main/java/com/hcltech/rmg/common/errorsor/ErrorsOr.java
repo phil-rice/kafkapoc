@@ -16,6 +16,8 @@ public interface ErrorsOr<T> {
 
     ErrorsOr<T> addPrefixIfError(String prefix);
 
+    T fold(Function<List<String>, T> onError);
+
     /**
      * throws an exception if a value
      */
@@ -64,9 +66,11 @@ public interface ErrorsOr<T> {
     default ErrorsOr<T> mapError(Function<List<String>, List<String>> f) {
         return isError() ? ErrorsOr.errors(f.apply(getErrors())) : this;
     }
+
     default ErrorsOr<T> recover(Function<List<String>, T> f) {
         return isError() ? ErrorsOr.lift(f.apply(getErrors())) : this;
     }
+
 
     default void ifValue(Consumer<? super T> consumer) {
         if (isValue()) consumer.accept(getValue().get());

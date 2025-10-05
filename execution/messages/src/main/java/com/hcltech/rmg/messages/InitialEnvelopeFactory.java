@@ -44,7 +44,7 @@ public class InitialEnvelopeFactory<Schema, CepState> {
         Objects.requireNonNull(schema, "Schema not found for: " + rootConfig.xmlSchemaPath() + " Legal values: " + nameToSchemaMap.keySet());
     }
 
-    public ErrorsOr<Envelope<CepState, Map<String, Object>>> createEnvelopeHeaderAtStart(RawMessage rawMessage, String domainId) {
+    public Envelope<CepState, Map<String, Object>> createEnvelopeHeaderAtStart(RawMessage rawMessage, String domainId) {
         Objects.requireNonNull(rawMessage, "rawMessage cannot be null");
         Objects.requireNonNull(domainId, "domainId cannot be null");
         ErrorsOr<Envelope<CepState, Map<String, Object>>> result = xmlTypeClass.parseAndValidate(rawMessage.rawValue(), schema).flatMap(
@@ -61,7 +61,7 @@ public class InitialEnvelopeFactory<Schema, CepState> {
                     });
                 }
         );
-        return result.recover(errors -> {
+        return result.fold(errors -> {
             var header = new EnvelopeHeader<CepState>(IEventTypeExtractor.unknownEventType, domainId, null, rawMessage, null, null, null);
             var valueEnv = new ValueEnvelope<CepState, Map<String, Object>>(header, Map.of());
             return new ErrorEnvelope<CepState, Map<String, Object>>(valueEnv, "initial-envelope-factory", errors);

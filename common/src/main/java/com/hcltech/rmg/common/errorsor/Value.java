@@ -3,6 +3,7 @@ package com.hcltech.rmg.common.errorsor;
 import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
+import java.util.function.Function;
 
 public final class Value<T> implements ErrorsOr<T> {
     private final T value;
@@ -29,6 +30,11 @@ public final class Value<T> implements ErrorsOr<T> {
     @Override
     public List<String> getErrors() {
         return List.of();
+    }
+
+    @Override
+    public T fold(Function<List<String>, T> onError) {
+        return value;
     }
 
     @Override

@@ -108,7 +108,8 @@ public class ProducerApp {
         ensureTopic(bootstrap, topic, partitions, rf);
 
         DomainMessageGenerator generator = new DomainMessageGenerator(seed);
-        Codec<TestDomainMessage, String> codec = Codec.clazzCodec(TestDomainMessage.class);
+        Codec<TestDomainMessage, String> codec = TestDomainMessage.xmlCodec;
+//        Codec<TestDomainMessage, String> codec = Codec.clazzCodec(TestDomainMessage.class);
 
         long startMs = System.currentTimeMillis();
 
@@ -117,7 +118,7 @@ public class ProducerApp {
         Semaphore gate = new Semaphore(parallelism);
 
         try (KafkaProducer<String, String> producer = newKafkaProducer(applicationProperties)) {
-            var it = generator.randomUniformStream(domainCount, TestDomainMessage::new).limit(count).iterator();
+            var it = generator.randomUniformStream(domainCount, TestDomainMessage::create).limit(count).iterator();
 
             while (it.hasNext()) {
                 if (firstError.get() != null) break; // stop feeding on first failure

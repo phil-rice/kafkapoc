@@ -1,13 +1,13 @@
+// src/test/java/com/hcltech/rmg/common/errorsor/ErrorsOrTest.java
 package com.hcltech.rmg.common.errorsor;
 
-import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Nested;
+import org.junit.jupiter.api.Test;
 
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 import java.util.concurrent.atomic.AtomicReference;
-import java.util.function.Function;
 
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -148,14 +148,51 @@ class ErrorsOrTest {
             ErrorsOr<String> good = ErrorsOr.lift("yay");
             ErrorsOr<String> bad = ErrorsOr.error("nay");
 
-            AtomicReference<String> valueSink = new AtomicReference<>("");
-            AtomicReference<List<String>> errorSink = new AtomicReference<>(List.of());
+            var valueSink = new java.util.concurrent.atomic.AtomicReference<>("");
+            var errorSink = new java.util.concurrent.atomic.AtomicReference<List<String>>(List.of());
 
             good.ifValue(valueSink::set);
             bad.ifError(errorSink::set);
 
             assertEquals("yay", valueSink.get());
             assertEquals(List.of("nay"), errorSink.get());
+        }
+
+        @Test
+        void addPrefixIfError_prefixesEachError_andNoOpOnValue() {
+            ErrorsOr<Object> err = ErrorsOr.errors(List.of("e1", "e2"))
+                    .addPrefixIfError("ctx: ");
+
+            assertTrue(err.isError());
+            assertEquals(List.of("ctx: e1", "ctx: e2"), err.getErrors());
+
+            ErrorsOr<Integer> val = ErrorsOr.lift(99).addPrefixIfError("ctx: ");
+            assertTrue(val.isValue());
+            assertEquals(99, val.getValue().orElseThrow());
+        }
+
+        @Test
+        void fold_returnsValue_onValue() {
+            ErrorsOr<String> val = ErrorsOr.lift("ok");
+            String out = val.fold(errs -> "fallback:" + String.join(",", errs));
+            assertEquals("ok", out, "fold must return the value when isValue()");
+        }
+
+        @Test
+        void fold_appliesOnError_andReturnsFallback() {
+            ErrorsOr<String> err = ErrorsOr.errors(List.of("a", "b"));
+            String out = err.fold(errs -> "fallback:" + String.join("|", errs));
+            assertEquals("fallback:a|b", out);
+        }
+
+        @Test
+        void errorPatternWithException_formatsNicely() {
+            Exception ex = new IllegalArgumentException("bad arg");
+            ErrorsOr<Void> eo = ErrorsOr.error("Failed op: {0}: {1}", ex);
+            assertTrue(eo.isError());
+            String msg = eo.getErrors().get(0);
+            assertTrue(msg.contains("IllegalArgumentException"));
+            assertTrue(msg.contains("bad arg"));
         }
     }
 

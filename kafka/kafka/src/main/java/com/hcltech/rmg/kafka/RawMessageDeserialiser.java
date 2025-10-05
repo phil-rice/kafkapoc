@@ -1,11 +1,11 @@
 package com.hcltech.rmg.kafka;
 
-import com.hcltech.rmg.appcontainer.impl.AppContainer;
+import com.hcltech.rmg.appcontainer.impl.AppContainerFactory;
 import com.hcltech.rmg.common.ITimeService;
 import com.hcltech.rmg.common.uuid.IUuidGenerator;
 import com.hcltech.rmg.messages.RawMessage;
-import org.apache.flink.api.common.typeinfo.TypeInformation;
 import org.apache.flink.api.common.serialization.DeserializationSchema;
+import org.apache.flink.api.common.typeinfo.TypeInformation;
 import org.apache.flink.connector.kafka.source.reader.deserializer.KafkaRecordDeserializationSchema;
 import org.apache.flink.util.Collector;
 import org.apache.kafka.clients.consumer.ConsumerRecord;
@@ -36,7 +36,7 @@ public final class RawMessageDeserialiser implements KafkaRecordDeserializationS
     @Override
     public void open(DeserializationSchema.InitializationContext context) {
         if (timeService != null && uuid != null) return; // test-only ctor already set them
-        var container = AppContainer.resolve(containerId);
+        var container = AppContainerFactory.resolve(containerId).valueOrThrow();
         this.timeService = container.time();
         this.uuid = container.uuid();
     }
