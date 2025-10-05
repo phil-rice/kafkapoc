@@ -11,6 +11,7 @@ public interface IEventTypeExtractor {
     static final String unknownEventType = "unknown";
     static IEventTypeExtractor fromPath(List<String> path) {
         var copy = List.copyOf(path);
-        return message -> ParameterExtractor.findValueOrNull(message, copy);
+        return message ->
+                ParameterExtractor.findValueOrNull(message, copy);
     }
 }

@@ -2,8 +2,8 @@
   "xmlSchemaPath": "schemas/config.xsd",
   "parameterConfig": {
     "parameters": [
-      { "legalValue": ["prod"], "defaultValue": "prod", "description": "environment" },
-      { "legalValue": ["uk"],   "defaultValue": "uk",   "description": "company/country" }
+      { "legalValue": ["parcel"], "defaultValue": "parcel", "description": "product type" },
+      { "legalValue": ["rmg"],   "defaultValue": "rmg",   "description": "company" }
     ]
   }
 }

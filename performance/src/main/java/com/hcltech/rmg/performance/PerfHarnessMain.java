@@ -89,6 +89,7 @@ public final class PerfHarnessMain {
     // Example main wiring
     public static void main(String[] args) throws Exception {
         final String containerId = System.getProperty("app.container", "prod");
+        var appContainer = AppContainerFactory.resolve(containerId).valueOrThrow();
         final int lanes = 1200;
 
         // a trivial pass-through async (replace with your real async)
@@ -108,6 +109,22 @@ public final class PerfHarnessMain {
         pipe.values().addSink(new MetricsCountingSink<>("envelopes", MetricsCountingSink.Kind.VALUES)).name("values-metrics");
         pipe.errors().addSink(new MetricsCountingSink<>("envelopes", MetricsCountingSink.Kind.ERRORS)).name("errors-metrics");
         pipe.retries().addSink(new MetricsCountingSink<>("envelopes", MetricsCountingSink.Kind.RETRIES)).name("retries-metrics");
+
+
+
+// brokers + topics
+        String brokers = appContainer.eventSourceConfig().bootstrapServers();//System.getProperty("kafka.bootstrap", "localhost:9092");
+        String processedTopic = "processed";
+        String errorsTopic    = "errors";
+        String retryTopic     = "retry";
+
+// route
+        EnvelopeRouting.routeToKafkaWithMetrics(
+                pipe.values(),   // DataStream<ValueEnvelope<Object, Map<String,Object>>>
+                pipe.errors(),   // DataStream<ErrorEnvelope<Object, Map<String,Object>>>
+                pipe.retries(),  // DataStream<RetryEnvelope<Object, Map<String,Object>>>
+                brokers, processedTopic, errorsTopic, retryTopic
+        );
 
         pipe.env().execute("rmg-perf-harness");
     }

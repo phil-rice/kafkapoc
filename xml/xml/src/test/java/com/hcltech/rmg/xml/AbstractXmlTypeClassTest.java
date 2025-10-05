@@ -1,11 +1,12 @@
-// src/test/java/com/hcltech/rmg/xml/AbstractXmlTypeClassTest.java
 package com.hcltech.rmg.xml;
 
 import com.hcltech.rmg.common.errorsor.ErrorsOr;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
+import java.io.ByteArrayInputStream;
 import java.io.InputStream;
+import java.nio.charset.StandardCharsets;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
@@ -46,7 +47,7 @@ public abstract class AbstractXmlTypeClassTest<S> {
     }
 
     /** Extracts element text whether stored as {"text": "..."} or a plain String. */
-    private static String elementText(Object nodeOrText) {
+    protected static String elementText(Object nodeOrText) {
         if (nodeOrText == null) return null;
         if (nodeOrText instanceof String s) return s;
         if (nodeOrText instanceof Map<?,?> m) {
@@ -57,7 +58,7 @@ public abstract class AbstractXmlTypeClassTest<S> {
     }
 
     /** Reads an attribute value from a CEL-friendly node: {"attr":{"id":"..."}...}. */
-    private static String attr(Object node, String name) {
+    protected static String attr(Object node, String name) {
         if (!(node instanceof Map<?,?> m)) return null;
         Object a = m.get("attr");
         if (!(a instanceof Map<?,?> attrs)) return null;
@@ -152,7 +153,7 @@ public abstract class AbstractXmlTypeClassTest<S> {
 
             ErrorsOr<Map<String, Object>> eo = eng.parseAndValidate("<a id=\"no-child\"/>", schema);
 
-            assertTrue(eo.isError(), "Expected ErrorsOr in error state for schema violation");
+            assertTrue(eo.isError(), "XXE/schema violation should be rejected");
             assertFalse(eo.errorsOrThrow().isEmpty(), "Errors list should not be empty");
         }
     }
@@ -174,6 +175,54 @@ public abstract class AbstractXmlTypeClassTest<S> {
 
             assertTrue(eo.isError(), "XXE/DOCTYPE should be rejected");
             assertFalse(eo.errorsOrThrow().isEmpty());
+        }
+    }
+
+    // -----------------------------
+    // real <msg> mapping test
+    // -----------------------------
+
+    @Test
+    @DisplayName("parse+validate: <msg> schema yields sensible map shape (leafs as text)")
+    void parses_msg_schema_sensible_shape() throws Exception {
+        // inline XSD that matches your test <msg> payload
+        String xsd = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema" elementFormDefault="qualified">
+                  <xs:element name="msg">
+                    <xs:complexType>
+                      <xs:sequence>
+                        <xs:element name="domainId"  type="xs:string"/>
+                        <xs:element name="eventType" type="xs:string" minOccurs="0"/>
+                        <xs:element name="count"     type="xs:integer" minOccurs="0"/>
+                      </xs:sequence>
+                    </xs:complexType>
+                  </xs:element>
+                </xs:schema>
+                """;
+
+        String xml = "<msg><domainId>153</domainId><eventType>test-event</eventType><count>0</count></msg>";
+
+        S schema;
+        try (InputStream in = new ByteArrayInputStream(xsd.getBytes(StandardCharsets.UTF_8))) {
+            schema = eng.loadSchema("msg.xsd", in);
+        }
+        Map<String,Object> out = eng.parseAndValidate(xml, schema).valueOrThrow();
+        assertTrue(out.containsKey("msg"), "root should contain 'msg' key");
+        Map<String,Object> msg = asMap(out.get("msg"));
+
+        assertEquals("153", elementText(msg.get("domainId")));
+        assertEquals("test-event", elementText(msg.get("eventType")));
+        assertEquals("0", elementText(msg.get("count")));
+
+        // ensure no double-nesting under leafs (either String or {"text":...})
+        Object evt = msg.get("eventType");
+        if (evt instanceof Map<?,?> m) {
+            // acceptable only if it's exactly {"text": "..."}
+            assertTrue(m.containsKey("text") && m.size() == 1,
+                    "Leaf node should be String or {\"text\":...}, not nested element name again");
+        } else {
+            assertTrue(evt instanceof String, "Leaf should be plain String");
         }
     }
 

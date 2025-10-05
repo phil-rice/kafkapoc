@@ -6,7 +6,10 @@ import org.codehaus.stax2.validation.XMLValidationSchema;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import com.hcltech.rmg.xml.AbstractXmlTypeClassTest;
+
+import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
+import java.util.Map;
 
 import static org.junit.jupiter.api.Assertions.*;
 

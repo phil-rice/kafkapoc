@@ -6,29 +6,32 @@ import com.hcltech.rmg.xml.exceptions.LoadSchemaException;
 import com.hcltech.rmg.xml.exceptions.XmlValidationException;
 import org.codehaus.stax2.XMLInputFactory2;
 import org.codehaus.stax2.XMLStreamReader2;
-import org.codehaus.stax2.validation.*;
+import org.codehaus.stax2.validation.Validatable;
+import org.codehaus.stax2.validation.ValidationProblemHandler;
+import org.codehaus.stax2.validation.XMLValidationProblem;
+import org.codehaus.stax2.validation.XMLValidationSchema;
+import org.codehaus.stax2.validation.XMLValidationSchemaFactory;
 
 import javax.xml.stream.XMLInputFactory;
 import javax.xml.stream.XMLStreamConstants;
 import javax.xml.stream.XMLStreamException;
 import java.io.InputStream;
 import java.io.StringReader;
-import java.util.Collections;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 
 /**
  * Woodstox/StAX2 implementation that:
  * • compiles XSDs into {@link XMLValidationSchema}s
  * • parses/validates XML streams in a single pass
  * • extracts keys using a streaming pull parser (no DOM)
- * <p>
+ *
  * Thread-safe, using one {@link XMLInputFactory2} per thread.
  */
 public final class WoodstoxXmlTypeClass implements XmlTypeClass<XMLValidationSchema> {
 
     private static final ThreadLocal<XMLInputFactory2> FACTORY = ThreadLocal.withInitial(() -> {
         XMLInputFactory2 f = (XMLInputFactory2) XMLInputFactory.newInstance();
+        // Safety defaults
         f.setProperty(XMLInputFactory.SUPPORT_DTD, Boolean.FALSE);
         f.setProperty(XMLInputFactory.IS_SUPPORTING_EXTERNAL_ENTITIES, Boolean.FALSE);
         f.setProperty(XMLInputFactory.IS_COALESCING, Boolean.FALSE);
@@ -60,25 +63,23 @@ public final class WoodstoxXmlTypeClass implements XmlTypeClass<XMLValidationSch
             v.validateAgainst(schema);
             v.setValidationProblemHandler(new ThrowingProblems());
 
+            // Build a CEL-friendly map in one pass
             CelFriendlyStreamingMapBuilder b = new CelFriendlyStreamingMapBuilder();
             while (r.hasNext()) {
-                switch (r.getEventType()) {
+                int ev = r.getEventType();
+                switch (ev) {
                     case XMLStreamConstants.START_ELEMENT -> b.onStart(r);
-                    case XMLStreamConstants.CHARACTERS, XMLStreamConstants.CDATA, XMLStreamConstants.SPACE ->
-                            b.onText(r);
+                    case XMLStreamConstants.CHARACTERS, XMLStreamConstants.CDATA, XMLStreamConstants.SPACE -> b.onText(r);
                     case XMLStreamConstants.END_ELEMENT -> b.onEnd(r);
                     default -> { /* ignore */ }
                 }
                 r.next();
             }
-            return ErrorsOr.lift(Collections.unmodifiableMap(b.result()));
+            return ErrorsOr.lift(b.result());
         } catch (Exception e) {
             return ErrorsOr.error("Parsing xml " + e);
         } finally {
-            if (r != null) try {
-                r.close();
-            } catch (Exception ignore) {
-            }
+            if (r != null) try { r.close(); } catch (Exception ignore) {}
         }
     }
 
@@ -89,7 +90,6 @@ public final class WoodstoxXmlTypeClass implements XmlTypeClass<XMLValidationSch
         if (rawString == null) return ErrorsOr.error("XML was null");
         if (idPath == null || idPath.isEmpty()) return ErrorsOr.error("idPath cannot be empty");
 
-        // pre-trim & skip blanks
         final String[] path = idPath.stream()
                 .filter(s -> s != null && !s.isBlank())
                 .map(String::trim)
@@ -134,10 +134,7 @@ public final class WoodstoxXmlTypeClass implements XmlTypeClass<XMLValidationSch
         } catch (XMLStreamException e) {
             return ErrorsOr.error("XML key extraction failed at path '" + pathStr + "': " + e);
         } finally {
-            if (r != null) try {
-                r.close();
-            } catch (Exception ignore) {
-            }
+            if (r != null) try { r.close(); } catch (Exception ignore) {}
         }
     }
 
@@ -147,6 +144,10 @@ public final class WoodstoxXmlTypeClass implements XmlTypeClass<XMLValidationSch
         return a != null && b != null && a.equals(b);
     }
 
+    /**
+     * Reads element text for the current START_ELEMENT position and returns
+     * the coalesced text when the matching END_ELEMENT is reached.
+     */
     private static String readElementText(XMLStreamReader2 r) throws XMLStreamException {
         StringBuilder sb = new StringBuilder(64);
         int depth = 1;
@@ -169,9 +170,83 @@ public final class WoodstoxXmlTypeClass implements XmlTypeClass<XMLValidationSch
         @Override
         public void reportProblem(XMLValidationProblem p) {
             int line = p.getLocation() != null ? p.getLocation().getLineNumber() : -1;
-            int col = p.getLocation() != null ? p.getLocation().getColumnNumber() : -1;
+            int col  = p.getLocation() != null ? p.getLocation().getColumnNumber() : -1;
             String msg = "[" + p.getSeverity() + "] line " + line + ", col " + col + ": " + p.getMessage();
             throw new XmlValidationException(msg);
+        }
+    }
+
+    // ---------- Streaming map builder (fixes double-nesting) ----------
+
+    /**
+     * Builds a CEL-friendly map in a single pass:
+     *  - Leaf element (no attrs/children) → plain String (trimmed text)
+     *  - Non-leaf → Map with:
+     *      "attr": {...}        (only if attributes exist)
+     *      childName: childVal  (each child)
+     *      "text": "..."        (only if mixed content non-blank)
+     */
+    private static final class CelFriendlyStreamingMapBuilder {
+        private static final class Node {
+            final String name;
+            final StringBuilder text = new StringBuilder();
+            final Map<String, Object> attrs = new LinkedHashMap<>();
+            final Map<String, Object> children = new LinkedHashMap<>();
+            Node(String name) { this.name = name; }
+            boolean hasOnlyText() { return attrs.isEmpty() && children.isEmpty(); }
+        }
+
+        private final Deque<Node> stack = new ArrayDeque<>();
+        private final Map<String, Object> result = new LinkedHashMap<>();
+
+        Map<String, Object> result() { return result; }
+
+        void onStart(XMLStreamReader2 r) {
+            Node n = new Node(r.getLocalName());
+            // attributes
+            for (int i = 0; i < r.getAttributeCount(); i++) {
+                String an = r.getAttributeLocalName(i);
+                String av = r.getAttributeValue(i);
+                n.attrs.put(an, av);
+            }
+            stack.push(n);
+        }
+
+        void onText(XMLStreamReader2 r) {
+            if (!stack.isEmpty()) {
+                // accumulate raw text (characters/cdata/space)
+                stack.peek().text.append(r.getText());
+            }
+        }
+
+        void onEnd(XMLStreamReader2 r) {
+            Node n = stack.pop();
+
+            // Decide the value for this element
+            Object value;
+            if (n.hasOnlyText()) {
+                // LEAF: just trimmed text
+                value = n.text.toString().trim();
+            } else {
+                // NON-LEAF: build a map with attrs/children and optional "text"
+                Map<String, Object> m = new LinkedHashMap<>();
+                if (!n.attrs.isEmpty())    m.put("attr", n.attrs);
+                if (!n.children.isEmpty()) m.putAll(n.children);
+
+                String t = n.text.toString().trim();
+                if (!t.isEmpty()) m.put("text", t);
+
+                value = m;
+            }
+
+            // Attach to parent or to root
+            if (!stack.isEmpty()) {
+                // attach under this element name once (no double-nesting)
+                stack.peek().children.put(n.name, value);
+            } else {
+                // top-level
+                result.put(n.name, value);
+            }
         }
     }
 }

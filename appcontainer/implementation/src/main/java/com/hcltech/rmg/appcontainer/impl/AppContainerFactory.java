@@ -58,8 +58,10 @@ public final class AppContainerFactory implements IAppContainerFactory<KafkaConf
                     System::currentTimeMillis,
                     IUuidGenerator.defaultGenerator(),
                     "config/root-prod.json",
-                    ParameterExtractor.defaultParameterExtractor(defaultParameters, Map.of(), Map.of()),
-                    IEventTypeExtractor.fromPath(List.of("eventType")),
+                    ParameterExtractor.defaultParameterExtractor(defaultParameters, Map.of(), Map.of(
+                            "productType", List.of("msg", "productType"),
+                                "company", List.of("msg", "company"))),
+                    IEventTypeExtractor.fromPath(List.of("msg", "eventType")),
                     IDomainTypeExtractor.fixed("parcel"),
                     "config/prod/"
             );

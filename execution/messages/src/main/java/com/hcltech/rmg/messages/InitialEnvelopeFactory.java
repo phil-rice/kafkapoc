@@ -54,9 +54,9 @@ public class InitialEnvelopeFactory<Schema, CepState> {
                     if (eventType == null)
                         return ErrorsOr.error("eventType cannot be null. Check eventTypeExtractor function");
                     return parameterExtractor.parameters(message, eventType, domainType, domainId).flatMap(parameters -> {
-                        var config = keyToConfigMap.get(eventType);
+                        var config = keyToConfigMap.get(parameters.key());
                         return config == null
-                                ? ErrorsOr.error("missing config for eventType: " + eventType + " Legal values: " + keyToConfigMap.keySet())
+                                ? ErrorsOr.error("missing config for key: " + parameters.key()+ " Legal values: " + keyToConfigMap.keySet())
                                 : ErrorsOr.lift(new ValueEnvelope<>(new EnvelopeHeader<CepState>(domainType, domainId, eventType, rawMessage, parameters, config.behaviorConfig(), null), message));
                     });
                 }
