@@ -32,6 +32,11 @@ public final class Value<T> implements ErrorsOr<T> {
     }
 
     @Override
+    public ErrorsOr<T> addPrefixIfError(String prefix) {
+        return this;
+    }
+
+    @Override
     public <T1> ErrorsOr<T1> errorCast() {
         throw new IllegalStateException("Trying to cast Value to Error");
     }

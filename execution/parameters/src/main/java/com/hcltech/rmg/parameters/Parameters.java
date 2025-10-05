@@ -1,6 +1,7 @@
 package com.hcltech.rmg.parameters;
 
 import java.util.List;
+import java.util.function.Function;
 
 /**
  * This holds the parameters in the current message being processed.
@@ -14,6 +15,13 @@ public record Parameters(List<String> parameterNames, List<String> parameterValu
                          String domainType,
                          String domainId,
                          String eventType) {
+    public static String defaultKeyFn(List<String> list) {
+        return String.join(":", list);
+    }
+
+    public static Function<List<String>, String> defaultResourceFn(String prefix) {
+        return (list) -> prefix + String.join("/", list) +".json";
+    }
 
     // Canonical constructor with validation
     public Parameters {
@@ -22,11 +30,8 @@ public record Parameters(List<String> parameterNames, List<String> parameterValu
         }
     }
 
-    public static String key(List<String> parameterValue) {
-        return String.join(":", parameterValue);
-    }
 
     public static Parameters of(List<String> parameterNames, List<String> parameterValues, String domainType, String domainId, String eventType) {
-        return new Parameters(parameterNames, parameterValues, key(parameterValues), domainType, domainId, eventType);
+        return new Parameters(parameterNames, parameterValues, defaultKeyFn(parameterValues), domainType, domainId, eventType);
     }
 }

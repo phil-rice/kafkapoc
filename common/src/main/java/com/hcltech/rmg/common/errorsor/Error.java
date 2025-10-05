@@ -32,6 +32,11 @@ public final class Error<T> implements ErrorsOr<T> {
     }
 
     @Override
+    public ErrorsOr<T> addPrefixIfError(String prefix) {
+        return new Error<>(errors.stream().map(e -> prefix + e).toList());
+    }
+
+    @Override
     public <T1> ErrorsOr<T1> errorCast() {
         return (ErrorsOr<T1>) this;
     }

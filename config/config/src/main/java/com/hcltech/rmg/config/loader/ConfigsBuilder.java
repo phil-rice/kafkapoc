@@ -11,33 +11,33 @@ import java.io.InputStream;
 import java.util.*;
 import java.util.function.Function;
 
+/**
+ * Builds {@link Configs} by:
+ *  - permuting the parameter space in {@code root.parameterConfig()}
+ *  - mapping each permutation to a key (keyFn)
+ *  - mapping each permutation to a classpath resource (resourceFn)
+ *  - loading BehaviorConfig JSON and pairing it with RootConfig's shared fields
+ *
+ * Assumes {@link RootConfig} is already validated (via RootConfigLoader).
+ * This class only reports problems related to key/resource functions and resource loading.
+ */
 public interface ConfigsBuilder {
 
-    /**
-     * Build Configs by:
-     * - permuting the parameter space in root.parameterConfig()
-     * - mapping each permutation to a key (keyFn)
-     * - mapping each permutation to a classpath resource name (resourceFn)
-     * - loading BehaviorConfig JSON from classpath and pairing it with RootConfig's shared fields
-     *
-     * @param root       already-deserialized RootConfig (holds ParameterConfig + xmlSchemaPath)
-     * @param keyFn      maps the positional values to a unique key, e.g. values -> String.join("-", values)
-     * @param resourceFn maps the positional values to a classpath resource, e.g. values -> "behaviors/%s/%s.json"
-     * @param cl         classloader to read resources from (use getClass().getClassLoader())
-     */
-    static ErrorsOr<Configs> buildFromClasspath(RootConfig root,
-                                                Function<List<String>, String> keyFn,
-                                                Function<List<String>, String> resourceFn,
-                                                ClassLoader cl) {
-
-        Objects.requireNonNull(root, "root");
+    static ErrorsOr<Configs> buildFromClasspath(
+            RootConfig root,
+            Function<List<String>, String> keyFn,
+            Function<List<String>, String> resourceFn,
+            ClassLoader cl
+    ) {
+        Objects.requireNonNull(root, "root");            // reference must be non-null
         Objects.requireNonNull(keyFn, "keyFn");
         Objects.requireNonNull(resourceFn, "resourceFn");
-        Objects.requireNonNull(cl, "cl");
+        Objects.requireNonNull(cl, "classLoader");
 
-        Map<String, Config> map = new LinkedHashMap<>();
+        Map<String, Config> out = new LinkedHashMap<>();
         List<String> errors = new ArrayList<>();
 
+        // Assumes: root.parameterConfig() != null and contains parameters (validated upstream).
         ParamPermutations.permutations(root.parameterConfig()).forEach(values -> {
             String key = safeApply(keyFn, values, errors, "keyFn");
             if (key == null) return;
@@ -50,11 +50,11 @@ public interface ConfigsBuilder {
                     errors.add("Missing behavior resource on classpath: '" + resource + "' (values=" + values + ")");
                     return;
                 }
-                BehaviorConfig bc = BehaviorConfigLoader.fromJson(in);
-                bc = BehaviorConfigLoader.validated(bc); // your existing light check
+
+                BehaviorConfig bc = BehaviorConfigLoader.validated(BehaviorConfigLoader.fromJson(in));
                 Config cfg = new Config(bc, root.parameterConfig(), root.xmlSchemaPath());
 
-                if (map.put(key, cfg) != null) {
+                if (out.put(key, cfg) != null) {
                     errors.add("Duplicate key from keyFn: '" + key + "' (values=" + values + ")");
                 }
             } catch (Exception e) {
@@ -63,14 +63,16 @@ public interface ConfigsBuilder {
         });
 
         return errors.isEmpty()
-                ? ErrorsOr.lift(new Configs(Map.copyOf(map)))
+                ? ErrorsOr.lift(new Configs(Map.copyOf(out)))
                 : ErrorsOr.errors(errors);
     }
 
-    private static String safeApply(Function<List<String>, String> fn,
-                                    List<String> values,
-                                    List<String> errors,
-                                    String name) {
+    private static String safeApply(
+            Function<List<String>, String> fn,
+            List<String> values,
+            List<String> errors,
+            String name
+    ) {
         try {
             String s = fn.apply(values);
             if (s == null || s.isBlank()) {

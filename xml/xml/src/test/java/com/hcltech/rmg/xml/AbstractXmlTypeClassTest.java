@@ -2,14 +2,21 @@
 package com.hcltech.rmg.xml;
 
 import com.hcltech.rmg.common.errorsor.ErrorsOr;
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
+import java.io.InputStream;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
 
 import static org.junit.jupiter.api.Assertions.*;
 
+/**
+ * Engine-agnostic tests for XmlTypeClass implementations.
+ * Concrete engines should extend this and only add engine-specific assertions.
+ */
 public abstract class AbstractXmlTypeClassTest<S> {
 
     protected final XmlTypeClass<S> eng;
@@ -22,8 +29,14 @@ public abstract class AbstractXmlTypeClassTest<S> {
     /** Classpath prefix for test schemas. */
     protected String resourcePrefix() { return "testxmlloader/"; }
 
-    /** Schema files to load from the prefix. */
+    /** Schema files (relative to prefix) to load. */
     protected List<String> schemaNames() { return List.of("a.xsd", "b.xsd"); }
+
+    /** Full classpath names (prefix + name) for loadSchemas(...) */
+    private List<String> fullSchemaNames() {
+        String pref = resourcePrefix();
+        return schemaNames().stream().map(n -> pref + n).collect(Collectors.toList());
+    }
 
     // ---------- helpers ----------
 
@@ -52,18 +65,23 @@ public abstract class AbstractXmlTypeClassTest<S> {
         return (v instanceof String) ? (String) v : null;
     }
 
-    // ---------- tests ----------
+    // ---------- general tests (apply to any engine) ----------
 
     @Test
     void compiles_all_schemas() {
-        Map<String, S> schemas = XmlTypeClass.loadSchemas(eng, resourcePrefix(), schemaNames());
-        assertEquals(new LinkedHashSet<>(schemaNames()), schemas.keySet());
+        ErrorsOr<Map<String, S>> eo = XmlTypeClass.loadSchemas(eng, fullSchemaNames());
+        assertTrue(eo.isValue(), () -> "Schema load failed: " + eo.getErrors());
+        Map<String, S> schemas = eo.valueOrThrow();
+
+        // keys should be the full names we passed in (prefix + file)
+        assertEquals(new LinkedHashSet<>(fullSchemaNames()), schemas.keySet());
     }
 
     @Test
+    @DisplayName("parse+validate: happy path against a.xsd")
     void validates_good_xml_against_a() {
-        Map<String, S> schemas = XmlTypeClass.loadSchemas(eng, resourcePrefix(), schemaNames());
-        S schemaA = schemas.get("a.xsd");
+        Map<String, S> schemas = XmlTypeClass.loadSchemas(eng, fullSchemaNames()).valueOrThrow();
+        S schemaA = schemas.get(resourcePrefix() + "a.xsd");
         assertNotNull(schemaA);
 
         String good = "<a id=\"A1\"><x>ok</x></a>";
@@ -72,47 +90,132 @@ public abstract class AbstractXmlTypeClassTest<S> {
         Map<String,Object> a = asMap(out.get("a"));
         assertNotNull(a, "root element 'a' missing");
 
-        // id attribute
         assertEquals("A1", attr(a, "id"));
-
-        // child x text (accept map-with-text or plain string)
         assertEquals("ok", elementText(a.get("x")));
     }
 
     @Test
+    @DisplayName("parse+validate: structural violations produce ErrorsOr(error) against a.xsd")
     void rejects_bad_xml_against_a() {
-        Map<String, S> schemas = XmlTypeClass.loadSchemas(eng, resourcePrefix(), schemaNames());
-        S schemaA = schemas.get("a.xsd");
+        Map<String, S> schemas = XmlTypeClass.loadSchemas(eng, fullSchemaNames()).valueOrThrow();
+        S schemaA = schemas.get(resourcePrefix() + "a.xsd");
         assertNotNull(schemaA);
 
-        // 'id' required
-        String missingAttr = "<a><x>ok</x></a>";
-        ErrorsOr<Map<String,Object>> eo1 = eng.parseAndValidate(missingAttr, schemaA);
-        assertTrue(eo1.isError(), "Expected schema violation for missing 'id'");
-        assertFalse(eo1.errorsOrThrow().isEmpty(), "Errors list should not be empty (missing 'id')");
+        ErrorsOr<Map<String,Object>> missingAttr =
+                eng.parseAndValidate("<a><x>ok</x></a>", schemaA);
+        assertTrue(missingAttr.isError(), "Expected schema violation for missing 'id'");
+        assertFalse(missingAttr.errorsOrThrow().isEmpty());
 
-        // 'x' required
-        String missingChild = "<a id=\"A1\"/>";
-        ErrorsOr<Map<String,Object>> eo2 = eng.parseAndValidate(missingChild, schemaA);
-        assertTrue(eo2.isError(), "Expected schema violation for missing child 'x'");
-        assertFalse(eo2.errorsOrThrow().isEmpty(), "Errors list should not be empty (missing 'x')");
+        ErrorsOr<Map<String,Object>> missingChild =
+                eng.parseAndValidate("<a id=\"A1\"/>", schemaA);
+        assertTrue(missingChild.isError(), "Expected schema violation for missing child 'x'");
+        assertFalse(missingChild.errorsOrThrow().isEmpty());
     }
 
     @Test
+    @DisplayName("parse+validate: b.xsd accepts integer y and rejects non-integer")
     void validates_and_rejects_on_b() {
-        Map<String, S> schemas = XmlTypeClass.loadSchemas(eng, resourcePrefix(), schemaNames());
-        S schemaB = schemas.get("b.xsd");
+        Map<String, S> schemas = XmlTypeClass.loadSchemas(eng, fullSchemaNames()).valueOrThrow();
+        S schemaB = schemas.get(resourcePrefix() + "b.xsd");
         assertNotNull(schemaB);
 
-        // good: <b><y>42</y></b>
         Map<String,Object> ok = eng.parseAndValidate("<b><y>42</y></b>", schemaB).valueOrThrow();
         Map<String,Object> b = asMap(ok.get("b"));
         assertNotNull(b, "root element 'b' missing");
         assertEquals("42", elementText(b.get("y")));
 
-        // bad: non-int content
         ErrorsOr<Map<String,Object>> bad = eng.parseAndValidate("<b><y>notAnInt</y></b>", schemaB);
         assertTrue(bad.isError(), "Expected schema violation for non-integer y");
-        assertFalse(bad.errorsOrThrow().isEmpty(), "Errors list should not be empty (non-integer y)");
+        assertFalse(bad.errorsOrThrow().isEmpty());
+    }
+
+    @Test
+    @DisplayName("engine smoke: parse+validate produces a map with root key")
+    void engine_smoke_test_value_roundtrips() throws Exception {
+        try (InputStream in = getClass().getResourceAsStream("/" + resourcePrefix() + "a.xsd")) {
+            assertNotNull(in, "missing a.xsd in " + resourcePrefix());
+            S schema = eng.loadSchema("a.xsd", in);
+
+            ErrorsOr<Map<String, Object>> eo = eng.parseAndValidate("<a id=\"1\"><x>x</x></a>", schema);
+            Map<String, Object> map = eo.valueOrThrow();
+
+            assertNotNull(map.get("a"));
+        }
+    }
+
+    @Test
+    @DisplayName("invalid XML fails schema validation and returns ErrorsOr(error) (engine-agnostic)")
+    void invalid_xml_fails_schema_validation_and_returns_errorsOr() throws Exception {
+        try (InputStream in = getClass().getResourceAsStream("/" + resourcePrefix() + "a.xsd")) {
+            assertNotNull(in, "missing a.xsd in " + resourcePrefix());
+            S schema = eng.loadSchema("a.xsd", in);
+
+            ErrorsOr<Map<String, Object>> eo = eng.parseAndValidate("<a id=\"no-child\"/>", schema);
+
+            assertTrue(eo.isError(), "Expected ErrorsOr in error state for schema violation");
+            assertFalse(eo.errorsOrThrow().isEmpty(), "Errors list should not be empty");
+        }
+    }
+
+    @Test
+    @DisplayName("DOCTYPE/XXE is disallowed (returns ErrorsOr(error))")
+    void xxe_doctype_is_disallowed_and_returns_error() throws Exception {
+        try (InputStream in = getClass().getResourceAsStream("/" + resourcePrefix() + "a.xsd")) {
+            assertNotNull(in, "missing a.xsd in " + resourcePrefix());
+            S schema = eng.loadSchema("a.xsd", in);
+
+            String evil = """
+                    <?xml version="1.0"?>
+                    <!DOCTYPE a [ <!ENTITY xxe SYSTEM "file:///etc/passwd"> ]>
+                    <a id="1"><x>&xxe;</x></a>
+                    """;
+
+            ErrorsOr<Map<String, Object>> eo = eng.parseAndValidate(evil, schema);
+
+            assertTrue(eo.isError(), "XXE/DOCTYPE should be rejected");
+            assertFalse(eo.errorsOrThrow().isEmpty());
+        }
+    }
+
+    // -----------------------------
+    // extractId(...) test cases
+    // -----------------------------
+
+    @Test
+    @DisplayName("extractId: happy path with simple path list")
+    void extractId_happy_path_with_simple_path() {
+        String xml = """
+                <Envelope>
+                  <Body>
+                    <Order>
+                      <Id>ABC-123</Id>
+                    </Order>
+                  </Body>
+                </Envelope>
+                """;
+
+        ErrorsOr<String> id = eng.extractId(xml, List.of("Envelope", "Body", "Order", "Id"));
+        assertTrue(id.isValue(), "Expected id to be extracted");
+        assertEquals("ABC-123", id.valueOrThrow());
+    }
+
+    @Test
+    @DisplayName("extractId: returns error when path not found")
+    void extractId_returns_error_when_not_found() {
+        String xml = "<root><child>v</child></root>";
+        ErrorsOr<String> id = eng.extractId(xml, List.of("root", "missing"));
+
+        assertTrue(id.isError(), "Expected error when id path not found");
+        assertTrue(id.errorsOrThrow().get(0).toLowerCase().contains("key"),
+                "Message should indicate missing key path");
+    }
+
+    @Test
+    @DisplayName("extractId: returns error when element text is empty/blank")
+    void extractId_returns_error_when_empty_text() {
+        String xml = "<root><id>   </id></root>";
+        ErrorsOr<String> id = eng.extractId(xml, List.of("root", "id"));
+
+        assertTrue(id.isError(), "Expected error for empty id element");
     }
 }
