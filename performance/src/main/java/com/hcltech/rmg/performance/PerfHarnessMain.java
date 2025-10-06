@@ -16,6 +16,7 @@ import org.apache.flink.connector.kafka.source.enumerator.initializer.OffsetsIni
 import org.apache.flink.streaming.api.datastream.AsyncDataStream;
 import org.apache.flink.streaming.api.environment.StreamExecutionEnvironment;
 import org.apache.flink.streaming.api.functions.async.AsyncFunction;
+import org.apache.flink.streaming.api.functions.async.RichAsyncFunction;
 import org.apache.flink.util.OutputTag;
 import org.codehaus.stax2.validation.XMLValidationSchema;
 
@@ -27,7 +28,7 @@ public final class PerfHarnessMain {
 
     // we’ll create typed tags *inside* buildPipeline to avoid casts per CEPState type
 
-    public static <CEPState> Pipeline<CEPState> buildPipeline(String containerId, int lanes, AsyncFunction<Envelope<CEPState, Map<String, Object>>, Envelope<CEPState, Map<String, Object>>> mainAsync, long asyncTimeoutMillis, Integer asyncParallelismOverride // null -> default to source parallelism
+    public static Pipeline buildPipeline(String containerId, int lanes, AsyncFunction<Envelope<Map<String, Object>>, Envelope<Map<String, Object>>> mainAsync, long asyncTimeoutMillis, Integer asyncParallelismOverride // null -> default to source parallelism
     ) {
         // ---- resolve DI and kafka config ----
         AppContainer<KafkaConfig, XMLValidationSchema> app = AppContainerFactory.resolve(containerId).valueOrThrow();
@@ -46,17 +47,17 @@ public final class PerfHarnessMain {
 
         // ---- pre: sniff key -> (domainId, raw) ; side output only here (optional to keep) ----
         // A typed errors tag specifically for this CEPState + payload type
-        OutputTag<ErrorEnvelope<CEPState, Map<String, Object>>> sniffErrorsTag = new OutputTag<>("sniff-errors", TypeInformation.of(new TypeHint<ErrorEnvelope<CEPState, Map<String, Object>>>() {
+        OutputTag<ErrorEnvelope<Map<String, Object>>> sniffErrorsTag = new OutputTag<>("sniff-errors", TypeInformation.of(new TypeHint<ErrorEnvelope<Map<String, Object>>>() {
         })) {
         };
 
-        var sniff = raw.process(new KeySniffAndClassify<CEPState>(containerId, (OutputTag) sniffErrorsTag, lanes)).name("key-sniff"); // SingleOutputStreamOperator<Tuple2<String, RawMessage>>
+        var sniff = raw.process(new KeySniffAndClassify(containerId, (OutputTag) sniffErrorsTag, lanes)).name("key-sniff"); // SingleOutputStreamOperator<Tuple2<String, RawMessage>>
 
         var sniffErrors = sniff.getSideOutput(sniffErrorsTag); // keep if you want to observe sniff errors
 
         // ---- map to Envelope (Value/Error) ----
         var envelopes = sniff.keyBy(t -> t.f0) // domainId
-                .map(new InitialEnvelopeMapFunction<CEPState>(containerId)).name("to-envelope"); // DataStream<Envelope<CEPState, Map<String,Object>>>
+                .map(new InitialEnvelopeMapFunction(containerId)).name("to-envelope"); // DataStream<Envelope<CEPState, Map<String,Object>>>
 
         // ---- async stage (Envelope -> Envelope) ----
         // parallelism and capacity calculation
@@ -68,14 +69,14 @@ public final class PerfHarnessMain {
                 envelopes, mainAsync, asyncTimeoutMillis, TimeUnit.MILLISECONDS, capacity).name("main-async").setParallelism(asyncParallelism);
 
         // ---- single splitter AFTER async ----
-        OutputTag<ErrorEnvelope<CEPState, Map<String, Object>>> errorsTag = new OutputTag<>("errors", TypeInformation.of(new TypeHint<ErrorEnvelope<CEPState, Map<String, Object>>>() {
+        OutputTag<ErrorEnvelope<Map<String, Object>>> errorsTag = new OutputTag<>("errors", TypeInformation.of(new TypeHint<ErrorEnvelope<Map<String, Object>>>() {
         })) {
         };
-        OutputTag<RetryEnvelope<CEPState, Map<String, Object>>> retriesTag = new OutputTag<>("retries", TypeInformation.of(new TypeHint<RetryEnvelope<CEPState, Map<String, Object>>>() {
+        OutputTag<RetryEnvelope<Map<String, Object>>> retriesTag = new OutputTag<>("retries", TypeInformation.of(new TypeHint<RetryEnvelope<Map<String, Object>>>() {
         })) {
         };
 
-        var values = processed.process(new SplitEnvelopes<CEPState, Map<String, Object>>(errorsTag, retriesTag)).name("splitter"); // DataStream<ValueEnvelope<CEPState, Map<String,Object>>>
+        var values = processed.process(new SplitEnvelopes<Map<String, Object>>(errorsTag, retriesTag)).name("splitter"); // DataStream<ValueEnvelope<CEPState, Map<String,Object>>>
 
         var allErrors = values.getSideOutput(errorsTag);
         var allRetries = values.getSideOutput(retriesTag);
@@ -83,7 +84,7 @@ public final class PerfHarnessMain {
         // If you want sniff errors unified later, you can union here (types must match).
         // For now, we keep Value/Error/Retry from the splitter.
 
-        return new Pipeline<>(env, values, allErrors, allRetries);
+        return new Pipeline(env, values, allErrors, allRetries);
     }
 
     // Example main wiring
@@ -93,9 +94,9 @@ public final class PerfHarnessMain {
         final int lanes = 1200;
 
         // a trivial pass-through async (replace with your real async)
-        AsyncFunction<Envelope<Object, Map<String, Object>>, Envelope<Object, Map<String, Object>>> mainAsync = new org.apache.flink.streaming.api.functions.async.RichAsyncFunction<>() {
+        AsyncFunction<Envelope<Map<String, Object>>, Envelope<Map<String, Object>>> mainAsync = new RichAsyncFunction<>() {
             @Override
-            public void asyncInvoke(Envelope<Object, Map<String, Object>> input, org.apache.flink.streaming.api.functions.async.ResultFuture<Envelope<Object, Map<String, Object>>> result) {
+            public void asyncInvoke(Envelope<Map<String, Object>> input, org.apache.flink.streaming.api.functions.async.ResultFuture<Envelope<Map<String, Object>>> result) {
                 result.complete(java.util.Collections.singletonList(input));
             }
         };
@@ -111,12 +112,11 @@ public final class PerfHarnessMain {
         pipe.retries().addSink(new MetricsCountingSink<>("envelopes", MetricsCountingSink.Kind.RETRIES)).name("retries-metrics");
 
 
-
 // brokers + topics
         String brokers = appContainer.eventSourceConfig().bootstrapServers();//System.getProperty("kafka.bootstrap", "localhost:9092");
         String processedTopic = "processed";
-        String errorsTopic    = "errors";
-        String retryTopic     = "retry";
+        String errorsTopic = "errors";
+        String retryTopic = "retry";
 
 // route
         EnvelopeRouting.routeToKafkaWithMetrics(

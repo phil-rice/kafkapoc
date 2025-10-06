@@ -22,6 +22,10 @@
     <dependencies>
         <dependency>
             <groupId>com.hcltech.rmg</groupId>
+            <artifactId>cepstate</artifactId>
+            <version>${project.version}</version>
+        </dependency>        <dependency>
+            <groupId>com.hcltech.rmg</groupId>
             <artifactId>common</artifactId>
             <version>${project.version}</version>
         </dependency>

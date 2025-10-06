@@ -8,23 +8,23 @@ import org.apache.flink.streaming.api.functions.ProcessFunction;
 import org.apache.flink.util.Collector;
 import org.apache.flink.util.OutputTag;
 
-public final class SplitEnvelopes<CEPState, T> extends ProcessFunction<Envelope<CEPState, T>, ValueEnvelope<CEPState, T>> {
+public final class SplitEnvelopes<T> extends ProcessFunction<Envelope<T>, ValueEnvelope<T>> {
 
-    private final OutputTag<ErrorEnvelope<CEPState, T>> errorsTag;
-    private final OutputTag<RetryEnvelope<CEPState, T>> retriesTag;
+    private final OutputTag<ErrorEnvelope<T>> errorsTag;
+    private final OutputTag<RetryEnvelope<T>> retriesTag;
 
-    public SplitEnvelopes(OutputTag<ErrorEnvelope<CEPState, T>> errorsTag, OutputTag<RetryEnvelope<CEPState, T>> retriesTag) {
+    public SplitEnvelopes(OutputTag<ErrorEnvelope<T>> errorsTag, OutputTag<RetryEnvelope<T>> retriesTag) {
         this.errorsTag = errorsTag;
         this.retriesTag = retriesTag;
     }
 
     @Override
-    public void processElement(Envelope<CEPState, T> e, Context ctx, Collector<ValueEnvelope<CEPState, T>> out) {
-        if (e instanceof ErrorEnvelope<CEPState, T> ee) {
+    public void processElement(Envelope<T> e, Context ctx, Collector<ValueEnvelope<T>> out) {
+        if (e instanceof ErrorEnvelope<T> ee) {
             ctx.output(errorsTag, ee);
-        } else if (e instanceof RetryEnvelope<CEPState, T> rr) {
+        } else if (e instanceof RetryEnvelope<T> rr) {
             ctx.output(retriesTag, rr);
-        } else if (e instanceof ValueEnvelope<CEPState, T> vv) {
+        } else if (e instanceof ValueEnvelope<T> vv) {
             out.collect(vv);
             return;
         } else {

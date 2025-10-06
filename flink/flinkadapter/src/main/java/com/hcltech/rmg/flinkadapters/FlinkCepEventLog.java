@@ -1,6 +1,7 @@
 package com.hcltech.rmg.flinkadapters;
 
 import com.hcltech.rmg.cepstate.CepEvent;
+import com.hcltech.rmg.cepstate.CepEventException;
 import com.hcltech.rmg.cepstate.CepEventLog;
 import org.apache.flink.api.common.functions.RuntimeContext;
 import org.apache.flink.api.common.state.*;
@@ -29,18 +30,26 @@ public final class FlinkCepEventLog implements CepEventLog {
     }
 
     @Override
-    public void append(Collection<CepEvent> batch) throws Exception {
+    public void append(Collection<CepEvent> batch) throws CepEventException {
         if (batch == null || batch.isEmpty()) return;
         // Defensive copy so callers can’t mutate after append
-        segments.add(new ArrayList<>(batch));
+        try {
+            segments.add(new ArrayList<>(batch));
+        } catch (Exception e) {
+            throw new CepEventException(e);
+        }
     }
 
     @Override
-    public List<CepEvent> getAll() throws Exception {
+    public List<CepEvent> getAll() throws CepEventException {
         List<CepEvent> out = new ArrayList<>();
-        for (List<CepEvent> seg : segments.get()) {
-            if (seg != null && !seg.isEmpty()) out.addAll(seg);
+        try {
+            for (List<CepEvent> seg : segments.get()) {
+                if (seg != null && !seg.isEmpty()) out.addAll(seg);
+            }
+            return out;
+        } catch (Exception e) {
+            throw new CepEventException(e);
         }
-        return out;
     }
 }

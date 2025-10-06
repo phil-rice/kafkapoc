@@ -10,15 +10,16 @@ import java.util.Map;
 import java.util.Properties;
 
 public final class EnvelopeRouting {
-    private EnvelopeRouting(){}
+    private EnvelopeRouting() {
+    }
 
     /**
      * Preferred: pass producer config (e.g., SASL, linger.ms, acks).
      */
     public static <C> void routeToKafkaWithMetrics(
-            DataStream<ValueEnvelope<C, Map<String,Object>>> values,
-            DataStream<ErrorEnvelope<C, Map<String,Object>>> errors,
-            DataStream<RetryEnvelope<C, Map<String,Object>>> retries,
+            DataStream<ValueEnvelope<Map<String, Object>>> values,
+            DataStream<ErrorEnvelope<Map<String, Object>>> errors,
+            DataStream<RetryEnvelope<Map<String, Object>>> retries,
             String brokers,
             String processedTopic,
             String errorsTopic,
@@ -47,9 +48,9 @@ public final class EnvelopeRouting {
      * Convenience overload: no producer config.
      */
     public static <C> void routeToKafkaWithMetrics(
-            DataStream<ValueEnvelope<C, Map<String,Object>>> values,
-            DataStream<ErrorEnvelope<C, Map<String,Object>>> errors,
-            DataStream<RetryEnvelope<C, Map<String,Object>>> retries,
+            DataStream<ValueEnvelope<Map<String, Object>>> values,
+            DataStream<ErrorEnvelope<Map<String, Object>>> errors,
+            DataStream<RetryEnvelope<Map<String, Object>>> retries,
             String brokers,
             String processedTopic,
             String errorsTopic,

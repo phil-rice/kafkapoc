@@ -31,9 +31,9 @@ import static org.junit.jupiter.api.Assertions.*;
 public final class KeySniffAndClassifyTest {
 
     // Provide TypeInformation so Flink can materialize the side output in tests
-    private static final OutputTag<ErrorEnvelope<?, ?>> SNIFF_ERRORS =
+    private static final OutputTag<ErrorEnvelope< ?>> SNIFF_ERRORS =
             new OutputTag<>("sniff-errors",
-                    TypeInformation.of(new TypeHint<ErrorEnvelope<?, ?>>() {})) {};
+                    TypeInformation.of(new TypeHint<ErrorEnvelope< ?>>() {})) {};
 
     // --- helpers ---------------------------------------------------------------
 
@@ -69,7 +69,7 @@ public final class KeySniffAndClassifyTest {
     @Test
     @DisplayName("happy path → emits (domainId, raw) on main output")
     void happyPath_emitsTuple() throws Exception {
-        var fn = new KeySniffAndClassify<Object>("test", SNIFF_ERRORS, 0);
+        var fn = new KeySniffAndClassify("test", SNIFF_ERRORS, 0);
         List<String> path = testKeyPath();
         String xml = xmlForPath(path, "ABC-123");
 
@@ -87,7 +87,7 @@ public final class KeySniffAndClassifyTest {
             assertEquals("ABC-123", t.f0);
             assertEquals(raw, t.f1);
 
-            ConcurrentLinkedQueue<StreamRecord<ErrorEnvelope<?, ?>>> side = h.getSideOutput(SNIFF_ERRORS);
+            ConcurrentLinkedQueue<StreamRecord<ErrorEnvelope< ?>>> side = h.getSideOutput(SNIFF_ERRORS);
             assertTrue(side == null || side.isEmpty(), "No errors expected on side output");
         }
     }
@@ -95,7 +95,7 @@ public final class KeySniffAndClassifyTest {
     @Test
     @DisplayName("missing path → ErrorEnvelope on side output; no main output")
     void missingPath_goesToSideOutput() throws Exception {
-        var fn = new KeySniffAndClassify<Object>("test", SNIFF_ERRORS, 0);
+        var fn = new KeySniffAndClassify("test", SNIFF_ERRORS, 0);
         List<String> path = testKeyPath();
         // Same tree but last element name changed so extractor won't find it
         List<String> wrongPath = withLastReplaced(path, "Other");
@@ -118,7 +118,7 @@ public final class KeySniffAndClassifyTest {
             var err = side.iterator().next().getValue();
             assertEquals("key-sniff", err.stageName());
 
-            ValueEnvelope<?, ?> ve = err.envelope();
+            ValueEnvelope<?> ve = err.envelope();
             assertNull(ve.header(), "Header should be null in sniff error");
             assertTrue(ve.data() instanceof RawMessage, "Payload should be RawMessage");
             assertEquals(raw, ve.data());
@@ -132,7 +132,7 @@ public final class KeySniffAndClassifyTest {
     @Test
     @DisplayName("blank id text → ErrorEnvelope on side output; no main output")
     void blankId_goesToSideOutput() throws Exception {
-        var fn = new KeySniffAndClassify<Object>("test", SNIFF_ERRORS, 0);
+        var fn = new KeySniffAndClassify("test", SNIFF_ERRORS, 0);
         List<String> path = testKeyPath();
         String xml = xmlForPath(path, "   "); // blank content at the leaf
 
@@ -153,7 +153,7 @@ public final class KeySniffAndClassifyTest {
             var err = side.iterator().next().getValue();
             assertEquals("key-sniff", err.stageName());
 
-            ValueEnvelope<?, ?> ve = err.envelope();
+            ValueEnvelope<?> ve = err.envelope();
             assertNull(ve.header());
             assertTrue(ve.data() instanceof RawMessage);
             assertEquals(raw, ve.data());
@@ -167,7 +167,7 @@ public final class KeySniffAndClassifyTest {
     @Test
     @DisplayName("multiple records → all good to main, bad to side output")
     void multipleRecords_mixGoodAndBad() throws Exception {
-        var fn = new KeySniffAndClassify<Object>("test", SNIFF_ERRORS, 0);
+        var fn = new KeySniffAndClassify("test", SNIFF_ERRORS, 0);
         List<String> path = testKeyPath();
 
         String xmlGoodA = xmlForPath(path, "A");

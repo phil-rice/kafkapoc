@@ -22,20 +22,20 @@ import java.util.List;
  * - emits (key, raw) on success
  * - side-outputs ErrorEnvelope with ValueEnvelope(null, raw) on failure
  */
-public final class KeySniffAndClassify<CepState>
+public final class KeySniffAndClassify
         extends ProcessFunction<RawMessage, Tuple2<String, RawMessage>> {
 
     private static final String STAGE = "key-sniff";
 
     private final String containerId;
     private List<String> keyPath;
-    private final OutputTag<ErrorEnvelope<?, ?>> errorsOut;
+    private final OutputTag<ErrorEnvelope<?>> errorsOut;
     private final int lanes;
 
     private transient KeyExtractor extractor;
 
     public KeySniffAndClassify(String containerId,
-                               OutputTag<ErrorEnvelope<?, ?>> errorsOut,
+                               OutputTag<ErrorEnvelope<?>> errorsOut,
                                int lanes) {
         this.containerId = containerId;
         this.errorsOut = errorsOut;

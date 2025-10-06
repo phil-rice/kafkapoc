@@ -15,7 +15,7 @@ import java.util.Map;
  * - config: direct reference to the config for this set of parameters
  * - cepState: direct reference to the CEP state for this domainId
  */
-public record EnvelopeHeader<CepState>(
+public record EnvelopeHeader(
         String domainType,
         String domainId,
         String eventType, //wil lbe null at start until we have parsed the message and found it
@@ -23,10 +23,10 @@ public record EnvelopeHeader<CepState>(
         Parameters parameters,
 //This will be null at start until we have parsed the message and found them. The actual parameters are defined in the config. Includes event type and domain type
         BehaviorConfig config, // the specific combination for this set of parameters
-        CepState cepState
+        Map<String, Object> cepState
 ) {
-    EnvelopeHeader<CepState> withMessage(ParameterExtractor parameterExtractor, Map<String, Object> message, String eventType) {
-        return new EnvelopeHeader<>(
+    EnvelopeHeader withMessage(ParameterExtractor parameterExtractor, Map<String, Object> message, String eventType) {
+        return new EnvelopeHeader(
                 domainType,
                 domainId,
                 eventType,
