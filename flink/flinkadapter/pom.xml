@@ -27,6 +27,18 @@
         </dependency>
         <dependency>
             <groupId>com.hcltech.rmg</groupId>
+            <artifactId>cepstate</artifactId>
+            <version>${project.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>com.hcltech.rmg</groupId>
+            <artifactId>cepstate</artifactId>
+            <version>${project.version}</version>
+            <scope>test</scope>
+            <type>test-jar</type>
+        </dependency>
+        <dependency>
+            <groupId>com.hcltech.rmg</groupId>
             <artifactId>messages</artifactId>
             <version>${project.version}</version>
         </dependency>

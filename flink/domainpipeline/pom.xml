@@ -32,11 +32,6 @@
         </dependency>
         <dependency>
             <groupId>com.hcltech.rmg</groupId>
-            <artifactId>cepstate_rocksdb</artifactId>
-            <version>${project.version}</version>
-        </dependency>
-        <dependency>
-            <groupId>com.hcltech.rmg</groupId>
             <artifactId>interfaces</artifactId>
             <version>${project.version}</version>
         </dependency>

@@ -51,15 +51,6 @@
             <version>${project.version}</version>
         </dependency>
         <dependency>
-            <groupId>com.hcltech.rmg</groupId>
-            <artifactId>cepstate_rocksdb</artifactId>
-            <version>${project.version}</version>
-        </dependency>
-        <dependency>
-            <groupId>org.rocksdb</groupId>
-            <artifactId>rocksdbjni</artifactId>
-        </dependency>
-        <dependency>
             <groupId>org.apache.kafka</groupId>
             <artifactId>kafka-clients</artifactId>
         </dependency>

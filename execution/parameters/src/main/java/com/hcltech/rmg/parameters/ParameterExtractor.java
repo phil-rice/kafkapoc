@@ -12,17 +12,7 @@ public interface ParameterExtractor {
         return new DefaultParameterExtractor(parameterNames, eventToParameterNameToPath, defaultParameterNameToPath);
     }
 
-    static String findValueOrNull(Map<String, Object> message, List<String> path) {
-        Object current = message;
-        for (String p : path) {
-            if (!(current instanceof Map)) return null;
-            Map<String, Object> currentMap = (Map<String, Object>) current;
-            if (!currentMap.containsKey(p)) return null;
-            current = currentMap.get(p);
-        }
-        if (!(current instanceof String)) return null;
-        return (String) current;
-    }
+
 
 }
 

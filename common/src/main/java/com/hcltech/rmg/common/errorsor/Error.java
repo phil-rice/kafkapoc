@@ -38,7 +38,12 @@ public final class Error<T> implements ErrorsOr<T> {
     }
 
     @Override
-    public T fold(Function<List<String>, T> onError) {
+    public T foldError(Function<List<String>, T> onError) {
+        return onError.apply(errors);
+    }
+
+    @Override
+    public <T1> T1 fold(Function<T, T1> onValue, Function<List<String>, T1> onError) {
         return onError.apply(errors);
     }
 

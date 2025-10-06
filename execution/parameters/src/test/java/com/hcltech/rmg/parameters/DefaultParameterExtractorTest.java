@@ -1,5 +1,6 @@
 package com.hcltech.rmg.parameters;
 
+import com.hcltech.rmg.common.Paths;
 import com.hcltech.rmg.parameters.ParameterExtractor;
 import com.hcltech.rmg.parameters.Parameters;
 import org.junit.jupiter.api.DisplayName;
@@ -238,20 +239,20 @@ class DefaultParameterExtractorTest {
         Map<String, Object> input = obj(
                 "a", obj("b", obj("c", "v"))
         );
-        assertEquals("v", ParameterExtractor.findValueOrNull(input, List.of("a", "b", "c")));
+        assertEquals("v", Paths.findStringOrNull(input, List.of("a", "b", "c")));
     }
 
     @Test
     @DisplayName("findValueOrNull: returns null on wrong type or missing")
     void findValueOrNull_nullOnWrongTypeOrMissing() {
         Map<String, Object> wrongType = obj("a", obj("b", 123));
-        assertNull(ParameterExtractor.findValueOrNull(wrongType, List.of("a", "b")));
+        assertNull(Paths.findStringOrNull(wrongType, List.of("a", "b")));
 
         Map<String, Object> missingKey = obj("a", obj()); // no 'b'
-        assertNull(ParameterExtractor.findValueOrNull(missingKey, List.of("a", "b")));
+        assertNull(Paths.findStringOrNull(missingKey, List.of("a", "b")));
 
         Map<String, Object> intermediateNotMap = obj("a", "x"); // 'a' is String
-        assertNull(ParameterExtractor.findValueOrNull(intermediateNotMap, List.of("a", "b")));
+        assertNull(Paths.findStringOrNull(intermediateNotMap, List.of("a", "b")));
     }
 
     @DisplayName("empty parameterNames → empty Parameters and empty key")

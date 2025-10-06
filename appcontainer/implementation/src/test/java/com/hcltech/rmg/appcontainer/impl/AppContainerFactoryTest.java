@@ -142,20 +142,24 @@ public final class AppContainerFactoryTest {
         assertFalse(params.isEmpty());
         assertEquals("prod", params.get(0).defaultValue(), "prod env should default to 'prod'");
     }
-
     @Test
     @DisplayName("prod: extractors are wired and non-null")
     void prod_extractors_present() {
         AppContainer<KafkaConfig, XMLValidationSchema> prod = AppContainerFactory.resolve("prod").valueOrThrow();
 
         assertNotNull(prod.eventTypeExtractor(), "eventTypeExtractor should be present");
-        String evt = prod.eventTypeExtractor().extractEventType(Map.of("eventType", "Arrived"));
+
+        // prod extractor expects ["msg","eventType"]
+        String evt = prod.eventTypeExtractor().extractEventType(
+                Map.of("msg", Map.of("eventType", "Arrived"))
+        );
         assertEquals("Arrived", evt);
 
         assertNotNull(prod.domainTypeExtractor(), "domainTypeExtractor should be present");
         String dom = prod.domainTypeExtractor().extractDomainType(Map.of());
         assertEquals("parcel", dom);
     }
+
 
     // --- test environment characteristics -----------------------------------
 

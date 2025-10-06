@@ -16,7 +16,9 @@ public interface ErrorsOr<T> {
 
     ErrorsOr<T> addPrefixIfError(String prefix);
 
-    T fold(Function<List<String>, T> onError);
+    T foldError(Function<List<String>, T> onError);
+
+    <T1> T1 fold(Function<T, T1> onValue, Function<List<String>, T1> onError);
 
     /**
      * throws an exception if a value

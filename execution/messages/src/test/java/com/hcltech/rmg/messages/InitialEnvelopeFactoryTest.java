@@ -69,14 +69,14 @@ class InitialEnvelopeFactoryTest {
         RootConfig root = new RootConfig(null, schemaName);
 
         Parameters params = mock(Parameters.class);
+        when(params.key()).thenReturn("dev:uk");
         ParameterExtractor paramEx = new FakeParamExtractor(ErrorsOr.lift(params));
 
-        // Extractors (new interfaces)
         IEventTypeExtractor eventTypeExtractor = message -> "OrderCreated";
         IDomainTypeExtractor domainTypeExtractor = message -> "orders";
 
         Config cfg = mock(Config.class); // behaviorConfig() not asserted
-        Map<String, Config> keyToConfig = Map.of("OrderCreated", cfg);
+        Map<String, Config> keyToConfig = Map.of("dev:uk", cfg);
 
         InitialEnvelopeFactory<Object, String> sut =
                 new InitialEnvelopeFactory<>(paramEx, nameToSchema, xml, eventTypeExtractor, domainTypeExtractor, keyToConfig, root);
@@ -151,6 +151,7 @@ class InitialEnvelopeFactoryTest {
         RootConfig root = new RootConfig(null, schemaName);
 
         Parameters params = mock(Parameters.class);
+        when(params.key()).thenReturn("dev:uk");
         ParameterExtractor paramEx = new FakeParamExtractor(ErrorsOr.lift(params));
 
         IEventTypeExtractor eventTypeExtractor = message -> "SomeEvent";
@@ -188,6 +189,9 @@ class InitialEnvelopeFactoryTest {
         RootConfig root = new RootConfig(null, schemaName);
 
         Parameters params = mock(Parameters.class);
+        // Not strictly needed because we fail before parameters() when eventType=null,
+        // but harmless if parameters() gets called later:
+        when(params.key()).thenReturn("dev:uk");
         ParameterExtractor paramEx = new FakeParamExtractor(ErrorsOr.lift(params));
 
         IEventTypeExtractor eventTypeExtractor = message -> null; // force error

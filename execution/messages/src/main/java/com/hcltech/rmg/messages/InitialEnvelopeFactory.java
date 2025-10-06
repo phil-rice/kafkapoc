@@ -8,7 +8,6 @@ import com.hcltech.rmg.xml.XmlTypeClass;
 
 import java.util.Map;
 import java.util.Objects;
-import java.util.function.Function;
 
 public class InitialEnvelopeFactory<Schema, CepState> {
     private final ParameterExtractor parameterExtractor;
@@ -61,7 +60,7 @@ public class InitialEnvelopeFactory<Schema, CepState> {
                     });
                 }
         );
-        return result.fold(errors -> {
+        return result.foldError(errors -> {
             var header = new EnvelopeHeader<CepState>(IEventTypeExtractor.unknownEventType, domainId, null, rawMessage, null, null, null);
             var valueEnv = new ValueEnvelope<CepState, Map<String, Object>>(header, Map.of());
             return new ErrorEnvelope<CepState, Map<String, Object>>(valueEnv, "initial-envelope-factory", errors);

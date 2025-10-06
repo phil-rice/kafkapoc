@@ -7,7 +7,6 @@ import org.junit.jupiter.api.Test;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
-import java.util.concurrent.atomic.AtomicReference;
 
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -174,14 +173,14 @@ class ErrorsOrTest {
         @Test
         void fold_returnsValue_onValue() {
             ErrorsOr<String> val = ErrorsOr.lift("ok");
-            String out = val.fold(errs -> "fallback:" + String.join(",", errs));
+            String out = val.foldError(errs -> "fallback:" + String.join(",", errs));
             assertEquals("ok", out, "fold must return the value when isValue()");
         }
 
         @Test
         void fold_appliesOnError_andReturnsFallback() {
             ErrorsOr<String> err = ErrorsOr.errors(List.of("a", "b"));
-            String out = err.fold(errs -> "fallback:" + String.join("|", errs));
+            String out = err.foldError(errs -> "fallback:" + String.join("|", errs));
             assertEquals("fallback:a|b", out);
         }
 

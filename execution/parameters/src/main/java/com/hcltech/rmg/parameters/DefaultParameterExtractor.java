@@ -1,5 +1,6 @@
 package com.hcltech.rmg.parameters;
 
+import com.hcltech.rmg.common.Paths;
 import com.hcltech.rmg.common.errorsor.ErrorsOr;
 
 import java.util.ArrayList;
@@ -33,7 +34,7 @@ class DefaultParameterExtractor implements ParameterExtractor {
             List<String> path = findPathOrNull(eventType, parameterName);
             if (path == null)
                 return ErrorsOr.error("No path for parameter " + parameterName + " and event type " + eventType);
-            String value = ParameterExtractor.findValueOrNull(input, path);
+            String value = Paths.findStringOrNull(input, path);
             if (value == null)
                 return ErrorsOr.error("No value for parameter " + parameterName + " at path " + path + " and event type " + eventType);
             parameterValues.add(value);
