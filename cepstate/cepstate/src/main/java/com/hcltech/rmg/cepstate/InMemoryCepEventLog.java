@@ -1,6 +1,7 @@
 package com.hcltech.rmg.cepstate;
 
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
 
@@ -9,7 +10,7 @@ public final class InMemoryCepEventLog implements CepEventLog {
     private final List<List<CepEvent>> segments = new ArrayList<>();
 
     @Override
-    public void append(List<CepEvent> batch) {
+    public void append(Collection<CepEvent> batch) {
         if (batch == null || batch.isEmpty()) return;
         // Defensive copy so caller can’t mutate after append
         segments.add(new ArrayList<>(batch));

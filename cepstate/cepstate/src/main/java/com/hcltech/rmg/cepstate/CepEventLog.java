@@ -1,10 +1,11 @@
 package com.hcltech.rmg.cepstate;
 
+import java.util.Collection;
 import java.util.List;
 import java.util.Map;
 
 public interface CepEventLog {
-    void append(List<CepEvent> batch) throws Exception;
+    void append(Collection<CepEvent> batch) throws Exception;
 
     List<CepEvent> getAll() throws Exception;
 

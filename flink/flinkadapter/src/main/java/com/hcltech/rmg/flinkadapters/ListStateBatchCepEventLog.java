@@ -9,6 +9,7 @@ import org.apache.flink.api.common.typeinfo.TypeHint;
 import org.apache.flink.api.common.typeinfo.TypeInformation;
 
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.List;
 
 public final class ListStateBatchCepEventLog implements CepEventLog {
@@ -22,7 +23,7 @@ public final class ListStateBatchCepEventLog implements CepEventLog {
     this.segments = store.getListState(desc);
   }
 
-  @Override public void append(List<CepEvent> batch) throws Exception {
+  @Override public void append(Collection<CepEvent> batch) throws Exception {
     if (batch == null || batch.isEmpty()) return;
     segments.add(new ArrayList<>(batch)); // defensive copy
   }

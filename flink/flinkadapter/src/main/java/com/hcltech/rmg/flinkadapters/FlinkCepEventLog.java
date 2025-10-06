@@ -8,6 +8,7 @@ import org.apache.flink.api.common.typeinfo.TypeHint;
 import org.apache.flink.api.common.typeinfo.TypeInformation;
 
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.List;
 
 public final class FlinkCepEventLog implements CepEventLog {
@@ -21,13 +22,14 @@ public final class FlinkCepEventLog implements CepEventLog {
     private FlinkCepEventLog(RuntimeContext ctx, String namePrefix) {
         ListStateDescriptor<List<CepEvent>> desc = new ListStateDescriptor<>(
                 namePrefix + ".segments",
-                TypeInformation.of(new TypeHint<List<CepEvent>>() {})
+                TypeInformation.of(new TypeHint<List<CepEvent>>() {
+                })
         );
         this.segments = ctx.getListState(desc);
     }
 
     @Override
-    public void append(List<CepEvent> batch) throws Exception {
+    public void append(Collection<CepEvent> batch) throws Exception {
         if (batch == null || batch.isEmpty()) return;
         // Defensive copy so callers can’t mutate after append
         segments.add(new ArrayList<>(batch));
