@@ -31,7 +31,7 @@ class InitialEnvelopeFactoryTest {
     /**
      * Fake XmlTypeClass that always succeeds with a given parsed map.
      */
-    private static final class FakeXmlPass implements XmlTypeClass<Object> {
+    private static final class FakeXmlPass implements XmlTypeClass<Map<String, Object>, Object> {
         private final Map<String, Object> parsed;
 
         FakeXmlPass(Map<String, Object> parsed) {
@@ -57,7 +57,7 @@ class InitialEnvelopeFactoryTest {
     /**
      * Fake XmlTypeClass that always fails with a given error.
      */
-    private static final class FakeXmlFail implements XmlTypeClass<Object> {
+    private static final class FakeXmlFail implements XmlTypeClass<Map<String, Object>, Object> {
         private final String err;
 
         FakeXmlFail(String err) {
@@ -110,7 +110,7 @@ class InitialEnvelopeFactoryTest {
         String schemaName = "schemas/order.xsd";
 
         Map<String, Object> parsed = Map.of("id", "ABC", "amount", 10);
-        XmlTypeClass<Object> xml = new FakeXmlPass(parsed);
+        XmlTypeClass<Map<String, Object>, Object> xml = new FakeXmlPass(parsed);
 
         Object schema = new Object();
         Map<String, Object> nameToSchema = Map.of(schemaName, schema);
@@ -120,8 +120,8 @@ class InitialEnvelopeFactoryTest {
         when(params.key()).thenReturn("dev:uk");
         ParameterExtractor<Map<String, Object>> paramEx = new FakeParamExtractor<>(ErrorsOr.lift(params));
 
-        IEventTypeExtractor eventTypeExtractor = message -> "OrderCreated";
-        IDomainTypeExtractor domainTypeExtractor = message -> "orders";
+        IEventTypeExtractor<Map<String, Object>> eventTypeExtractor = message -> "OrderCreated";
+        IDomainTypeExtractor<Map<String, Object>> domainTypeExtractor = message -> "orders";
 
         Config cfg = mock(Config.class); // behaviorConfig() not asserted
         Map<String, Config> keyToConfig = Map.of("dev:uk", cfg);
@@ -132,24 +132,24 @@ class InitialEnvelopeFactoryTest {
                 ErrorsOr.lift(new HashMap<>()));
         Supplier<CepEventLog> cepSupplier = cepSupplierReturning(cepLog);
 
-        InitialEnvelopeFactory<Object> sut =
+        InitialEnvelopeFactory<Map<String, Object>, Map<String, Object>, Object> sut =
                 new InitialEnvelopeFactory<>(paramEx, nameToSchema, cepSupplier, xml, eventTypeExtractor, domainTypeExtractor, keyToConfig, root);
 
         RawMessage raw = mock(RawMessage.class);
         when(raw.rawValue()).thenReturn("<Order><Id>ABC</Id></Order>");
 
-        Envelope<Map<String, Object>> env = sut.createEnvelopeHeaderAtStart(raw, domainId);
+        Envelope<Map<String, Object>, Map<String, Object>> env = sut.createEnvelopeHeaderAtStart(raw, domainId);
 
         assertTrue(env instanceof ValueEnvelope, "Expected ValueEnvelope");
 
         @SuppressWarnings("unchecked")
-        ValueEnvelope<Map<String, Object>> ve = (ValueEnvelope<Map<String, Object>>) env;
+        ValueEnvelope<Map<String, Object>, Map<String, Object>> ve = (ValueEnvelope<Map<String, Object>, Map<String, Object>>) env;
 
         // payload
         assertEquals(parsed, ve.data());
 
         // header fields
-        EnvelopeHeader<Map<String,Object>> h = ve.header();
+        EnvelopeHeader<Map<String, Object>> h = ve.header();
         assertEquals("orders", h.domainType());
         assertEquals(domainId, h.domainId());
         assertEquals("OrderCreated", h.eventType());
@@ -168,7 +168,7 @@ class InitialEnvelopeFactoryTest {
         String schemaName = "schemas/order.xsd";
 
         Map<String, Object> parsed = Map.of("id", "ABC");
-        XmlTypeClass<Object> xml = new FakeXmlPass(parsed);
+        XmlTypeClass<Map<String, Object>, Object> xml = new FakeXmlPass(parsed);
 
         Object schema = new Object();
         Map<String, Object> nameToSchema = Map.of(schemaName, schema);
@@ -176,10 +176,10 @@ class InitialEnvelopeFactoryTest {
 
         Parameters params = mock(Parameters.class);
         when(params.key()).thenReturn("dev:uk");
-        ParameterExtractor paramEx = new FakeParamExtractor(ErrorsOr.lift(params));
+        ParameterExtractor<Map<String, Object>> paramEx = new FakeParamExtractor<>(ErrorsOr.lift(params));
 
-        IEventTypeExtractor eventTypeExtractor = message -> "OrderUpdated";
-        IDomainTypeExtractor domainTypeExtractor = message -> "orders";
+        IEventTypeExtractor<Map<String, Object>> eventTypeExtractor = message -> "OrderUpdated";
+        IDomainTypeExtractor<Map<String, Object>> domainTypeExtractor = message -> "orders";
 
         Config cfg = mock(Config.class);
         Map<String, Config> keyToConfig = Map.of("dev:uk", cfg);
@@ -193,20 +193,20 @@ class InitialEnvelopeFactoryTest {
         when(cepLog.safeFoldAll(anyMap())).thenReturn(ErrorsOr.lift(folded));
         Supplier<CepEventLog> cepSupplier = cepSupplierReturning(cepLog);
 
-        InitialEnvelopeFactory<Object> sut =
+        InitialEnvelopeFactory<Map<String, Object>, Map<String, Object>, Object> sut =
                 new InitialEnvelopeFactory<>(paramEx, nameToSchema, cepSupplier, xml, eventTypeExtractor, domainTypeExtractor, keyToConfig, root);
 
         RawMessage raw = mock(RawMessage.class);
         when(raw.rawValue()).thenReturn("<Order/>");
 
-        Envelope<Map<String, Object>> env = sut.createEnvelopeHeaderAtStart(raw, domainId);
+        Envelope<Map<String, Object>, Map<String, Object>> env = sut.createEnvelopeHeaderAtStart(raw, domainId);
 
         assertTrue(env instanceof ValueEnvelope, "Expected ValueEnvelope");
 
         @SuppressWarnings("unchecked")
-        ValueEnvelope<Map<String, Object>> ve = (ValueEnvelope<Map<String, Object>>) env;
+        ValueEnvelope<Map<String, Object>, Map<String, Object>> ve = (ValueEnvelope<Map<String, Object>, Map<String, Object>>) env;
 
-        EnvelopeHeader h = ve.header();
+        EnvelopeHeader<Map<String, Object>> h = ve.header();
         assertEquals("orders", h.domainType());
         assertEquals(domainId, h.domainId());
         assertEquals("OrderUpdated", h.eventType());
@@ -222,39 +222,39 @@ class InitialEnvelopeFactoryTest {
         String domainId = "D-ERR";
         String schemaName = "schemas/order.xsd";
 
-        XmlTypeClass<Object> xml = new FakeXmlFail("xml invalid");
+        XmlTypeClass<Map<String, Object>, Object> xml = new FakeXmlFail("xml invalid");
         Object schema = new Object();
         Map<String, Object> nameToSchema = Map.of(schemaName, schema);
         RootConfig root = new RootConfig(null, schemaName);
 
-        ParameterExtractor paramEx = new FakeParamExtractor(ErrorsOr.error("unused"));
-        IEventTypeExtractor eventTypeExtractor = message -> "X";
-        IDomainTypeExtractor domainTypeExtractor = message -> "orders";
+        ParameterExtractor<Map<String, Object>> paramEx = new FakeParamExtractor(ErrorsOr.error("unused"));
+        IEventTypeExtractor<Map<String, Object>> eventTypeExtractor = message -> "X";
+        IDomainTypeExtractor<Map<String, Object>> domainTypeExtractor = message -> "orders";
         Map<String, Config> keyToConfig = Map.of();
 
         // CepEventLog (won't be called because parse fails)
         CepEventLog cepLog = mock(CepEventLog.class);
         Supplier<CepEventLog> cepSupplier = cepSupplierReturning(cepLog);
 
-        InitialEnvelopeFactory<Object> sut =
+        InitialEnvelopeFactory<Map<String, Object>, Map<String, Object>, Object> sut =
                 new InitialEnvelopeFactory<>(paramEx, nameToSchema, cepSupplier, xml, eventTypeExtractor, domainTypeExtractor, keyToConfig, root);
 
         RawMessage raw = mock(RawMessage.class);
         when(raw.rawValue()).thenReturn("<broken/>");
 
-        Envelope<Map<String, Object>> env = sut.createEnvelopeHeaderAtStart(raw, domainId);
+        Envelope<Map<String, Object>, Map<String, Object>> env = sut.createEnvelopeHeaderAtStart(raw, domainId);
 
         assertTrue(env instanceof ErrorEnvelope, "Expected ErrorEnvelope");
 
         @SuppressWarnings("unchecked")
-        ErrorEnvelope<Map<String, Object>> ee = (ErrorEnvelope<Map<String, Object>>) env;
+        ErrorEnvelope<Map<String, Object>, Map<String, Object>> ee = (ErrorEnvelope<Map<String, Object>, Map<String, Object>>) env;
 
         // inner value envelope crafted in recover(): header with null eventType, payload = Map.of()
-        ValueEnvelope<Map<String, Object>> inner = ee.valueEnvelope();
-        EnvelopeHeader h = inner.header();
+        ValueEnvelope<Map<String, Object>, Map<String, Object>> inner = ee.valueEnvelope();
+        EnvelopeHeader<Map<String, Object>> h = inner.header();
         assertNull(h.eventType(), "eventType should be null in error header");
         assertSame(raw, h.rawMessage());
-        assertEquals(Map.of(), inner.data(), "recover payload should be empty Map");
+        assertEquals(null, inner.data(), "recover payload should be null");
 
         verifyNoInteractions(cepLog);
     }
@@ -265,17 +265,17 @@ class InitialEnvelopeFactoryTest {
         String schemaName = "schemas/order.xsd";
 
         Map<String, Object> parsed = Map.of("id", "X");
-        XmlTypeClass<Object> xml = new FakeXmlPass(parsed);
+        XmlTypeClass<Map<String, Object>, Object> xml = new FakeXmlPass(parsed);
         Object schema = new Object();
         Map<String, Object> nameToSchema = Map.of(schemaName, schema);
         RootConfig root = new RootConfig(null, schemaName);
 
         Parameters params = mock(Parameters.class);
         when(params.key()).thenReturn("dev:uk");
-        ParameterExtractor paramEx = new FakeParamExtractor(ErrorsOr.lift(params));
+        ParameterExtractor<Map<String, Object>> paramEx = new FakeParamExtractor<>(ErrorsOr.lift(params));
 
-        IEventTypeExtractor eventTypeExtractor = message -> "SomeEvent";
-        IDomainTypeExtractor domainTypeExtractor = message -> "orders";
+        IEventTypeExtractor<Map<String, Object>> eventTypeExtractor = message -> "SomeEvent";
+        IDomainTypeExtractor<Map<String, Object>> domainTypeExtractor = message -> "orders";
         Map<String, Config> keyToConfig = Map.of(); // missing config
 
         // CepEventLog (will be invoked before missing-config check)
@@ -283,21 +283,21 @@ class InitialEnvelopeFactoryTest {
         when(cepLog.safeFoldAll(anyMap())).thenReturn(ErrorsOr.lift(new HashMap<>()));
         Supplier<CepEventLog> cepSupplier = cepSupplierReturning(cepLog);
 
-        InitialEnvelopeFactory<Object> sut =
+        InitialEnvelopeFactory<Map<String, Object>, Map<String, Object>, Object> sut =
                 new InitialEnvelopeFactory<>(paramEx, nameToSchema, cepSupplier, xml, eventTypeExtractor, domainTypeExtractor, keyToConfig, root);
 
         RawMessage raw = mock(RawMessage.class);
         when(raw.rawValue()).thenReturn("<ok/>");
 
-        Envelope<Map<String, Object>> env = sut.createEnvelopeHeaderAtStart(raw, domainId);
+        Envelope<Map<String, Object>, Map<String, Object>> env = sut.createEnvelopeHeaderAtStart(raw, domainId);
 
         assertTrue(env instanceof ErrorEnvelope, "Expected ErrorEnvelope due to missing config");
 
         @SuppressWarnings("unchecked")
-        ErrorEnvelope<Map<String, Object>> ee = (ErrorEnvelope<Map<String, Object>>) env;
+        ErrorEnvelope<Map<String, Object>, Map<String, Object>> ee = (ErrorEnvelope<Map<String, Object>, Map<String, Object>>) env;
 
-        ValueEnvelope<Map<String, Object>> inner = ee.valueEnvelope();
-        assertEquals(Map.of(), inner.data(), "recover payload should be empty Map");
+        ValueEnvelope<Map<String, Object>, Map<String, Object>> inner = ee.valueEnvelope();
+        assertEquals(null, inner.data(), "recover payload should be null");
         assertNull(inner.header().eventType());
         assertSame(raw, inner.header().rawMessage());
         verify(cepLog).safeFoldAll(anyMap());
@@ -309,38 +309,38 @@ class InitialEnvelopeFactoryTest {
         String schemaName = "schemas/order.xsd";
 
         Map<String, Object> parsed = Map.of("z", 1);
-        XmlTypeClass<Object> xml = new FakeXmlPass(parsed);
+        XmlTypeClass<Map<String, Object>, Object> xml = new FakeXmlPass(parsed);
         Object schema = new Object();
         Map<String, Object> nameToSchema = Map.of(schemaName, schema);
         RootConfig root = new RootConfig(null, schemaName);
 
         Parameters params = mock(Parameters.class);
         when(params.key()).thenReturn("dev:uk");
-        ParameterExtractor paramEx = new FakeParamExtractor(ErrorsOr.lift(params));
+        ParameterExtractor<Map<String, Object>> paramEx = new FakeParamExtractor(ErrorsOr.lift(params));
 
-        IEventTypeExtractor eventTypeExtractor = message -> null; // force error
-        IDomainTypeExtractor domainTypeExtractor = message -> "orders";
+        IEventTypeExtractor<Map<String, Object>> eventTypeExtractor = message -> null; // force error
+        IDomainTypeExtractor<Map<String, Object>> domainTypeExtractor = message -> "orders";
         Map<String, Config> keyToConfig = Map.of();
 
         // CepEventLog should not be called because we short-circuit on null eventType
         CepEventLog cepLog = mock(CepEventLog.class);
         Supplier<CepEventLog> cepSupplier = cepSupplierReturning(cepLog);
 
-        InitialEnvelopeFactory<Object> sut =
+        InitialEnvelopeFactory<Map<String, Object>, Map<String, Object>, Object> sut =
                 new InitialEnvelopeFactory<>(paramEx, nameToSchema, cepSupplier, xml, eventTypeExtractor, domainTypeExtractor, keyToConfig, root);
 
         RawMessage raw = mock(RawMessage.class);
         when(raw.rawValue()).thenReturn("<ok/>");
 
-        Envelope<Map<String, Object>> env = sut.createEnvelopeHeaderAtStart(raw, domainId);
+        Envelope<Map<String, Object>, Map<String, Object>> env = sut.createEnvelopeHeaderAtStart(raw, domainId);
 
         assertTrue(env instanceof ErrorEnvelope, "Expected ErrorEnvelope due to null event type");
 
         @SuppressWarnings("unchecked")
-        ErrorEnvelope<Map<String, Object>> ee = (ErrorEnvelope<Map<String, Object>>) env;
+        ErrorEnvelope<Map<String, Object>, Map<String, Object>> ee = (ErrorEnvelope<Map<String, Object>, Map<String, Object>>) env;
 
-        ValueEnvelope<Map<String, Object>> inner = ee.valueEnvelope();
-        assertEquals(Map.of(), inner.data(), "recover payload should be empty Map");
+        ValueEnvelope<Map<String, Object>, Map<String, Object>> inner = ee.valueEnvelope();
+        assertEquals(null, inner.data(), "recover payload should be null");
         assertNull(inner.header().eventType());
         assertSame(raw, inner.header().rawMessage());
 
@@ -352,10 +352,10 @@ class InitialEnvelopeFactoryTest {
         String schemaName = "schemas/missing.xsd";
         RootConfig root = new RootConfig(null, schemaName);
 
-        ParameterExtractor paramEx = new FakeParamExtractor(ErrorsOr.error("unused"));
-        XmlTypeClass<Object> xml = new FakeXmlPass(Map.of());
-        IEventTypeExtractor eventTypeExtractor = message -> "X";
-        IDomainTypeExtractor domainTypeExtractor = message -> "orders";
+        ParameterExtractor<Map<String, Object>> paramEx = new FakeParamExtractor<>(ErrorsOr.error("unused"));
+        XmlTypeClass<Map<String, Object>, Object> xml = new FakeXmlPass(Map.of());
+        IEventTypeExtractor<Map<String, Object>> eventTypeExtractor = message -> "X";
+        IDomainTypeExtractor<Map<String, Object>> domainTypeExtractor = message -> "orders";
 
         Supplier<CepEventLog> cepSupplier = () -> mock(CepEventLog.class);
 

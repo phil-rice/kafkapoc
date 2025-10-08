@@ -20,20 +20,30 @@ import static org.junit.jupiter.api.Assertions.*;
  */
 public abstract class AbstractXmlTypeClassTest<S> {
 
-    protected final XmlTypeClass<S> eng;
+    protected final XmlTypeClass<Map<String, Object>, S> eng;
 
-    protected AbstractXmlTypeClassTest(XmlTypeClass<S> eng) {
+    protected AbstractXmlTypeClassTest(XmlTypeClass<Map<String, Object>, S> eng) {
         this.eng = eng;
         assertNotNull(this.eng, "engine must not be null");
     }
 
-    /** Classpath prefix for test schemas. */
-    protected String resourcePrefix() { return "testxmlloader/"; }
+    /**
+     * Classpath prefix for test schemas.
+     */
+    protected String resourcePrefix() {
+        return "testxmlloader/";
+    }
 
-    /** Schema files (relative to prefix) to load. */
-    protected List<String> schemaNames() { return List.of("a.xsd", "b.xsd"); }
+    /**
+     * Schema files (relative to prefix) to load.
+     */
+    protected List<String> schemaNames() {
+        return List.of("a.xsd", "b.xsd");
+    }
 
-    /** Full classpath names (prefix + name) for loadSchemas(...) */
+    /**
+     * Full classpath names (prefix + name) for loadSchemas(...)
+     */
     private List<String> fullSchemaNames() {
         String pref = resourcePrefix();
         return schemaNames().stream().map(n -> pref + n).collect(Collectors.toList());
@@ -46,22 +56,26 @@ public abstract class AbstractXmlTypeClassTest<S> {
         return (Map<String, Object>) o;
     }
 
-    /** Extracts element text whether stored as {"text": "..."} or a plain String. */
+    /**
+     * Extracts element text whether stored as {"text": "..."} or a plain String.
+     */
     protected static String elementText(Object nodeOrText) {
         if (nodeOrText == null) return null;
         if (nodeOrText instanceof String s) return s;
-        if (nodeOrText instanceof Map<?,?> m) {
+        if (nodeOrText instanceof Map<?, ?> m) {
             Object t = m.get("text");
             return (t instanceof String) ? (String) t : null;
         }
         return null;
     }
 
-    /** Reads an attribute value from a CEL-friendly node: {"attr":{"id":"..."}...}. */
+    /**
+     * Reads an attribute value from a CEL-friendly node: {"attr":{"id":"..."}...}.
+     */
     protected static String attr(Object node, String name) {
-        if (!(node instanceof Map<?,?> m)) return null;
+        if (!(node instanceof Map<?, ?> m)) return null;
         Object a = m.get("attr");
-        if (!(a instanceof Map<?,?> attrs)) return null;
+        if (!(a instanceof Map<?, ?> attrs)) return null;
         Object v = attrs.get(name);
         return (v instanceof String) ? (String) v : null;
     }
@@ -86,9 +100,9 @@ public abstract class AbstractXmlTypeClassTest<S> {
         assertNotNull(schemaA);
 
         String good = "<a id=\"A1\"><x>ok</x></a>";
-        Map<String,Object> out = eng.parseAndValidate(good, schemaA).valueOrThrow();
+        Map<String, Object> out = eng.parseAndValidate(good, schemaA).valueOrThrow();
 
-        Map<String,Object> a = asMap(out.get("a"));
+        Map<String, Object> a = asMap(out.get("a"));
         assertNotNull(a, "root element 'a' missing");
 
         assertEquals("A1", attr(a, "id"));
@@ -102,12 +116,12 @@ public abstract class AbstractXmlTypeClassTest<S> {
         S schemaA = schemas.get(resourcePrefix() + "a.xsd");
         assertNotNull(schemaA);
 
-        ErrorsOr<Map<String,Object>> missingAttr =
+        ErrorsOr<Map<String, Object>> missingAttr =
                 eng.parseAndValidate("<a><x>ok</x></a>", schemaA);
         assertTrue(missingAttr.isError(), "Expected schema violation for missing 'id'");
         assertFalse(missingAttr.errorsOrThrow().isEmpty());
 
-        ErrorsOr<Map<String,Object>> missingChild =
+        ErrorsOr<Map<String, Object>> missingChild =
                 eng.parseAndValidate("<a id=\"A1\"/>", schemaA);
         assertTrue(missingChild.isError(), "Expected schema violation for missing child 'x'");
         assertFalse(missingChild.errorsOrThrow().isEmpty());
@@ -120,12 +134,12 @@ public abstract class AbstractXmlTypeClassTest<S> {
         S schemaB = schemas.get(resourcePrefix() + "b.xsd");
         assertNotNull(schemaB);
 
-        Map<String,Object> ok = eng.parseAndValidate("<b><y>42</y></b>", schemaB).valueOrThrow();
-        Map<String,Object> b = asMap(ok.get("b"));
+        Map<String, Object> ok = eng.parseAndValidate("<b><y>42</y></b>", schemaB).valueOrThrow();
+        Map<String, Object> b = asMap(ok.get("b"));
         assertNotNull(b, "root element 'b' missing");
         assertEquals("42", elementText(b.get("y")));
 
-        ErrorsOr<Map<String,Object>> bad = eng.parseAndValidate("<b><y>notAnInt</y></b>", schemaB);
+        ErrorsOr<Map<String, Object>> bad = eng.parseAndValidate("<b><y>notAnInt</y></b>", schemaB);
         assertTrue(bad.isError(), "Expected schema violation for non-integer y");
         assertFalse(bad.errorsOrThrow().isEmpty());
     }
@@ -207,9 +221,9 @@ public abstract class AbstractXmlTypeClassTest<S> {
         try (InputStream in = new ByteArrayInputStream(xsd.getBytes(StandardCharsets.UTF_8))) {
             schema = eng.loadSchema("msg.xsd", in);
         }
-        Map<String,Object> out = eng.parseAndValidate(xml, schema).valueOrThrow();
+        Map<String, Object> out = eng.parseAndValidate(xml, schema).valueOrThrow();
         assertTrue(out.containsKey("msg"), "root should contain 'msg' key");
-        Map<String,Object> msg = asMap(out.get("msg"));
+        Map<String, Object> msg = asMap(out.get("msg"));
 
         assertEquals("153", elementText(msg.get("domainId")));
         assertEquals("test-event", elementText(msg.get("eventType")));
@@ -217,7 +231,7 @@ public abstract class AbstractXmlTypeClassTest<S> {
 
         // ensure no double-nesting under leafs (either String or {"text":...})
         Object evt = msg.get("eventType");
-        if (evt instanceof Map<?,?> m) {
+        if (evt instanceof Map<?, ?> m) {
             // acceptable only if it's exactly {"text": "..."}
             assertTrue(m.containsKey("text") && m.size() == 1,
                     "Leaf node should be String or {\"text\":...}, not nested element name again");

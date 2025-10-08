@@ -28,24 +28,24 @@ public final class AppContainerFactoryForMapStringObjectTest {
     @Test
     @DisplayName("resolve(prod): returns same singleton for same id")
     void resolve_sameId_sameInstance() {
-        AppContainer<KafkaConfig, XMLValidationSchema> a = AppContainerFactoryForMapStringObject.resolve("prod").valueOrThrow();
-        AppContainer<KafkaConfig, XMLValidationSchema> b = AppContainerFactoryForMapStringObject.resolve("prod").valueOrThrow();
+        AppContainer<KafkaConfig, Map<String,Object>,XMLValidationSchema> a = AppContainerFactoryForMapStringObject.resolve("prod").valueOrThrow();
+        AppContainer<KafkaConfig, Map<String,Object>,XMLValidationSchema> b = AppContainerFactoryForMapStringObject.resolve("prod").valueOrThrow();
         assertSame(a, b, "Expected same cached instance for the same id");
     }
 
     @Test
     @DisplayName("resolve: id normalization (trim + lowercase)")
     void resolve_normalizesId() {
-        AppContainer<KafkaConfig, XMLValidationSchema> a = AppContainerFactoryForMapStringObject.resolve(" prod ").valueOrThrow();
-        AppContainer<KafkaConfig, XMLValidationSchema> b = AppContainerFactoryForMapStringObject.resolve("PROD").valueOrThrow();
+        AppContainer<KafkaConfig,Map<String,Object>, XMLValidationSchema> a = AppContainerFactoryForMapStringObject.resolve(" prod ").valueOrThrow();
+        AppContainer<KafkaConfig,Map<String,Object>, XMLValidationSchema> b = AppContainerFactoryForMapStringObject.resolve("PROD").valueOrThrow();
         assertSame(a, b, "Ids differing only by case/whitespace should map to same instance");
     }
 
     @Test
     @DisplayName("resolve: different ids yield different instances")
     void resolve_differentIds_differentInstances() {
-        AppContainer<KafkaConfig, XMLValidationSchema> prod = AppContainerFactoryForMapStringObject.resolve("prod").valueOrThrow();
-        AppContainer<KafkaConfig, XMLValidationSchema> test = AppContainerFactoryForMapStringObject.resolve("test").valueOrThrow();
+        AppContainer<KafkaConfig, Map<String,Object>,XMLValidationSchema> prod = AppContainerFactoryForMapStringObject.resolve("prod").valueOrThrow();
+        AppContainer<KafkaConfig, Map<String,Object>,XMLValidationSchema> test = AppContainerFactoryForMapStringObject.resolve("test").valueOrThrow();
         assertNotSame(prod, test, "Different env ids should not return the same instance");
     }
 
@@ -54,7 +54,7 @@ public final class AppContainerFactoryForMapStringObjectTest {
     @Test
     @DisplayName("prod: time service is close to system clock")
     void prod_timeService_closeToNow() {
-        AppContainer<KafkaConfig, XMLValidationSchema> prod = AppContainerFactoryForMapStringObject.resolve("prod").valueOrThrow();
+        AppContainer<KafkaConfig, Map<String,Object>,XMLValidationSchema> prod = AppContainerFactoryForMapStringObject.resolve("prod").valueOrThrow();
 
         long before = System.currentTimeMillis();
         long t = prod.time().currentTimeMillis();
@@ -70,7 +70,7 @@ public final class AppContainerFactoryForMapStringObjectTest {
     @Test
     @DisplayName("prod: keyPath is hardcoded")
     void prod_keyPath_isHardcoded() {
-        AppContainer<KafkaConfig, XMLValidationSchema> prod = AppContainerFactoryForMapStringObject.resolve("prod").valueOrThrow();
+        AppContainer<KafkaConfig, Map<String,Object>,XMLValidationSchema> prod = AppContainerFactoryForMapStringObject.resolve("prod").valueOrThrow();
         List<String> path = prod.keyPath();
         List<String> expected = List.of("domainId");
         assertEquals(expected, path, "prod keyPath should be the hardcoded default");
@@ -80,7 +80,7 @@ public final class AppContainerFactoryForMapStringObjectTest {
     @Test
     @DisplayName("prod: uuid generator yields different values across calls")
     void prod_uuid_isRandomEnough() {
-        AppContainer<KafkaConfig, XMLValidationSchema> prod = AppContainerFactoryForMapStringObject.resolve("prod").valueOrThrow();
+        AppContainer<KafkaConfig,Map<String,Object>, XMLValidationSchema> prod = AppContainerFactoryForMapStringObject.resolve("prod").valueOrThrow();
         String u1 = prod.uuid().generate();
         String u2 = prod.uuid().generate();
         assertNotNull(u1);
@@ -91,7 +91,7 @@ public final class AppContainerFactoryForMapStringObjectTest {
     @Test
     @DisplayName("XML: xml.extractId works on a simple path")
     void prod_xml_services_present_and_work() {
-        AppContainer<KafkaConfig, XMLValidationSchema> prod = AppContainerFactoryForMapStringObject.resolve("prod").valueOrThrow();
+        AppContainer<KafkaConfig,Map<String,Object>, XMLValidationSchema> prod = AppContainerFactoryForMapStringObject.resolve("prod").valueOrThrow();
         var xml = prod.xml();
         assertNotNull(xml, "xml typeclass should be provided");
 
@@ -106,7 +106,7 @@ public final class AppContainerFactoryForMapStringObjectTest {
     @Test
     @DisplayName("prod: eventSourceConfig (Kafka) is constructed")
     void prod_eventSourceConfig_present() {
-        AppContainer<KafkaConfig, XMLValidationSchema> prod = AppContainerFactoryForMapStringObject.resolve("prod").valueOrThrow();
+        AppContainer<KafkaConfig, Map<String,Object>,XMLValidationSchema> prod = AppContainerFactoryForMapStringObject.resolve("prod").valueOrThrow();
         KafkaConfig cfg = prod.eventSourceConfig();
         assertNotNull(cfg, "KafkaConfig should be present");
 
@@ -126,7 +126,7 @@ public final class AppContainerFactoryForMapStringObjectTest {
     @Test
     @DisplayName("prod: rootConfig is loaded, schema map contains schema, and env marker is prod")
     void prod_rootConfig_loaded() {
-        AppContainer<KafkaConfig, XMLValidationSchema> prod = AppContainerFactoryForMapStringObject.resolve("prod").valueOrThrow();
+        AppContainer<KafkaConfig,Map<String,Object>, XMLValidationSchema> prod = AppContainerFactoryForMapStringObject.resolve("prod").valueOrThrow();
         RootConfig rc = prod.rootConfig();
         assertNotNull(rc, "rootConfig should be loaded for prod");
 
@@ -145,7 +145,7 @@ public final class AppContainerFactoryForMapStringObjectTest {
     @Test
     @DisplayName("prod: extractors are wired and non-null")
     void prod_extractors_present() {
-        AppContainer<KafkaConfig, XMLValidationSchema> prod = AppContainerFactoryForMapStringObject.resolve("prod").valueOrThrow();
+        AppContainer<KafkaConfig,Map<String,Object>, XMLValidationSchema> prod = AppContainerFactoryForMapStringObject.resolve("prod").valueOrThrow();
 
         assertNotNull(prod.eventTypeExtractor(), "eventTypeExtractor should be present");
 
@@ -166,7 +166,7 @@ public final class AppContainerFactoryForMapStringObjectTest {
     @Test
     @DisplayName("test env: deterministic defaults are returned")
     void test_env_defaults() {
-        AppContainer<KafkaConfig, XMLValidationSchema> test = AppContainerFactoryForMapStringObject.resolve("test").valueOrThrow();
+        AppContainer<KafkaConfig,Map<String,Object>, XMLValidationSchema> test = AppContainerFactoryForMapStringObject.resolve("test").valueOrThrow();
         assertEquals(1_726_000_000_000L, test.time().currentTimeMillis());
         assertEquals("11111111-2222-3333-4444-555555555555", test.uuid().generate());
         assertNotNull(test.xml());
@@ -175,7 +175,7 @@ public final class AppContainerFactoryForMapStringObjectTest {
     @Test
     @DisplayName("test env: eventSourceConfig (Kafka) is constructed")
     void test_eventSourceConfig_present() {
-        AppContainer<KafkaConfig, XMLValidationSchema> test = AppContainerFactoryForMapStringObject.resolve("test").valueOrThrow();
+        AppContainer<KafkaConfig,Map<String,Object>, XMLValidationSchema> test = AppContainerFactoryForMapStringObject.resolve("test").valueOrThrow();
         KafkaConfig cfg = test.eventSourceConfig();
         assertNotNull(cfg, "KafkaConfig should be present");
 
@@ -195,7 +195,7 @@ public final class AppContainerFactoryForMapStringObjectTest {
     @Test
     @DisplayName("test env: rootConfig is loaded from classpath and env marker is dev")
     void test_rootConfig_loaded() {
-        AppContainer<KafkaConfig, XMLValidationSchema> test = AppContainerFactoryForMapStringObject.resolve("test").valueOrThrow();
+        AppContainer<KafkaConfig,Map<String,Object>, XMLValidationSchema> test = AppContainerFactoryForMapStringObject.resolve("test").valueOrThrow();
         RootConfig rc = test.rootConfig();
         assertNotNull(rc, "rootConfig should be loaded for test");
 
@@ -212,7 +212,7 @@ public final class AppContainerFactoryForMapStringObjectTest {
         int threads = Math.max(4, Runtime.getRuntime().availableProcessors());
         ExecutorService pool = Executors.newFixedThreadPool(threads);
         try {
-            Set<AppContainer<KafkaConfig, XMLValidationSchema>> results = ConcurrentHashMap.newKeySet();
+            Set<AppContainer<KafkaConfig,Map<String,Object>, XMLValidationSchema>> results = ConcurrentHashMap.newKeySet();
             CountDownLatch start = new CountDownLatch(1);
 
             var tasks = IntStream.range(0, 64).mapToObj(i -> pool.submit(() -> {
@@ -221,7 +221,7 @@ public final class AppContainerFactoryForMapStringObjectTest {
             })).toList();
 
             start.countDown();
-            for (Future<AppContainer<KafkaConfig, XMLValidationSchema>> f : tasks) {
+            for (Future<AppContainer<KafkaConfig, Map<String,Object>,XMLValidationSchema>> f : tasks) {
                 results.add(f.get(3, TimeUnit.SECONDS));
             }
 
@@ -235,9 +235,9 @@ public final class AppContainerFactoryForMapStringObjectTest {
     @Test
     @DisplayName("clearCache: clears cache; next resolve produces a fresh instance")
     void clearCache_createsFreshInstance() {
-        AppContainer<KafkaConfig, XMLValidationSchema> a = AppContainerFactoryForMapStringObject.resolve("prod").valueOrThrow();
+        AppContainer<KafkaConfig, Map<String,Object>,XMLValidationSchema> a = AppContainerFactoryForMapStringObject.resolve("prod").valueOrThrow();
         AppContainerFactoryForMapStringObject.clearCache();
-        AppContainer<KafkaConfig, XMLValidationSchema> b = AppContainerFactoryForMapStringObject.resolve("prod").valueOrThrow();
+        AppContainer<KafkaConfig,Map<String,Object>, XMLValidationSchema> b = AppContainerFactoryForMapStringObject.resolve("prod").valueOrThrow();
         assertNotSame(a, b, "After clearCache, a fresh instance should be created on next resolve");
     }
 
@@ -252,7 +252,7 @@ public final class AppContainerFactoryForMapStringObjectTest {
     @Test
     @DisplayName("resolve: unknown id yields ErrorsOr.error")
     void resolve_unknown_returnsError() {
-        ErrorsOr<AppContainer<KafkaConfig, XMLValidationSchema>> eo = AppContainerFactoryForMapStringObject.resolve("nope");
+        ErrorsOr<AppContainer<KafkaConfig,Map<String,Object>, XMLValidationSchema>> eo = AppContainerFactoryForMapStringObject.resolve("nope");
         assertTrue(eo.isError(), "Unknown id should return ErrorsOr.error");
         var errors = eo.errorsOrThrow();
         assertFalse(errors.isEmpty());

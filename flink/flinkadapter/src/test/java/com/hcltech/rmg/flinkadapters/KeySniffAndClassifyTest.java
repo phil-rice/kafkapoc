@@ -19,6 +19,7 @@ import org.junit.jupiter.api.Test;
 
 import java.util.List;
 import java.util.Locale;
+import java.util.Map;
 import java.util.concurrent.ConcurrentLinkedQueue;
 
 import static org.junit.jupiter.api.Assertions.*;
@@ -30,14 +31,14 @@ import static org.junit.jupiter.api.Assertions.*;
 public final class KeySniffAndClassifyTest {
 
     // Provide TypeInformation so Flink can materialize the side output in tests
-    private static final OutputTag<ErrorEnvelope< ?>> SNIFF_ERRORS =
+    private static final OutputTag<ErrorEnvelope< ?,?>> SNIFF_ERRORS =
             new OutputTag<>("sniff-errors",
-                    TypeInformation.of(new TypeHint<ErrorEnvelope< ?>>() {})) {};
+                    TypeInformation.of(new TypeHint<ErrorEnvelope< ?,?>>() {})) {};
 
     // --- helpers ---------------------------------------------------------------
 
     private static List<String> testKeyPath() {
-        AppContainer<KafkaConfig, XMLValidationSchema> c =
+        AppContainer<KafkaConfig, Map<String,Object>, XMLValidationSchema> c =
                 AppContainerFactoryForMapStringObject.resolve("test").valueOrThrow();
         List<String> path = c.keyPath();
         assertNotNull(path, "test container keyPath() should not be null");
@@ -86,7 +87,7 @@ public final class KeySniffAndClassifyTest {
             assertEquals("ABC-123", t.f0);
             assertEquals(raw, t.f1);
 
-            ConcurrentLinkedQueue<StreamRecord<ErrorEnvelope< ?>>> side = h.getSideOutput(SNIFF_ERRORS);
+            ConcurrentLinkedQueue<StreamRecord<ErrorEnvelope<?, ?>>> side = h.getSideOutput(SNIFF_ERRORS);
             assertTrue(side == null || side.isEmpty(), "No errors expected on side output");
         }
     }
@@ -117,7 +118,7 @@ public final class KeySniffAndClassifyTest {
             var err = side.iterator().next().getValue();
             assertEquals("key-sniff", err.stageName());
 
-            ValueEnvelope<?> ve = err.envelope();
+            ValueEnvelope<?,?> ve = err.envelope();
             assertNull(ve.header(), "Header should be null in sniff error");
             assertTrue(ve.data() instanceof RawMessage, "Payload should be RawMessage");
             assertEquals(raw, ve.data());
@@ -152,7 +153,7 @@ public final class KeySniffAndClassifyTest {
             var err = side.iterator().next().getValue();
             assertEquals("key-sniff", err.stageName());
 
-            ValueEnvelope<?> ve = err.envelope();
+            ValueEnvelope<?,?> ve = err.envelope();
             assertNull(ve.header());
             assertTrue(ve.data() instanceof RawMessage);
             assertEquals(raw, ve.data());
