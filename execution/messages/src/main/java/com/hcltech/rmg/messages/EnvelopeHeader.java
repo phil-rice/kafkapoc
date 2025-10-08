@@ -4,8 +4,6 @@ import com.hcltech.rmg.config.config.BehaviorConfig;
 import com.hcltech.rmg.parameters.ParameterExtractor;
 import com.hcltech.rmg.parameters.Parameters;
 
-import java.util.Map;
-
 /**
  * Local-only domain envelope that exists *inside a single operator box*
  * (no network hops). It is intentionally not serializable and should
@@ -15,7 +13,7 @@ import java.util.Map;
  * - config: direct reference to the config for this set of parameters
  * - cepState: direct reference to the CEP state for this domainId
  */
-public record EnvelopeHeader(
+public record EnvelopeHeader<CepState>(
         String domainType,
         String domainId,
         String eventType, //wil lbe null at start until we have parsed the message and found it
@@ -23,10 +21,10 @@ public record EnvelopeHeader(
         Parameters parameters,
 //This will be null at start until we have parsed the message and found them. The actual parameters are defined in the config. Includes event type and domain type
         BehaviorConfig config, // the specific combination for this set of parameters
-        Map<String, Object> cepState
+        CepState cepState
 ) {
-    EnvelopeHeader withMessage(ParameterExtractor parameterExtractor, Map<String, Object> message, String eventType) {
-        return new EnvelopeHeader(
+    <Msg> EnvelopeHeader<CepState> withMessage(ParameterExtractor<Msg> parameterExtractor, Msg message, String eventType) {
+        return new EnvelopeHeader<>(
                 domainType,
                 domainId,
                 eventType,

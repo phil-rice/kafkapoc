@@ -16,10 +16,10 @@ public final class EnvelopeRouting {
     /**
      * Preferred: pass producer config (e.g., SASL, linger.ms, acks).
      */
-    public static <C> void routeToKafkaWithMetrics(
-            DataStream<ValueEnvelope<Map<String, Object>>> values,
-            DataStream<ErrorEnvelope<Map<String, Object>>> errors,
-            DataStream<RetryEnvelope<Map<String, Object>>> retries,
+    public static <CepState,Msg> void routeToKafkaWithMetrics(
+            DataStream<ValueEnvelope<CepState,Msg>> values,
+            DataStream<ErrorEnvelope<CepState,Msg>> errors,
+            DataStream<RetryEnvelope<CepState,Msg>> retries,
             String brokers,
             String processedTopic,
             String errorsTopic,
@@ -47,10 +47,10 @@ public final class EnvelopeRouting {
     /**
      * Convenience overload: no producer config.
      */
-    public static <C> void routeToKafkaWithMetrics(
-            DataStream<ValueEnvelope<Map<String, Object>>> values,
-            DataStream<ErrorEnvelope<Map<String, Object>>> errors,
-            DataStream<RetryEnvelope<Map<String, Object>>> retries,
+    public static  <CepState,Msg> void routeToKafkaWithMetrics(
+            DataStream<ValueEnvelope <CepState,Msg>> values,
+            DataStream<ErrorEnvelope <CepState,Msg>> errors,
+            DataStream<RetryEnvelope <CepState,Msg>> retries,
             String brokers,
             String processedTopic,
             String errorsTopic,

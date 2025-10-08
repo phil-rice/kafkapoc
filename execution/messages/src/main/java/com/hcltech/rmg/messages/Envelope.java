@@ -1,9 +1,9 @@
 package com.hcltech.rmg.messages;
 
-public interface Envelope< T> {
-    ValueEnvelope< T> valueEnvelope();
+public interface Envelope<CepState, Msg> {
+    ValueEnvelope<CepState, Msg> valueEnvelope();
 
-    default EnvelopeHeader header() {
+    default EnvelopeHeader<CepState> header() {
         return valueEnvelope().header();
     }
 

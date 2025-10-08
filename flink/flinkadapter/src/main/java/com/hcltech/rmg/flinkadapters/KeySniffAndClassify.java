@@ -1,7 +1,7 @@
 // KeySniff.java  ->  KeySniffAndClassify.java
 package com.hcltech.rmg.flinkadapters;
 
-import com.hcltech.rmg.appcontainer.impl.AppContainerFactory;
+import com.hcltech.rmg.appcontainer.impl.AppContainerFactoryForMapStringObject;
 import com.hcltech.rmg.common.errorsor.ErrorsOr;
 import com.hcltech.rmg.messages.ErrorEnvelope;
 import com.hcltech.rmg.messages.RawMessage;
@@ -29,13 +29,13 @@ public final class KeySniffAndClassify
 
     private final String containerId;
     private List<String> keyPath;
-    private final OutputTag<ErrorEnvelope<?>> errorsOut;
+    private final OutputTag<ErrorEnvelope<?,?>> errorsOut;
     private final int lanes;
 
     private transient KeyExtractor extractor;
 
     public KeySniffAndClassify(String containerId,
-                               OutputTag<ErrorEnvelope<?>> errorsOut,
+                               OutputTag<ErrorEnvelope<?,?>> errorsOut,
                                int lanes) {
         this.containerId = containerId;
         this.errorsOut = errorsOut;
@@ -44,7 +44,7 @@ public final class KeySniffAndClassify
 
     @Override
     public void open(OpenContext ctx) {
-        var container = AppContainerFactory.resolve(containerId).valueOrThrow();
+        var container = AppContainerFactoryForMapStringObject.resolve(containerId).valueOrThrow();
         this.extractor = container.xml();
         this.keyPath = container.keyPath();
         if (keyPath == null || keyPath.isEmpty()) {

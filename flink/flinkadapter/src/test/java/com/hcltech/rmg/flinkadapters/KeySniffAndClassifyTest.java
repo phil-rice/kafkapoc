@@ -1,8 +1,7 @@
 package com.hcltech.rmg.flinkadapters;
 
-import com.hcltech.rmg.appcontainer.impl.AppContainerFactory;
+import com.hcltech.rmg.appcontainer.impl.AppContainerFactoryForMapStringObject;
 import com.hcltech.rmg.appcontainer.interfaces.AppContainer;
-import com.hcltech.rmg.flinkadapters.KeySniffAndClassify;
 import com.hcltech.rmg.kafkaconfig.KafkaConfig;
 import com.hcltech.rmg.messages.ErrorEnvelope;
 import com.hcltech.rmg.messages.RawMessage;
@@ -39,7 +38,7 @@ public final class KeySniffAndClassifyTest {
 
     private static List<String> testKeyPath() {
         AppContainer<KafkaConfig, XMLValidationSchema> c =
-                AppContainerFactory.resolve("test").valueOrThrow();
+                AppContainerFactoryForMapStringObject.resolve("test").valueOrThrow();
         List<String> path = c.keyPath();
         assertNotNull(path, "test container keyPath() should not be null");
         assertFalse(path.isEmpty(), "test container keyPath() should not be empty");

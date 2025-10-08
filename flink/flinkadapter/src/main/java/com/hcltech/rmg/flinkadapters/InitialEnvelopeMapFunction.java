@@ -1,6 +1,8 @@
 package com.hcltech.rmg.flinkadapters;
 
-import com.hcltech.rmg.appcontainer.impl.AppContainerFactory;
+import com.hcltech.rmg.appcontainer.interfaces.AppContainer;
+import com.hcltech.rmg.appcontainer.interfaces.IAppContainerFactory;
+import com.hcltech.rmg.appcontainer.interfaces.InitialEnvelopeServices;
 import com.hcltech.rmg.cepstate.CepEventLog;
 import com.hcltech.rmg.messages.Envelope;
 import com.hcltech.rmg.messages.InitialEnvelopeFactory;
@@ -8,7 +10,6 @@ import com.hcltech.rmg.messages.RawMessage;
 import org.apache.flink.api.common.functions.OpenContext;
 import org.apache.flink.api.common.functions.RichMapFunction;
 import org.apache.flink.api.java.tuple.Tuple2;
-import org.codehaus.stax2.validation.XMLValidationSchema;
 
 import java.util.Objects;
 import java.util.function.Supplier;
@@ -19,21 +20,23 @@ import java.util.function.Supplier;
  * <p>
  * All error paths are wrapped as ErrorEnvelope by the factory (via recover()).
  */
-public final class InitialEnvelopeMapFunction
-        extends RichMapFunction<Tuple2<String, RawMessage>, Envelope<java.util.Map<String, Object>>> {
+public final class InitialEnvelopeMapFunction< MSC,CepState, Msg, Schema>
+        extends RichMapFunction<Tuple2<String, RawMessage>, Envelope<CepState, Msg>> {
 
+    private final Class<IAppContainerFactory<MSC, Msg, Schema>> factoryClass;
     private final String containerId;
-    private InitialEnvelopeFactory<XMLValidationSchema> factory;
+    private InitialEnvelopeFactory<CepState, Msg, Schema> factory;
 
-    public InitialEnvelopeMapFunction(String containerId) {
+    public InitialEnvelopeMapFunction(Class<IAppContainerFactory<MSC, Msg, Schema>> factoryClass, String containerId) {
+        this.factoryClass = factoryClass;
         this.containerId = containerId;
     }
 
     @Override
     public void open(OpenContext parameters) {
-        var container = AppContainerFactory.resolve(containerId).valueOrThrow();
+        InitialEnvelopeServices<Msg,Schema> container = IAppContainerFactory.resolve(factoryClass, containerId).valueOrThrow();
         Supplier<CepEventLog> cepStateSupplier = () -> FlinkCepEventLog.from(getRuntimeContext(), "cepState");
-        this.factory = new InitialEnvelopeFactory<XMLValidationSchema>(container.parameterExtractor(),
+        this.factory = new InitialEnvelopeFactory<CepState, Msg, Schema>(container.parameterExtractor(),
                 container.nameToSchemaMap(),
                 cepStateSupplier,
                 container.xml(),
@@ -44,7 +47,7 @@ public final class InitialEnvelopeMapFunction
     }
 
     @Override
-    public Envelope<java.util.Map<String, Object>> map(Tuple2<String, RawMessage> in) {
+    public Envelope<CepState, Msg> map(Tuple2<String, RawMessage> in) {
         Objects.requireNonNull(factory, "InitialEnvelopeMapFunction not opened");
         String domainId = in.f0;
         RawMessage raw = in.f1;

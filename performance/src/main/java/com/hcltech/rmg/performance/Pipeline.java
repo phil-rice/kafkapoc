@@ -9,10 +9,10 @@ import org.apache.flink.streaming.api.environment.StreamExecutionEnvironment;
 
 import java.util.Map;
 
-public record Pipeline(
+public record Pipeline<CepState, Msg>(
         StreamExecutionEnvironment env,
-        DataStream<ValueEnvelope<Map<String, Object>>> values,
-        DataStream<ErrorEnvelope<Map<String, Object>>> errors,
-        DataStream<RetryEnvelope<Map<String, Object>>> retries
+        DataStream<ValueEnvelope<CepState, Msg>> values,
+        DataStream<ErrorEnvelope<CepState, Msg>> errors,
+        DataStream<RetryEnvelope<CepState, Msg>> retries
 ) {
 }

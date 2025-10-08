@@ -24,10 +24,10 @@ import java.util.*;
  * • compiles XSDs into {@link XMLValidationSchema}s
  * • parses/validates XML streams in a single pass
  * • extracts keys using a streaming pull parser (no DOM)
- *
+ * <p>
  * Thread-safe, using one {@link XMLInputFactory2} per thread.
  */
-public final class WoodstoxXmlTypeClass implements XmlTypeClass<XMLValidationSchema> {
+public final class WoodstoxXmlForMapStringObjectTypeClass implements XmlTypeClass<Map<String, Object>, XMLValidationSchema> {
 
     private static final ThreadLocal<XMLInputFactory2> FACTORY = ThreadLocal.withInitial(() -> {
         XMLInputFactory2 f = (XMLInputFactory2) XMLInputFactory.newInstance();
@@ -69,7 +69,8 @@ public final class WoodstoxXmlTypeClass implements XmlTypeClass<XMLValidationSch
                 int ev = r.getEventType();
                 switch (ev) {
                     case XMLStreamConstants.START_ELEMENT -> b.onStart(r);
-                    case XMLStreamConstants.CHARACTERS, XMLStreamConstants.CDATA, XMLStreamConstants.SPACE -> b.onText(r);
+                    case XMLStreamConstants.CHARACTERS, XMLStreamConstants.CDATA, XMLStreamConstants.SPACE ->
+                            b.onText(r);
                     case XMLStreamConstants.END_ELEMENT -> b.onEnd(r);
                     default -> { /* ignore */ }
                 }
@@ -79,7 +80,10 @@ public final class WoodstoxXmlTypeClass implements XmlTypeClass<XMLValidationSch
         } catch (Exception e) {
             return ErrorsOr.error("Parsing xml " + e);
         } finally {
-            if (r != null) try { r.close(); } catch (Exception ignore) {}
+            if (r != null) try {
+                r.close();
+            } catch (Exception ignore) {
+            }
         }
     }
 
@@ -134,7 +138,10 @@ public final class WoodstoxXmlTypeClass implements XmlTypeClass<XMLValidationSch
         } catch (XMLStreamException e) {
             return ErrorsOr.error("XML key extraction failed at path '" + pathStr + "': " + e);
         } finally {
-            if (r != null) try { r.close(); } catch (Exception ignore) {}
+            if (r != null) try {
+                r.close();
+            } catch (Exception ignore) {
+            }
         }
     }
 
@@ -170,7 +177,7 @@ public final class WoodstoxXmlTypeClass implements XmlTypeClass<XMLValidationSch
         @Override
         public void reportProblem(XMLValidationProblem p) {
             int line = p.getLocation() != null ? p.getLocation().getLineNumber() : -1;
-            int col  = p.getLocation() != null ? p.getLocation().getColumnNumber() : -1;
+            int col = p.getLocation() != null ? p.getLocation().getColumnNumber() : -1;
             String msg = "[" + p.getSeverity() + "] line " + line + ", col " + col + ": " + p.getMessage();
             throw new XmlValidationException(msg);
         }
@@ -180,11 +187,11 @@ public final class WoodstoxXmlTypeClass implements XmlTypeClass<XMLValidationSch
 
     /**
      * Builds a CEL-friendly map in a single pass:
-     *  - Leaf element (no attrs/children) → plain String (trimmed text)
-     *  - Non-leaf → Map with:
-     *      "attr": {...}        (only if attributes exist)
-     *      childName: childVal  (each child)
-     *      "text": "..."        (only if mixed content non-blank)
+     * - Leaf element (no attrs/children) → plain String (trimmed text)
+     * - Non-leaf → Map with:
+     * "attr": {...}        (only if attributes exist)
+     * childName: childVal  (each child)
+     * "text": "..."        (only if mixed content non-blank)
      */
     private static final class CelFriendlyStreamingMapBuilder {
         private static final class Node {
@@ -192,14 +199,22 @@ public final class WoodstoxXmlTypeClass implements XmlTypeClass<XMLValidationSch
             final StringBuilder text = new StringBuilder();
             final Map<String, Object> attrs = new LinkedHashMap<>();
             final Map<String, Object> children = new LinkedHashMap<>();
-            Node(String name) { this.name = name; }
-            boolean hasOnlyText() { return attrs.isEmpty() && children.isEmpty(); }
+
+            Node(String name) {
+                this.name = name;
+            }
+
+            boolean hasOnlyText() {
+                return attrs.isEmpty() && children.isEmpty();
+            }
         }
 
         private final Deque<Node> stack = new ArrayDeque<>();
         private final Map<String, Object> result = new LinkedHashMap<>();
 
-        Map<String, Object> result() { return result; }
+        Map<String, Object> result() {
+            return result;
+        }
 
         void onStart(XMLStreamReader2 r) {
             Node n = new Node(r.getLocalName());
@@ -230,7 +245,7 @@ public final class WoodstoxXmlTypeClass implements XmlTypeClass<XMLValidationSch
             } else {
                 // NON-LEAF: build a map with attrs/children and optional "text"
                 Map<String, Object> m = new LinkedHashMap<>();
-                if (!n.attrs.isEmpty())    m.put("attr", n.attrs);
+                if (!n.attrs.isEmpty()) m.put("attr", n.attrs);
                 if (!n.children.isEmpty()) m.putAll(n.children);
 
                 String t = n.text.toString().trim();

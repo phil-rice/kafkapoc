@@ -1,8 +1,6 @@
 package com.hcltech.rmg.parameters;
 
 import com.hcltech.rmg.common.Paths;
-import com.hcltech.rmg.parameters.ParameterExtractor;
-import com.hcltech.rmg.parameters.Parameters;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
@@ -12,7 +10,7 @@ import java.util.Map;
 
 import static org.junit.jupiter.api.Assertions.*;
 
-class DefaultParameterExtractorTest {
+class MapStringObjectParameterExtractorTest {
 
     // Helper to build nested maps tersely.
     private static Map<String, Object> obj(Object... kv) {
@@ -23,7 +21,7 @@ class DefaultParameterExtractorTest {
         return m;
     }
 
-    private static ParameterExtractor extractor(
+    private static ParameterExtractor<Map<String,Object>> extractor(
             List<String> names,
             Map<String, Map<String, List<String>>> e2p,
             Map<String, List<String>> defaults
@@ -204,7 +202,7 @@ class DefaultParameterExtractorTest {
     @Test
     @DisplayName("findPathOrNull: event has param → use event path")
     void findPathOrNull_usesEventPath() {
-        DefaultParameterExtractor d = new DefaultParameterExtractor(
+        MapStringObjectParameterExtractor d = new MapStringObjectParameterExtractor(
                 List.of("id"),
                 Map.of(EVT, Map.of("id", List.of("order", "id"))),
                 Map.of("id", List.of("default", "id"))
@@ -215,7 +213,7 @@ class DefaultParameterExtractorTest {
     @Test
     @DisplayName("findPathOrNull: param missing in event → fallback to default")
     void findPathOrNull_fallbackToDefault() {
-        DefaultParameterExtractor d = new DefaultParameterExtractor(
+        MapStringObjectParameterExtractor d = new MapStringObjectParameterExtractor(
                 List.of("user"),
                 Map.of(EVT, Map.of()), // empty per-event map
                 Map.of("user", List.of("user", "name"))
@@ -226,7 +224,7 @@ class DefaultParameterExtractorTest {
     @Test
     @DisplayName("findPathOrNull: neither event nor default has param → null")
     void findPathOrNull_nullWhenNoConfig() {
-        DefaultParameterExtractor d = new DefaultParameterExtractor(
+        MapStringObjectParameterExtractor d = new MapStringObjectParameterExtractor(
                 List.of("missing"),
                 Map.of(), Map.of()
         );

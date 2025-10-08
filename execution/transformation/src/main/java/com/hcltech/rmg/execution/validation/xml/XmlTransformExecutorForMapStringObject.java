@@ -8,12 +8,12 @@ import com.hcltech.rmg.xml.XmlTypeClass;
 import java.util.List;
 import java.util.Map;
 
-public class XmlTransformExecutor<Schema> implements RegisteredAspectExecutor<XmlTransform, String, Map<String, Object>> {
+public class XmlTransformExecutorForMapStringObject<Schema> implements RegisteredAspectExecutor<XmlTransform, String, Map<String, Object>> {
 
-    private final XmlTypeClass<Schema> xmlTypeClass;
+    private final XmlTypeClass<Map<String,Object>,Schema> xmlTypeClass;
     private final Map<String, Schema> schemas;
 
-    public XmlTransformExecutor(XmlTypeClass<Schema> xmlTypeClass, Map<String, Schema> schemas) {
+    public XmlTransformExecutorForMapStringObject(XmlTypeClass<Map<String,Object>,Schema> xmlTypeClass, Map<String, Schema> schemas) {
         this.xmlTypeClass = xmlTypeClass;
         this.schemas = schemas;
     }

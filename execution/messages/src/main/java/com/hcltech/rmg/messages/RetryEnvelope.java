@@ -1,11 +1,11 @@
 package com.hcltech.rmg.messages;
 
-public record RetryEnvelope< T>(ValueEnvelope< T> envelope,
+public record RetryEnvelope< CepState,T>(ValueEnvelope< CepState,T> envelope,
                                          String stageName,
                                          int retryCount
-) implements Envelope< T> {
+) implements Envelope< CepState,T> {
     @Override
-    public ValueEnvelope< T> valueEnvelope() {
+    public ValueEnvelope<CepState, T> valueEnvelope() {
         return envelope;
     }
 }

@@ -1,7 +1,8 @@
 package com.hcltech.rmg.performance;
 
-import com.hcltech.rmg.appcontainer.impl.AppContainerFactory;
+import com.hcltech.rmg.appcontainer.impl.AppContainerFactoryForMapStringObject;
 import com.hcltech.rmg.appcontainer.interfaces.AppContainer;
+import com.hcltech.rmg.appcontainer.interfaces.IAppContainerFactory;
 import com.hcltech.rmg.flinkadapters.InitialEnvelopeMapFunction;
 import com.hcltech.rmg.flinkadapters.KeySniffAndClassify;
 import com.hcltech.rmg.kafka.KafkaSourceForFlink;
@@ -16,6 +17,7 @@ import org.apache.flink.connector.kafka.source.enumerator.initializer.OffsetsIni
 import org.apache.flink.streaming.api.datastream.AsyncDataStream;
 import org.apache.flink.streaming.api.environment.StreamExecutionEnvironment;
 import org.apache.flink.streaming.api.functions.async.AsyncFunction;
+import org.apache.flink.streaming.api.functions.async.ResultFuture;
 import org.apache.flink.streaming.api.functions.async.RichAsyncFunction;
 import org.apache.flink.util.OutputTag;
 import org.codehaus.stax2.validation.XMLValidationSchema;
@@ -28,10 +30,10 @@ public final class PerfHarnessMain {
 
     // we’ll create typed tags *inside* buildPipeline to avoid casts per CEPState type
 
-    public static Pipeline buildPipeline(String containerId, int lanes, AsyncFunction<Envelope<Map<String, Object>>, Envelope<Map<String, Object>>> mainAsync, long asyncTimeoutMillis, Integer asyncParallelismOverride // null -> default to source parallelism
+    public static <CepState, Msg, Schema> Pipeline<CepState, Msg> buildPipeline(Class<IAppContainerFactory<KafkaConfig, Msg, Schema>> factoryClass, String containerId, int lanes, AsyncFunction<Envelope<CepState, Msg>, Envelope<CepState, Msg>> mainAsync, long asyncTimeoutMillis, Integer asyncParallelismOverride // null -> default to source parallelism
     ) {
         // ---- resolve DI and kafka config ----
-        AppContainer<KafkaConfig, XMLValidationSchema> app = AppContainerFactory.resolve(containerId).valueOrThrow();
+        AppContainer<KafkaConfig, Msg, Schema> app = IAppContainerFactory.resolve(factoryClass, containerId).valueOrThrow();
         final KafkaConfig kafka = app.eventSourceConfig();
 
         final int totalPartitions = kafka.sourceParallelism();
@@ -47,7 +49,7 @@ public final class PerfHarnessMain {
 
         // ---- pre: sniff key -> (domainId, raw) ; side output only here (optional to keep) ----
         // A typed errors tag specifically for this CEPState + payload type
-        OutputTag<ErrorEnvelope<Map<String, Object>>> sniffErrorsTag = new OutputTag<>("sniff-errors", TypeInformation.of(new TypeHint<ErrorEnvelope<Map<String, Object>>>() {
+        OutputTag<ErrorEnvelope<CepState, Msg>> sniffErrorsTag = new OutputTag<>("sniff-errors", TypeInformation.of(new TypeHint<ErrorEnvelope<CepState, Msg>>() {
         })) {
         };
 
@@ -57,7 +59,7 @@ public final class PerfHarnessMain {
 
         // ---- map to Envelope (Value/Error) ----
         var envelopes = sniff.keyBy(t -> t.f0) // domainId
-                .map(new InitialEnvelopeMapFunction(containerId)).name("to-envelope"); // DataStream<Envelope<CEPState, Map<String,Object>>>
+                .map(new InitialEnvelopeMapFunction<KafkaConfig, CepState, Msg, Schema>(factoryClass, containerId)).name("to-envelope"); // DataStream<Envelope<CEPState, Map<String,Object>>>
 
         // ---- async stage (Envelope -> Envelope) ----
         // parallelism and capacity calculation
@@ -69,14 +71,14 @@ public final class PerfHarnessMain {
                 envelopes, mainAsync, asyncTimeoutMillis, TimeUnit.MILLISECONDS, capacity).name("main-async").setParallelism(asyncParallelism);
 
         // ---- single splitter AFTER async ----
-        OutputTag<ErrorEnvelope<Map<String, Object>>> errorsTag = new OutputTag<>("errors", TypeInformation.of(new TypeHint<ErrorEnvelope<Map<String, Object>>>() {
+        OutputTag<ErrorEnvelope<CepState, Msg>> errorsTag = new OutputTag<>("errors", TypeInformation.of(new TypeHint<ErrorEnvelope<CepState, Msg>>() {
         })) {
         };
-        OutputTag<RetryEnvelope<Map<String, Object>>> retriesTag = new OutputTag<>("retries", TypeInformation.of(new TypeHint<RetryEnvelope<Map<String, Object>>>() {
+        OutputTag<RetryEnvelope<CepState, Msg>> retriesTag = new OutputTag<>("retries", TypeInformation.of(new TypeHint<RetryEnvelope<CepState, Msg>>() {
         })) {
         };
 
-        var values = processed.process(new SplitEnvelopes<Map<String, Object>>(errorsTag, retriesTag)).name("splitter"); // DataStream<ValueEnvelope<CEPState, Map<String,Object>>>
+        var values = processed.process(new SplitEnvelopes<CepState, Msg>(errorsTag, retriesTag)).name("splitter"); // DataStream<ValueEnvelope<CEPState, Map<String,Object>>>
 
         var allErrors = values.getSideOutput(errorsTag);
         var allRetries = values.getSideOutput(retriesTag);
@@ -84,24 +86,24 @@ public final class PerfHarnessMain {
         // If you want sniff errors unified later, you can union here (types must match).
         // For now, we keep Value/Error/Retry from the splitter.
 
-        return new Pipeline(env, values, allErrors, allRetries);
+        return new Pipeline<>(env, values, allErrors, allRetries);
     }
 
     // Example main wiring
     public static void main(String[] args) throws Exception {
         final String containerId = System.getProperty("app.container", "prod");
-        var appContainer = AppContainerFactory.resolve(containerId).valueOrThrow();
+        var appContainer = AppContainerFactoryForMapStringObject.resolve(containerId).valueOrThrow();
         final int lanes = 1200;
 
         // a trivial pass-through async (replace with your real async)
-        AsyncFunction<Envelope<Map<String, Object>>, Envelope<Map<String, Object>>> mainAsync = new RichAsyncFunction<>() {
+        AsyncFunction<Envelope<Map<String, Object>, Map<String, Object>>, Envelope<Map<String, Object>, Map<String, Object>>> mainAsync = new RichAsyncFunction<>() {
             @Override
-            public void asyncInvoke(Envelope<Map<String, Object>> input, org.apache.flink.streaming.api.functions.async.ResultFuture<Envelope<Map<String, Object>>> result) {
+            public void asyncInvoke(Envelope<Map<String, Object>, Map<String, Object>> input, ResultFuture<Envelope<Map<String, Object>, Map<String, Object>>> result) {
                 result.complete(java.util.Collections.singletonList(input));
             }
         };
 
-        var pipe = buildPipeline(containerId, lanes, mainAsync, 2_000, null);
+        Pipeline<Map<String, Object>, Map<String, Object>> pipe = buildPipeline((Class) AppContainerFactoryForMapStringObject.class, containerId, lanes, mainAsync, 2_000, null);
 
 // start time-driven printer (every 2s)
         PerfStats.start(2000);

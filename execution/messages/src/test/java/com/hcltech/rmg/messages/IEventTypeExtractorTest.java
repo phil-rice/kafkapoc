@@ -13,7 +13,7 @@ class IEventTypeExtractorTest {
 
     @Test
     void extractsEventTypeFromNestedPath() {
-        IEventTypeExtractor ext = IEventTypeExtractor.fromPath(List.of("meta", "event", "type"));
+        IEventTypeExtractor ext = IEventTypeExtractor.fromPathForMapStringObject(List.of("meta", "event", "type"));
 
         Map<String, Object> msg = Map.of(
                 "meta", Map.of(
@@ -28,7 +28,7 @@ class IEventTypeExtractorTest {
 
     @Test
     void returnsNullWhenKeyMissing() {
-        IEventTypeExtractor ext = IEventTypeExtractor.fromPath(List.of("meta", "event", "type"));
+        IEventTypeExtractor ext = IEventTypeExtractor.fromPathForMapStringObject(List.of("meta", "event", "type"));
 
         Map<String, Object> msg = Map.of(
                 "meta", Map.of(
@@ -44,7 +44,7 @@ class IEventTypeExtractorTest {
 
     @Test
     void returnsNullWhenIntermediateIsNotAMap() {
-        IEventTypeExtractor ext = IEventTypeExtractor.fromPath(List.of("meta", "event", "type"));
+        IEventTypeExtractor ext = IEventTypeExtractor.fromPathForMapStringObject(List.of("meta", "event", "type"));
 
         Map<String, Object> msg = Map.of(
                 "meta", Map.of(
@@ -57,7 +57,7 @@ class IEventTypeExtractorTest {
 
     @Test
     void returnsNullWhenLeafIsNotAString() {
-        IEventTypeExtractor ext = IEventTypeExtractor.fromPath(List.of("meta", "event", "type"));
+        IEventTypeExtractor ext = IEventTypeExtractor.fromPathForMapStringObject(List.of("meta", "event", "type"));
 
         Map<String, Object> msg = Map.of(
                 "meta", Map.of(
@@ -72,7 +72,7 @@ class IEventTypeExtractorTest {
 
     @Test
     void emptyPathReturnsNull() {
-        IEventTypeExtractor ext = IEventTypeExtractor.fromPath(List.of());
+        IEventTypeExtractor ext = IEventTypeExtractor.fromPathForMapStringObject(List.of());
 
         Map<String, Object> msg = Map.of("anything", "goes");
         assertNull(ext.extractEventType(msg));
@@ -81,7 +81,7 @@ class IEventTypeExtractorTest {
     @Test
     void pathIsCopied_mutatingOriginalListDoesNotAffectExtractor() {
         List<String> original = new ArrayList<>(List.of("meta", "event", "type"));
-        IEventTypeExtractor ext = IEventTypeExtractor.fromPath(original);
+        IEventTypeExtractor ext = IEventTypeExtractor.fromPathForMapStringObject(original);
 
         // mutate the original after creating the extractor
         original.set(0, "WRONG");

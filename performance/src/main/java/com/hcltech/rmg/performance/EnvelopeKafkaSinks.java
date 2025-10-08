@@ -27,14 +27,14 @@ public final class EnvelopeKafkaSinks {
 
     // ------------------ Builders ------------------
 
-    public static KafkaSink<ValueEnvelope<Map<String, Object>>> valueSink(
+    public static <CepState, Msg> KafkaSink<ValueEnvelope<CepState, Msg>> valueSink(
             String brokers, String topic, Properties producerConfig) {
 
-        return KafkaSink.<ValueEnvelope<Map<String, Object>>>builder()
+        return KafkaSink.<ValueEnvelope<CepState, Msg>>builder()
                 .setBootstrapServers(brokers)
                 .setKafkaProducerConfig(producerConfig)
                 .setRecordSerializer(
-                        KafkaRecordSerializationSchema.<ValueEnvelope<Map<String, Object>>>builder()
+                        KafkaRecordSerializationSchema.<ValueEnvelope<CepState, Msg>>builder()
                                 .setTopic(topic)
                                 .setKeySerializationSchema(new ValueKeySerializer())
                                 .setValueSerializationSchema(new ValuePayloadSerializer())
@@ -44,14 +44,14 @@ public final class EnvelopeKafkaSinks {
                 .build();
     }
 
-    public static KafkaSink<ErrorEnvelope<Map<String, Object>>> errorSink(
+    public static <CepState, Msg> KafkaSink<ErrorEnvelope<CepState, Msg>> errorSink(
             String brokers, String topic, Properties producerConfig) {
 
-        return KafkaSink.<ErrorEnvelope<Map<String, Object>>>builder()
+        return KafkaSink.<ErrorEnvelope<CepState, Msg>>builder()
                 .setBootstrapServers(brokers)
                 .setKafkaProducerConfig(producerConfig)
                 .setRecordSerializer(
-                        KafkaRecordSerializationSchema.<ErrorEnvelope<Map<String, Object>>>builder()
+                        KafkaRecordSerializationSchema.<ErrorEnvelope<CepState, Msg>>builder()
                                 .setTopic(topic)
                                 .setKeySerializationSchema(new ErrorKeySerializer())
                                 .setValueSerializationSchema(new ErrorPayloadSerializer())
@@ -61,14 +61,14 @@ public final class EnvelopeKafkaSinks {
                 .build();
     }
 
-    public static KafkaSink<RetryEnvelope<Map<String, Object>>> retrySink(
+    public static <CepState, Msg> KafkaSink<RetryEnvelope<CepState, Msg>> retrySink(
             String brokers, String topic, Properties producerConfig) {
 
-        return KafkaSink.<RetryEnvelope<Map<String, Object>>>builder()
+        return KafkaSink.<RetryEnvelope<CepState, Msg>>builder()
                 .setBootstrapServers(brokers)
                 .setKafkaProducerConfig(producerConfig)
                 .setRecordSerializer(
-                        KafkaRecordSerializationSchema.<RetryEnvelope<Map<String, Object>>>builder()
+                        KafkaRecordSerializationSchema.<RetryEnvelope<CepState,Msg>>builder()
                                 .setTopic(topic)
                                 .setKeySerializationSchema(new RetryKeySerializer())
                                 .setValueSerializationSchema(new RetryPayloadSerializer())
@@ -80,41 +80,41 @@ public final class EnvelopeKafkaSinks {
 
     // ------------------ Key serializers ------------------
 
-    public static final class ValueKeySerializer
-            implements SerializationSchema<ValueEnvelope<Map<String, Object>>> {
+    public static final class ValueKeySerializer<CepState, Msg>
+            implements SerializationSchema<ValueEnvelope<CepState, Msg>> {
         @Override
         public void open(InitializationContext ctx) {
         }
 
         @Override
-        public byte[] serialize(ValueEnvelope<Map<String, Object>> v) {
+        public byte[] serialize(ValueEnvelope<CepState, Msg> v) {
             String k = (v == null || v.header() == null) ? null : v.header().domainId();
             return toBytes(k);
         }
     }
 
-    public static final class ErrorKeySerializer
-            implements SerializationSchema<ErrorEnvelope<Map<String, Object>>> {
+    public static final class ErrorKeySerializer<CepState, Msg>
+            implements SerializationSchema<ErrorEnvelope<CepState, Msg>> {
         @Override
         public void open(InitializationContext ctx) {
         }
 
         @Override
-        public byte[] serialize(ErrorEnvelope<Map<String, Object>> e) {
+        public byte[] serialize(ErrorEnvelope<CepState, Msg> e) {
             var h = (e == null) ? null : e.valueEnvelope().header();
             String k = (h == null) ? null : h.domainId();
             return toBytes(k);
         }
     }
 
-    public static final class RetryKeySerializer
-            implements SerializationSchema<RetryEnvelope<Map<String, Object>>> {
+    public static final class RetryKeySerializer<CepState, Msg>
+            implements SerializationSchema<RetryEnvelope<CepState, Msg>> {
         @Override
         public void open(InitializationContext ctx) {
         }
 
         @Override
-        public byte[] serialize(RetryEnvelope<Map<String, Object>> r) {
+        public byte[] serialize(RetryEnvelope<CepState, Msg> r) {
             var h = (r == null) ? null : r.valueEnvelope().header();
             String k = (h == null) ? null : h.domainId();
             return toBytes(k);
@@ -123,14 +123,14 @@ public final class EnvelopeKafkaSinks {
 
     // ------------------ Payload serializers ------------------
 
-    public static final class ValuePayloadSerializer
-            implements SerializationSchema<ValueEnvelope<Map<String, Object>>> {
+    public static final class ValuePayloadSerializer<CepState, Msg>
+            implements SerializationSchema<ValueEnvelope<CepState, Msg>> {
         @Override
         public void open(InitializationContext ctx) {
         }
 
         @Override
-        public byte[] serialize(ValueEnvelope<Map<String, Object>> v) {
+        public byte[] serialize(ValueEnvelope<CepState, Msg> v) {
             try {
                 ObjectNode root = MAPPER.createObjectNode();
                 root.put("kind", "value");
@@ -146,14 +146,14 @@ public final class EnvelopeKafkaSinks {
         }
     }
 
-    public static final class ErrorPayloadSerializer
-            implements SerializationSchema<ErrorEnvelope<Map<String, Object>>> {
+    public static final class ErrorPayloadSerializer<CepState, Msg>
+            implements SerializationSchema<ErrorEnvelope<CepState, Msg>> {
         @Override
         public void open(InitializationContext ctx) {
         }
 
         @Override
-        public byte[] serialize(ErrorEnvelope<Map<String, Object>> e) {
+        public byte[] serialize(ErrorEnvelope<CepState, Msg> e) {
             try {
                 ObjectNode root = MAPPER.createObjectNode();
                 root.put("kind", "error");
@@ -171,14 +171,14 @@ public final class EnvelopeKafkaSinks {
         }
     }
 
-    public static final class RetryPayloadSerializer
-            implements SerializationSchema<RetryEnvelope<Map<String, Object>>> {
+    public static final class RetryPayloadSerializer<CepState, Msg>
+            implements SerializationSchema<RetryEnvelope<CepState, Msg>> {
         @Override
         public void open(InitializationContext ctx) {
         }
 
         @Override
-        public byte[] serialize(RetryEnvelope<Map<String, Object>> r) {
+        public byte[] serialize(RetryEnvelope<CepState, Msg> r) {
             try {
                 ObjectNode root = MAPPER.createObjectNode();
                 root.put("kind", "retry");

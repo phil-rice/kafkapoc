@@ -2,13 +2,13 @@ package com.hcltech.rmg.messages;
 
 import java.util.List;
 
-public record ErrorEnvelope<T>(ValueEnvelope<T> envelope,
-                               String stageName,
-                               List<String> errors
-) implements Envelope<T> {
+public record ErrorEnvelope<CepState, Msg>(ValueEnvelope<CepState, Msg> envelope,
+                                           String stageName,
+                                           List<String> errors
+) implements Envelope<CepState, Msg> {
 
     @Override
-    public ValueEnvelope<T> valueEnvelope() {
+    public ValueEnvelope<CepState, Msg> valueEnvelope() {
         return envelope;
     }
 }

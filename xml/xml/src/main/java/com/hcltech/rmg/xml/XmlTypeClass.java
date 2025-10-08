@@ -7,15 +7,17 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
-public interface XmlTypeClass<Schema> extends KeyExtractor {
+public interface XmlTypeClass<Result, Schema> extends KeyExtractor {
     Schema loadSchema(String schemaName, InputStream schemaStream);
 
-    ErrorsOr<Map<String, Object>> parseAndValidate(String xml, Schema schema);
+    ErrorsOr<Result> parseAndValidate(String xml, Schema schema);
 
     // ---------- helpers: classpath schema loading (monadic) ----------
 
-    /** Load a single optional schema; returns empty map if name is null/blank. */
-    static <S> ErrorsOr<Map<String, S>> loadOptionalSchema(XmlTypeClass<S> tc, String schemaName) {
+    /**
+     * Load a single optional schema; returns empty map if name is null/blank.
+     */
+    static <S> ErrorsOr<Map<String, S>> loadOptionalSchema(XmlTypeClass<Map<String, Object>, S> tc, String schemaName) {
         if (schemaName == null || schemaName.isBlank()) {
             return ErrorsOr.lift(Map.of());
         }
@@ -31,8 +33,10 @@ public interface XmlTypeClass<Schema> extends KeyExtractor {
         }
     }
 
-    /** Load multiple schema names from classpath into a map (name -> schema). */
-    static <S> ErrorsOr<Map<String, S>> loadSchemas(XmlTypeClass<S> tc, List<String> schemaNames) {
+    /**
+     * Load multiple schema names from classpath into a map (name -> schema).
+     */
+    static <S> ErrorsOr<Map<String, S>> loadSchemas(XmlTypeClass<?, S> tc, List<String> schemaNames) {
         Map<String, S> out = new LinkedHashMap<>();
         List<String> errs = new java.util.ArrayList<>();
         for (String name : schemaNames) {
@@ -57,7 +61,9 @@ public interface XmlTypeClass<Schema> extends KeyExtractor {
         return errs.isEmpty() ? ErrorsOr.lift(Map.copyOf(out)) : ErrorsOr.errors(errs);
     }
 
-    /** TCCL-first resource resolution with fallback. */
+    /**
+     * TCCL-first resource resolution with fallback.
+     */
     private static InputStream resource(String path) {
         ClassLoader cl = Thread.currentThread().getContextClassLoader();
         InputStream in = (cl != null) ? cl.getResourceAsStream(path) : null;

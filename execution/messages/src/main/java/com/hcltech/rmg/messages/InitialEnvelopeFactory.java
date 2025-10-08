@@ -13,22 +13,22 @@ import java.util.function.Supplier;
 
 import com.hcltech.rmg.cepstate.CepEventLog;
 
-public class InitialEnvelopeFactory<Schema> {
-    private final ParameterExtractor parameterExtractor;
+public class InitialEnvelopeFactory<CepState, Msg, Schema> {
+    private final ParameterExtractor<Msg> parameterExtractor;
     private final Map<String, Schema> nameToSchemaMap;
-    private final XmlTypeClass<Schema> xmlTypeClass;
-    private final IEventTypeExtractor eventTypeExtractor;
+    private final XmlTypeClass<Msg, Schema> xmlTypeClass;
+    private final IEventTypeExtractor<Msg> eventTypeExtractor;
     private final IDomainTypeExtractor domainTypeExtractor;
     private final Map<String, Config> keyToConfigMap;
     private final Schema schema;
     private final Supplier<CepEventLog> cepStateSupplier;
 
 
-    public InitialEnvelopeFactory(ParameterExtractor parameterExtractor,
+    public InitialEnvelopeFactory(ParameterExtractor<Msg> parameterExtractor,
                                   Map<String, Schema> nameToSchemaMap,
                                   Supplier<CepEventLog> cepStateSupplier,
-                                  XmlTypeClass<Schema> xmlTypeClass,
-                                  IEventTypeExtractor eventTypeExtractor,
+                                  XmlTypeClass<Msg,Schema> xmlTypeClass,
+                                  IEventTypeExtractor<Msg> eventTypeExtractor,
                                   IDomainTypeExtractor domainTypeExtractor,
                                   Map<String, Config> keyToConfigMap,
                                   RootConfig rootConfig) {
@@ -50,11 +50,11 @@ public class InitialEnvelopeFactory<Schema> {
         Objects.requireNonNull(schema, "Schema not found for: " + rootConfig.xmlSchemaPath() + " Legal values: " + nameToSchemaMap.keySet());
     }
 
-    public Envelope<Map<String, Object>> createEnvelopeHeaderAtStart(RawMessage rawMessage, String domainId) {
+    public Envelope<CepState, Msg> createEnvelopeHeaderAtStart(RawMessage rawMessage, String domainId) {
         Objects.requireNonNull(rawMessage, "rawMessage cannot be null");
         Objects.requireNonNull(domainId, "domainId cannot be null");
 
-        ErrorsOr<Envelope<Map<String, Object>>> result =
+        ErrorsOr<Envelope<CepState, Msg>> result =
                 xmlTypeClass.parseAndValidate(rawMessage.rawValue(), schema)
                         .flatMap(message -> {
                             var domainType = domainTypeExtractor.extractDomainType(message);
@@ -89,9 +89,9 @@ public class InitialEnvelopeFactory<Schema> {
                         });
 
         return result.foldError(errors -> {
-            var header = new EnvelopeHeader(IEventTypeExtractor.unknownEventType, domainId, null, rawMessage, null, null, null);
-            var valueEnv = new ValueEnvelope<Map<String, Object>>(header, Map.of());
-            return new ErrorEnvelope<Map<String, Object>>(valueEnv, "initial-envelope-factory", errors);
+            var header = new EnvelopeHeader<CepState>(IEventTypeExtractor.unknownEventType, domainId, null, rawMessage, null, null, null);
+            var valueEnv = new ValueEnvelope<CepState, Msg>(header, null);
+            return new ErrorEnvelope<CepState, Msg>(valueEnv, "initial-envelope-factory", errors);
         });
     }
 }

@@ -1,6 +1,6 @@
 package com.hcltech.rmg.kafka;
 
-import com.hcltech.rmg.appcontainer.impl.AppContainerFactory;
+import com.hcltech.rmg.appcontainer.impl.AppContainerFactoryForMapStringObject;
 import com.hcltech.rmg.common.ITimeService;
 import com.hcltech.rmg.common.uuid.IUuidGenerator;
 import com.hcltech.rmg.messages.RawMessage;
@@ -36,7 +36,7 @@ public final class RawMessageDeserialiser implements KafkaRecordDeserializationS
     @Override
     public void open(DeserializationSchema.InitializationContext context) {
         if (timeService != null && uuid != null) return; // test-only ctor already set them
-        var container = AppContainerFactory.resolve(containerId).valueOrThrow();
+        var container = AppContainerFactoryForMapStringObject.resolve(containerId).valueOrThrow();
         this.timeService = container.time();
         this.uuid = container.uuid();
     }

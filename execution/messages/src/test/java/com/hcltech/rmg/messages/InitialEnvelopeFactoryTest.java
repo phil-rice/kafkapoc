@@ -28,32 +28,70 @@ class InitialEnvelopeFactoryTest {
 
     // ---- Tiny fakes ---------------------------------------------------------
 
-    /** Fake XmlTypeClass that always succeeds with a given parsed map. */
+    /**
+     * Fake XmlTypeClass that always succeeds with a given parsed map.
+     */
     private static final class FakeXmlPass implements XmlTypeClass<Object> {
         private final Map<String, Object> parsed;
-        FakeXmlPass(Map<String, Object> parsed) { this.parsed = parsed; }
 
-        @Override public Object loadSchema(String schemaName, InputStream schemaStream) { return new Object(); }
-        @Override public ErrorsOr<Map<String, Object>> parseAndValidate(String xml, Object schema) { return ErrorsOr.lift(parsed); }
-        @Override public ErrorsOr<String> extractId(String rawString, List<String> idPath) { return ErrorsOr.error("unused"); }
+        FakeXmlPass(Map<String, Object> parsed) {
+            this.parsed = parsed;
+        }
+
+        @Override
+        public Object loadSchema(String schemaName, InputStream schemaStream) {
+            return new Object();
+        }
+
+        @Override
+        public ErrorsOr<Map<String, Object>> parseAndValidate(String xml, Object schema) {
+            return ErrorsOr.lift(parsed);
+        }
+
+        @Override
+        public ErrorsOr<String> extractId(String rawString, List<String> idPath) {
+            return ErrorsOr.error("unused");
+        }
     }
 
-    /** Fake XmlTypeClass that always fails with a given error. */
+    /**
+     * Fake XmlTypeClass that always fails with a given error.
+     */
     private static final class FakeXmlFail implements XmlTypeClass<Object> {
         private final String err;
-        FakeXmlFail(String err) { this.err = err; }
 
-        @Override public Object loadSchema(String schemaName, InputStream schemaStream) { return new Object(); }
-        @Override public ErrorsOr<Map<String, Object>> parseAndValidate(String xml, Object schema) { return ErrorsOr.error(err); }
-        @Override public ErrorsOr<String> extractId(String rawString, List<String> idPath) { return ErrorsOr.error("unused"); }
+        FakeXmlFail(String err) {
+            this.err = err;
+        }
+
+        @Override
+        public Object loadSchema(String schemaName, InputStream schemaStream) {
+            return new Object();
+        }
+
+        @Override
+        public ErrorsOr<Map<String, Object>> parseAndValidate(String xml, Object schema) {
+            return ErrorsOr.error(err);
+        }
+
+        @Override
+        public ErrorsOr<String> extractId(String rawString, List<String> idPath) {
+            return ErrorsOr.error("unused");
+        }
     }
 
-    /** Fake ParameterExtractor that returns a pre-made Parameters value/errors. */
-    private static final class FakeParamExtractor implements ParameterExtractor {
+    /**
+     * Fake ParameterExtractor that returns a pre-made Parameters value/errors.
+     */
+    private static final class FakeParamExtractor<Msg> implements ParameterExtractor<Msg> {
         private final ErrorsOr<Parameters> result;
-        FakeParamExtractor(ErrorsOr<Parameters> result) { this.result = result; }
+
+        FakeParamExtractor(ErrorsOr<Parameters> result) {
+            this.result = result;
+        }
+
         @Override
-        public ErrorsOr<Parameters> parameters(Map<String, Object> input, String eventType, String domainType, String domainId) {
+        public ErrorsOr<Parameters> parameters(Msg input, String eventType, String domainType, String domainId) {
             return result;
         }
     }
@@ -68,7 +106,7 @@ class InitialEnvelopeFactoryTest {
 
     @Test
     void happyPath_buildsValueEnvelope_withEmptyCepState() {
-        String domainId   = "D-123";
+        String domainId = "D-123";
         String schemaName = "schemas/order.xsd";
 
         Map<String, Object> parsed = Map.of("id", "ABC", "amount", 10);
@@ -80,7 +118,7 @@ class InitialEnvelopeFactoryTest {
 
         Parameters params = mock(Parameters.class);
         when(params.key()).thenReturn("dev:uk");
-        ParameterExtractor paramEx = new FakeParamExtractor(ErrorsOr.lift(params));
+        ParameterExtractor<Map<String, Object>> paramEx = new FakeParamExtractor<>(ErrorsOr.lift(params));
 
         IEventTypeExtractor eventTypeExtractor = message -> "OrderCreated";
         IDomainTypeExtractor domainTypeExtractor = message -> "orders";
@@ -111,7 +149,7 @@ class InitialEnvelopeFactoryTest {
         assertEquals(parsed, ve.data());
 
         // header fields
-        EnvelopeHeader h = ve.header();
+        EnvelopeHeader<Map<String,Object>> h = ve.header();
         assertEquals("orders", h.domainType());
         assertEquals(domainId, h.domainId());
         assertEquals("OrderCreated", h.eventType());
@@ -126,7 +164,7 @@ class InitialEnvelopeFactoryTest {
 
     @Test
     void happyPath_buildsValueEnvelope_withPrepopulatedCepState() {
-        String domainId   = "D-CEP";
+        String domainId = "D-CEP";
         String schemaName = "schemas/order.xsd";
 
         Map<String, Object> parsed = Map.of("id", "ABC");
@@ -181,7 +219,7 @@ class InitialEnvelopeFactoryTest {
 
     @Test
     void parseError_recoversToErrorEnvelope_withEmptyMapPayload() {
-        String domainId   = "D-ERR";
+        String domainId = "D-ERR";
         String schemaName = "schemas/order.xsd";
 
         XmlTypeClass<Object> xml = new FakeXmlFail("xml invalid");
@@ -223,7 +261,7 @@ class InitialEnvelopeFactoryTest {
 
     @Test
     void missingConfig_recoversToErrorEnvelope_withEmptyMapPayload() {
-        String domainId   = "D-MISS-CFG";
+        String domainId = "D-MISS-CFG";
         String schemaName = "schemas/order.xsd";
 
         Map<String, Object> parsed = Map.of("id", "X");
@@ -267,7 +305,7 @@ class InitialEnvelopeFactoryTest {
 
     @Test
     void nullEventType_recoversToErrorEnvelope_withEmptyMapPayload() {
-        String domainId   = "D-NULL-EVT";
+        String domainId = "D-NULL-EVT";
         String schemaName = "schemas/order.xsd";
 
         Map<String, Object> parsed = Map.of("z", 1);

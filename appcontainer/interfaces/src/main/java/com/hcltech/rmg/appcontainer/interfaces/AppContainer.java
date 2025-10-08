@@ -12,13 +12,13 @@ import com.hcltech.rmg.xml.XmlTypeClass;
 import java.util.List;
 import java.util.Map;
 
-public record AppContainer<EventSourceConfig, Schema>(
+public record AppContainer<EventSourceConfig, Msg, Schema>(
         // infra
         ITimeService time,
         IUuidGenerator uuid,
 
         // XML services
-        XmlTypeClass<Schema> xml,                // keyExtraction + parse + validate
+        XmlTypeClass<Msg, Schema> xml,                // keyExtraction + parse + validate
 
         // shared config
         List<String> keyPath,
@@ -26,13 +26,13 @@ public record AppContainer<EventSourceConfig, Schema>(
         RootConfig rootConfig,
 
         // getting things out of messages
-        ParameterExtractor parameterExtractor,
+        ParameterExtractor<Msg> parameterExtractor,
         Map<String, Schema> nameToSchemaMap,
-        IDomainTypeExtractor domainTypeExtractor,
-        IEventTypeExtractor eventTypeExtractor,
+        IDomainTypeExtractor<Msg> domainTypeExtractor,
+        IEventTypeExtractor<Msg> eventTypeExtractor,
 
 
         //The behaviour of the application. The key is the parameters key.
         Map<String, Config> keyToConfigMap
-) {
+) implements InitialEnvelopeServices<Msg, Schema> {
 }

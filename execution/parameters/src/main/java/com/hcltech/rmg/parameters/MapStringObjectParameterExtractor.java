@@ -7,13 +7,13 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
-class DefaultParameterExtractor implements ParameterExtractor {
+class MapStringObjectParameterExtractor implements ParameterExtractor<Map<String,Object>> {
 
     private final List<String> parameterNames;
     private final Map<String, Map<String, List<String>>> eventToParameterNameToPath;
     private final Map<String, List<String>> defaultParameterNameToPath;
 
-    public DefaultParameterExtractor(List<String> parameterNames, Map<String, Map<String, List<String>>> eventToParameterNameToPath, Map<String, List<String>> defaultParameterNameToPath) {
+    public MapStringObjectParameterExtractor(List<String> parameterNames, Map<String, Map<String, List<String>>> eventToParameterNameToPath, Map<String, List<String>> defaultParameterNameToPath) {
         this.parameterNames = parameterNames;
         this.eventToParameterNameToPath = eventToParameterNameToPath;
         this.defaultParameterNameToPath = defaultParameterNameToPath;

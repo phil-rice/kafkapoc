@@ -7,25 +7,23 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import com.hcltech.rmg.xml.AbstractXmlTypeClassTest;
 
-import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
-import java.util.Map;
 
 import static org.junit.jupiter.api.Assertions.*;
 
 /**
  * Woodstox-specific additions to the engine-agnostic tests in AbstractXmlTypeClassTest.
  */
-public class WoodstoxXmlTypeClassTest extends AbstractXmlTypeClassTest<XMLValidationSchema> {
+public class WoodstoxXmlForMapStringObjectTypeClassTest extends AbstractXmlTypeClassTest<XMLValidationSchema> {
 
-    public WoodstoxXmlTypeClassTest() {
-        super(new WoodstoxXmlTypeClass());
+    public WoodstoxXmlForMapStringObjectTypeClassTest() {
+        super(new WoodstoxXmlForMapStringObjectTypeClass());
     }
 
     @Test
     @DisplayName("malformed schema → LoadSchemaException (Woodstox-specific contract)")
     void malformed_schema_returns_LoadSchemaException() {
-        var eng = new WoodstoxXmlTypeClass();
+        var eng = new WoodstoxXmlForMapStringObjectTypeClass();
 
         // Intentionally broken XSD (bad closing tag + undefined type)
         String badXsd = """

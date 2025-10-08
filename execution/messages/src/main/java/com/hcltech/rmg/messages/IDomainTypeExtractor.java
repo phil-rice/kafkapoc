@@ -6,15 +6,15 @@ import com.hcltech.rmg.parameters.ParameterExtractor;
 import java.util.List;
 import java.util.Map;
 
-public interface IDomainTypeExtractor {
-    String extractDomainType(Map<String, Object> message);
+public interface IDomainTypeExtractor<Msg> {
+    String extractDomainType(Msg message);
 
-    static IDomainTypeExtractor fromPath(List<String> path) {
+    static IDomainTypeExtractor<Map<String, Object>> fromPath(List<String> path) {
         var copy = List.copyOf(path);
         return message -> Paths.findStringOrNull(message, copy);
     }
 
-    static IDomainTypeExtractor fixed(String domainType) {
+    static <Msg> IDomainTypeExtractor<Msg> fixed(String domainType) {
         return message -> domainType;
     }
 }
