@@ -1,5 +1,6 @@
 package com.hcltech.rmg.appcontainer.interfaces;
 
+import com.hcltech.rmg.cepstate.CepStateTypeClass;
 import com.hcltech.rmg.common.ITimeService;
 import com.hcltech.rmg.common.uuid.IUuidGenerator;
 import com.hcltech.rmg.config.config.Config;
@@ -12,25 +13,35 @@ import com.hcltech.rmg.xml.XmlTypeClass;
 import java.util.List;
 import java.util.Map;
 
-/** Projection that exposes only what operators need, without the EventSourceConfig type. */
-public interface InitialEnvelopeServices<Msg, Schema> {
-  // infra
-  ITimeService time();
-  IUuidGenerator uuid();
+/**
+ * Projection that exposes only what operators need, without the EventSourceConfig type.
+ */
+public interface InitialEnvelopeServices<CepState, Msg, Schema> {
+    // infra
+    ITimeService time();
 
-  // XML services
-  XmlTypeClass<Msg, Schema> xml();
+    IUuidGenerator uuid();
 
-  // shared config
-  List<String> keyPath();
-  RootConfig rootConfig();
+    //CepState
+    CepStateTypeClass<CepState> cepStateTypeClass();
 
-  // message helpers
-  ParameterExtractor<Msg> parameterExtractor();
-  Map<String, Schema> nameToSchemaMap();
-  IDomainTypeExtractor<Msg> domainTypeExtractor();
-  IEventTypeExtractor<Msg> eventTypeExtractor();
+    // XML services
+    XmlTypeClass<Msg, Schema> xml();
 
-  // behaviour/config per key
-  Map<String, Config> keyToConfigMap();
+    // shared config
+    List<String> keyPath();
+
+    RootConfig rootConfig();
+
+    // message helpers
+    ParameterExtractor<Msg> parameterExtractor();
+
+    Map<String, Schema> nameToSchemaMap();
+
+    IDomainTypeExtractor<Msg> domainTypeExtractor();
+
+    IEventTypeExtractor<Msg> eventTypeExtractor();
+
+    // behaviour/config per key
+    Map<String, Config> keyToConfigMap();
 }

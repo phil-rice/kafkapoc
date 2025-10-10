@@ -12,15 +12,15 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
 
-public final class FlinkCepEventLog implements CepEventLog {
+public final class FlinkCepEventForMapStringObjectLog implements CepEventLog {
 
     private final ListState<List<CepEvent>> segments;
 
-    public static FlinkCepEventLog from(RuntimeContext ctx, String namePrefix) {
-        return new FlinkCepEventLog(ctx, namePrefix);
+    public static FlinkCepEventForMapStringObjectLog from(RuntimeContext ctx, String namePrefix) {
+        return new FlinkCepEventForMapStringObjectLog(ctx, namePrefix);
     }
 
-    private FlinkCepEventLog(RuntimeContext ctx, String namePrefix) {
+    private FlinkCepEventForMapStringObjectLog(RuntimeContext ctx, String namePrefix) {
         ListStateDescriptor<List<CepEvent>> desc = new ListStateDescriptor<>(
                 namePrefix + ".segments",
                 TypeInformation.of(new TypeHint<List<CepEvent>>() {

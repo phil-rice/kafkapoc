@@ -2,6 +2,8 @@
 package com.hcltech.rmg.messages;
 
 import com.hcltech.rmg.cepstate.CepEventLog;
+import com.hcltech.rmg.cepstate.CepStateTypeClass;
+import com.hcltech.rmg.cepstate.MapStringObjectCepStateTypeClass;
 import com.hcltech.rmg.common.errorsor.ErrorsOr;
 import com.hcltech.rmg.config.config.Config;
 import com.hcltech.rmg.config.config.RootConfig;
@@ -25,6 +27,9 @@ import static org.mockito.Mockito.*;
  * Parameters, Config, and RawMessage.
  */
 class InitialEnvelopeFactoryTest {
+
+    // Cep state typeclass we use across tests
+    private static final CepStateTypeClass<Map<String, Object>> TC = new MapStringObjectCepStateTypeClass();
 
     // ---- Tiny fakes ---------------------------------------------------------
 
@@ -128,12 +133,12 @@ class InitialEnvelopeFactoryTest {
 
         // CepEventLog that folds to empty map
         CepEventLog cepLog = mock(CepEventLog.class);
-        when(cepLog.safeFoldAll(anyMap())).thenAnswer(inv ->
-                ErrorsOr.lift(new HashMap<>()));
+        when(cepLog.safeFoldAll(eq(TC), anyMap()))
+                .thenAnswer(inv -> ErrorsOr.lift(new HashMap<>()));
         Supplier<CepEventLog> cepSupplier = cepSupplierReturning(cepLog);
 
         InitialEnvelopeFactory<Map<String, Object>, Map<String, Object>, Object> sut =
-                new InitialEnvelopeFactory<>(paramEx, nameToSchema, cepSupplier, xml, eventTypeExtractor, domainTypeExtractor, keyToConfig, root);
+                new InitialEnvelopeFactory<>(paramEx, TC, nameToSchema, cepSupplier, xml, eventTypeExtractor, domainTypeExtractor, keyToConfig, root);
 
         RawMessage raw = mock(RawMessage.class);
         when(raw.rawValue()).thenReturn("<Order><Id>ABC</Id></Order>");
@@ -159,7 +164,7 @@ class InitialEnvelopeFactoryTest {
         // cep state folded empty
         assertNotNull(h.cepState());
         assertTrue(h.cepState().isEmpty(), "cepState should be empty");
-        verify(cepLog).safeFoldAll(anyMap());
+        verify(cepLog).safeFoldAll(eq(TC), anyMap());
     }
 
     @Test
@@ -190,11 +195,11 @@ class InitialEnvelopeFactoryTest {
         folded.put("count", 7);
 
         CepEventLog cepLog = mock(CepEventLog.class);
-        when(cepLog.safeFoldAll(anyMap())).thenReturn(ErrorsOr.lift(folded));
+        when(cepLog.safeFoldAll(eq(TC), anyMap())).thenReturn(ErrorsOr.lift(folded));
         Supplier<CepEventLog> cepSupplier = cepSupplierReturning(cepLog);
 
         InitialEnvelopeFactory<Map<String, Object>, Map<String, Object>, Object> sut =
-                new InitialEnvelopeFactory<>(paramEx, nameToSchema, cepSupplier, xml, eventTypeExtractor, domainTypeExtractor, keyToConfig, root);
+                new InitialEnvelopeFactory<>(paramEx, TC, nameToSchema, cepSupplier, xml, eventTypeExtractor, domainTypeExtractor, keyToConfig, root);
 
         RawMessage raw = mock(RawMessage.class);
         when(raw.rawValue()).thenReturn("<Order/>");
@@ -214,7 +219,7 @@ class InitialEnvelopeFactoryTest {
 
         // cep state folded content present
         assertEquals(folded, h.cepState(), "cepState should be exactly the folded map");
-        verify(cepLog).safeFoldAll(anyMap());
+        verify(cepLog).safeFoldAll(eq(TC), anyMap());
     }
 
     @Test
@@ -227,7 +232,7 @@ class InitialEnvelopeFactoryTest {
         Map<String, Object> nameToSchema = Map.of(schemaName, schema);
         RootConfig root = new RootConfig(null, schemaName);
 
-        ParameterExtractor<Map<String, Object>> paramEx = new FakeParamExtractor(ErrorsOr.error("unused"));
+        ParameterExtractor<Map<String, Object>> paramEx = new FakeParamExtractor<>(ErrorsOr.error("unused"));
         IEventTypeExtractor<Map<String, Object>> eventTypeExtractor = message -> "X";
         IDomainTypeExtractor<Map<String, Object>> domainTypeExtractor = message -> "orders";
         Map<String, Config> keyToConfig = Map.of();
@@ -237,7 +242,7 @@ class InitialEnvelopeFactoryTest {
         Supplier<CepEventLog> cepSupplier = cepSupplierReturning(cepLog);
 
         InitialEnvelopeFactory<Map<String, Object>, Map<String, Object>, Object> sut =
-                new InitialEnvelopeFactory<>(paramEx, nameToSchema, cepSupplier, xml, eventTypeExtractor, domainTypeExtractor, keyToConfig, root);
+                new InitialEnvelopeFactory<>(paramEx, TC, nameToSchema, cepSupplier, xml, eventTypeExtractor, domainTypeExtractor, keyToConfig, root);
 
         RawMessage raw = mock(RawMessage.class);
         when(raw.rawValue()).thenReturn("<broken/>");
@@ -249,7 +254,7 @@ class InitialEnvelopeFactoryTest {
         @SuppressWarnings("unchecked")
         ErrorEnvelope<Map<String, Object>, Map<String, Object>> ee = (ErrorEnvelope<Map<String, Object>, Map<String, Object>>) env;
 
-        // inner value envelope crafted in recover(): header with null eventType, payload = Map.of()
+        // inner value envelope crafted in recover(): header with null eventType, payload = null
         ValueEnvelope<Map<String, Object>, Map<String, Object>> inner = ee.valueEnvelope();
         EnvelopeHeader<Map<String, Object>> h = inner.header();
         assertNull(h.eventType(), "eventType should be null in error header");
@@ -280,11 +285,11 @@ class InitialEnvelopeFactoryTest {
 
         // CepEventLog (will be invoked before missing-config check)
         CepEventLog cepLog = mock(CepEventLog.class);
-        when(cepLog.safeFoldAll(anyMap())).thenReturn(ErrorsOr.lift(new HashMap<>()));
+        when(cepLog.safeFoldAll(eq(TC), anyMap())).thenReturn(ErrorsOr.lift(new HashMap<>()));
         Supplier<CepEventLog> cepSupplier = cepSupplierReturning(cepLog);
 
         InitialEnvelopeFactory<Map<String, Object>, Map<String, Object>, Object> sut =
-                new InitialEnvelopeFactory<>(paramEx, nameToSchema, cepSupplier, xml, eventTypeExtractor, domainTypeExtractor, keyToConfig, root);
+                new InitialEnvelopeFactory<>(paramEx, TC, nameToSchema, cepSupplier, xml, eventTypeExtractor, domainTypeExtractor, keyToConfig, root);
 
         RawMessage raw = mock(RawMessage.class);
         when(raw.rawValue()).thenReturn("<ok/>");
@@ -300,7 +305,7 @@ class InitialEnvelopeFactoryTest {
         assertEquals(null, inner.data(), "recover payload should be null");
         assertNull(inner.header().eventType());
         assertSame(raw, inner.header().rawMessage());
-        verify(cepLog).safeFoldAll(anyMap());
+        verify(cepLog).safeFoldAll(eq(TC), anyMap());
     }
 
     @Test
@@ -316,7 +321,7 @@ class InitialEnvelopeFactoryTest {
 
         Parameters params = mock(Parameters.class);
         when(params.key()).thenReturn("dev:uk");
-        ParameterExtractor<Map<String, Object>> paramEx = new FakeParamExtractor(ErrorsOr.lift(params));
+        ParameterExtractor<Map<String, Object>> paramEx = new FakeParamExtractor<>(ErrorsOr.lift(params));
 
         IEventTypeExtractor<Map<String, Object>> eventTypeExtractor = message -> null; // force error
         IDomainTypeExtractor<Map<String, Object>> domainTypeExtractor = message -> "orders";
@@ -327,7 +332,7 @@ class InitialEnvelopeFactoryTest {
         Supplier<CepEventLog> cepSupplier = cepSupplierReturning(cepLog);
 
         InitialEnvelopeFactory<Map<String, Object>, Map<String, Object>, Object> sut =
-                new InitialEnvelopeFactory<>(paramEx, nameToSchema, cepSupplier, xml, eventTypeExtractor, domainTypeExtractor, keyToConfig, root);
+                new InitialEnvelopeFactory<>(paramEx, TC, nameToSchema, cepSupplier, xml, eventTypeExtractor, domainTypeExtractor, keyToConfig, root);
 
         RawMessage raw = mock(RawMessage.class);
         when(raw.rawValue()).thenReturn("<ok/>");
@@ -361,7 +366,7 @@ class InitialEnvelopeFactoryTest {
 
         NullPointerException ex = assertThrows(NullPointerException.class, () ->
                 new InitialEnvelopeFactory<>(
-                        paramEx, Map.of(/* no schema */), cepSupplier, xml, eventTypeExtractor, domainTypeExtractor, Map.of(), root
+                        paramEx, TC, Map.of(/* no schema */), cepSupplier, xml, eventTypeExtractor, domainTypeExtractor, Map.of(), root
                 ));
         assertTrue(ex.getMessage().contains("Schema not found"), "Error should mention missing schema");
     }

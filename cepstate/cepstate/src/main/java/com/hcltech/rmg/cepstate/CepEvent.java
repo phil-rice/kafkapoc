@@ -19,24 +19,14 @@ import java.util.Map;
 })
 public interface CepEvent {
 
-    Map<String, Object> fold(Map<String, Object> state);
-
-    static Map<String,Object> foldAll(Map<String,Object> initial, Collection<CepEvent> events) {
+    static <CepState> CepState foldAll(CepStateTypeClass<CepState> tc, CepState initial, Collection<CepEvent> events) {
         var state = initial;
-        for(var event: events) {
-            state = event.fold(state);
-        }
-        return state;
-    }
-    static Map<String,Object> foldMultiple(Map<String,Object> initial, Collection<Collection<CepEvent>> events) {
-        var state = initial;
-        for(var eventList: events) {
-            state = foldAll(state, eventList);
-        }
+        for (var event : events)
+            state = tc.processState(state, event);
         return state;
     }
 
-    static Codec<CepEvent, String> codex = Codec.clazzCodec(CepEvent.class);
+    static Codec<CepEvent, String> codec = Codec.clazzCodec(CepEvent.class);
 
     static CepEvent set(List<String> path, Object value) {
         return new CepSetEvent(path, value);

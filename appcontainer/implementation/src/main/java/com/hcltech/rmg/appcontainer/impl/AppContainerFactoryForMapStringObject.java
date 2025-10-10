@@ -3,6 +3,8 @@ package com.hcltech.rmg.appcontainer.impl;
 
 import com.hcltech.rmg.appcontainer.interfaces.AppContainer;
 import com.hcltech.rmg.appcontainer.interfaces.IAppContainerFactory;
+import com.hcltech.rmg.cepstate.CepStateTypeClass;
+import com.hcltech.rmg.cepstate.MapStringObjectCepStateTypeClass;
 import com.hcltech.rmg.common.ITimeService;
 import com.hcltech.rmg.common.errorsor.ErrorsOr;
 import com.hcltech.rmg.common.uuid.IUuidGenerator;
@@ -25,15 +27,13 @@ import java.util.concurrent.ConcurrentHashMap;
 
 import static java.util.Objects.requireNonNull;
 
-public final class AppContainerFactoryForMapStringObject implements IAppContainerFactory<KafkaConfig, Map<String, Object>, XMLValidationSchema> {
+public final class AppContainerFactoryForMapStringObject implements IAppContainerFactory<KafkaConfig, Map<String, Object>, Map<String, Object>, XMLValidationSchema> {
 
-    private static final Map<String, ErrorsOr<AppContainer<KafkaConfig, Map<String, Object>, XMLValidationSchema>>> CACHE =
+    private static final Map<String, ErrorsOr<AppContainer<KafkaConfig, Map<String, Object>, Map<String, Object>, XMLValidationSchema>>> CACHE =
             new ConcurrentHashMap<>();
 
-    private AppContainerFactoryForMapStringObject() {
-    }
 
-    public static ErrorsOr<AppContainer<KafkaConfig, Map<String, Object>, XMLValidationSchema>> resolve(String id) {
+    public static ErrorsOr<AppContainer<KafkaConfig, Map<String, Object>, Map<String, Object>, XMLValidationSchema>> resolve(String id) {
         requireNonNull(id, "container id must not be null");
         final String norm = id.trim().toLowerCase();
         return CACHE.computeIfAbsent(norm, AppContainerFactoryForMapStringObject::build);
@@ -44,7 +44,7 @@ public final class AppContainerFactoryForMapStringObject implements IAppContaine
     }
 
     @Override
-    public ErrorsOr<AppContainer<KafkaConfig, Map<String, Object>, XMLValidationSchema>> create(String id) {
+    public ErrorsOr<AppContainer<KafkaConfig, Map<String, Object>, Map<String, Object>, XMLValidationSchema>> create(String id) {
         return resolve(id);
     }
 
@@ -52,7 +52,7 @@ public final class AppContainerFactoryForMapStringObject implements IAppContaine
 
     public static final List<String> defaultParameters = List.of("productType", "company");
 
-    private static ErrorsOr<AppContainer<KafkaConfig, Map<String, Object>, XMLValidationSchema>> build(String id) {
+    private static ErrorsOr<AppContainer<KafkaConfig, Map<String, Object>, Map<String, Object>, XMLValidationSchema>> build(String id) {
         return switch (id) {
             case "prod" -> basic(
                     System::currentTimeMillis,
@@ -80,7 +80,7 @@ public final class AppContainerFactoryForMapStringObject implements IAppContaine
 
     // ---------- monadic composition (inlined) ----------
 
-    private static ErrorsOr<AppContainer<KafkaConfig, Map<String, Object>, XMLValidationSchema>> basic(
+    private static ErrorsOr<AppContainer<KafkaConfig, Map<String, Object>, Map<String, Object>, XMLValidationSchema>> basic(
             ITimeService time,
             IUuidGenerator uuid,
             String rootConfigPath,
@@ -93,6 +93,7 @@ public final class AppContainerFactoryForMapStringObject implements IAppContaine
         Objects.requireNonNull(uuid, "uuid generator must not be null");
         Objects.requireNonNull(rootConfigPath, "root config path must not be null");
 
+        final CepStateTypeClass<Map<String, Object>> cepStateTypeClass = new MapStringObjectCepStateTypeClass();
         final XmlTypeClass<Map<String, Object>, XMLValidationSchema> xml = new WoodstoxXmlForMapStringObjectTypeClass();
         final List<String> keyPath = List.of("domainId");
         final KafkaConfig eventSourceConfig = KafkaConfig.fromSystemProps();
@@ -117,6 +118,7 @@ public final class AppContainerFactoryForMapStringObject implements IAppContaine
                                         time,
                                         uuid,
                                         xml,
+                                        cepStateTypeClass,
                                         keyPath,
                                         eventSourceConfig,
                                         root,

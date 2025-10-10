@@ -10,13 +10,15 @@ import java.util.Map;
 
 import static org.junit.jupiter.api.Assertions.*;
 
-class CepEventTest {
+public class CepEventForMapStringObjectTest {
 
     private static ObjectMapper mapper() {
         ObjectMapper m = new ObjectMapper();
         m.findAndRegisterModules();
         return m;
     }
+
+    private final CepStateTypeClass<Map<String,Object>> typeClass = new MapStringObjectCepStateTypeClass();
 
     // ----------------- Polymorphic (de)serialization: single events -----------------
 
@@ -57,115 +59,110 @@ class CepEventTest {
         assertEquals("alpha", a.value());
     }
 
-
-
-    // ----------------- fold behavior: set -----------------
+    // ----------------- processState behavior: set -----------------
 
     @Test
-    void fold_set_createsIntermediatesAndSetsLeaf() {
+    void process_set_createsIntermediatesAndSetsLeaf() {
         Map<String, Object> state = new HashMap<>();
         CepEvent e = CepEvent.set(List.of("person", "name", "first"), "Alice");
 
-        Map<String, Object> after = e.fold(state);
+        Map<String, Object> after = typeClass.processState(state, e);
 
-        assertSame(state, after);
         assertEquals("Alice", valueAt(after, List.of("person", "name", "first")));
-        assertTrue(((Map<?, ?>) after.get("person")).get("name") instanceof Map);
+        assertTrue(((Map<?, ?>) ((Map<?, ?>) after.get("person")).get("name")) instanceof Map);
     }
 
     @Test
-    void fold_set_overwritesIntermediateNonMap() {
+    void process_set_overwritesIntermediateNonMap() {
         Map<String, Object> state = new HashMap<>();
         state.put("person", "not-a-map");
 
         CepEvent e = CepEvent.set(List.of("person", "name", "first"), "Alice");
-        e.fold(state);
+        Map<String, Object> after = typeClass.processState(state, e);
 
-        assertTrue(state.get("person") instanceof Map);
-        assertEquals("Alice", valueAt(state, List.of("person", "name", "first")));
+        assertTrue(after.get("person") instanceof Map);
+        assertEquals("Alice", valueAt(after, List.of("person", "name", "first")));
     }
 
     @Test
-    void fold_set_overwritesLeafWithDifferentType() {
+    void process_set_overwritesLeafWithDifferentType() {
         Map<String, Object> state = new HashMap<>();
         state.put("k", new HashMap<>(Map.of("leaf", 123)));
 
         CepEvent e = CepEvent.set(List.of("k", "leaf"), List.of("x", "y"));
-        e.fold(state);
+        Map<String, Object> after = typeClass.processState(state, e);
 
-        assertEquals(List.of("x", "y"), valueAt(state, List.of("k", "leaf")));
+        assertEquals(List.of("x", "y"), valueAt(after, List.of("k", "leaf")));
     }
 
     @Test
-    void fold_set_emptyPath_isNoOp() {
+    void process_set_emptyPath_isNoOp() {
         Map<String, Object> state = new HashMap<>();
         state.put("unchanged", true);
 
         CepEvent e = CepEvent.set(List.of(), "ignored");
-        e.fold(state);
+        Map<String, Object> after = typeClass.processState(state, e);
 
-        assertEquals(Map.of("unchanged", true), state);
+        assertEquals(Map.of("unchanged", true), after);
     }
 
-    // ----------------- fold behavior: append -----------------
+    // ----------------- processState behavior: append -----------------
 
     @Test
-    void fold_append_createsListWhenMissing() {
+    void process_append_createsListWhenMissing() {
         Map<String, Object> state = new HashMap<>();
 
         CepEvent e = CepEvent.append(List.of("items"), "a");
-        e.fold(state);
+        Map<String, Object> after = typeClass.processState(state, e);
 
-        assertEquals(List.of("a"), valueAt(state, List.of("items")));
+        assertEquals(List.of("a"), valueAt(after, List.of("items")));
     }
 
     @Test
-    void fold_append_overwritesNonListWithNewList() {
+    void process_append_overwritesNonListWithNewList() {
         Map<String, Object> state = new HashMap<>();
         state.put("items", "not-a-list");
 
         CepEvent e = CepEvent.append(List.of("items"), "a");
-        e.fold(state);
+        Map<String, Object> after = typeClass.processState(state, e);
 
-        assertEquals(List.of("a"), valueAt(state, List.of("items")));
+        assertEquals(List.of("a"), valueAt(after, List.of("items")));
     }
 
     @Test
-    void fold_append_appendsWhenListExists() {
+    void process_append_appendsWhenListExists() {
         Map<String, Object> state = new HashMap<>();
         state.put("items", new ArrayList<>(List.of("a")));
 
         CepEvent e = CepEvent.append(List.of("items"), "b");
-        e.fold(state);
+        Map<String, Object> after = typeClass.processState(state, e);
 
-        assertEquals(List.of("a", "b"), valueAt(state, List.of("items")));
+        assertEquals(List.of("a", "b"), valueAt(after, List.of("items")));
     }
 
     @Test
-    void fold_append_createsIntermediates() {
+    void process_append_createsIntermediates() {
         Map<String, Object> state = new HashMap<>();
 
         CepEvent e = CepEvent.append(List.of("person", "tags"), "new");
-        e.fold(state);
+        Map<String, Object> after = typeClass.processState(state, e);
 
-        assertEquals(List.of("new"), valueAt(state, List.of("person", "tags")));
+        assertEquals(List.of("new"), valueAt(after, List.of("person", "tags")));
     }
 
     @Test
-    void fold_append_emptyPath_isNoOp() {
+    void process_append_emptyPath_isNoOp() {
         Map<String, Object> state = new HashMap<>();
         state.put("keep", 1);
 
         CepEvent e = CepEvent.append(List.of(), "x");
-        e.fold(state);
+        Map<String, Object> after = typeClass.processState(state, e);
 
-        assertEquals(1, state.get("keep"));
-        assertEquals(1, state.size());
+        assertEquals(1, after.get("keep"));
+        assertEquals(1, after.size());
     }
 
     // ----------------- Optional: codec sanity (enable if your ErrorsOr API matches) -----------------
-    // Uncomment and adapt if ErrorsOr has methods like isError()/value()/errors()
-    //
     // @Test
     // void codec_roundtrip_withCodex() {
     //     var encoded = CepEvent.codex.encode(CepEvent.set(List.of("a"), 42));

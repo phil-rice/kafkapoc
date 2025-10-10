@@ -29,13 +29,13 @@ public final class KeySniffAndClassify
 
     private final String containerId;
     private List<String> keyPath;
-    private final OutputTag<ErrorEnvelope<?,?>> errorsOut;
+    private final OutputTag<ErrorEnvelope<?, ?>> errorsOut;
     private final int lanes;
 
     private transient KeyExtractor extractor;
 
     public KeySniffAndClassify(String containerId,
-                               OutputTag<ErrorEnvelope<?,?>> errorsOut,
+                               OutputTag<ErrorEnvelope<?, ?>> errorsOut,
                                int lanes) {
         this.containerId = containerId;
         this.errorsOut = errorsOut;
@@ -64,7 +64,7 @@ public final class KeySniffAndClassify
         ctx.output(
                 errorsOut,
                 new ErrorEnvelope<>(
-                        new ValueEnvelope<>(null, raw),
+                        new ValueEnvelope<>(null, raw, List.of()),
                         STAGE,
                         eo.errorsOrThrow()
                 )

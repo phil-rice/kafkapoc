@@ -1,6 +1,5 @@
 package com.hcltech.rmg.flinkadapters;
 
-import com.hcltech.rmg.appcontainer.interfaces.AppContainer;
 import com.hcltech.rmg.appcontainer.interfaces.IAppContainerFactory;
 import com.hcltech.rmg.appcontainer.interfaces.InitialEnvelopeServices;
 import com.hcltech.rmg.cepstate.CepEventLog;
@@ -20,30 +19,27 @@ import java.util.function.Supplier;
  * <p>
  * All error paths are wrapped as ErrorEnvelope by the factory (via recover()).
  */
-public final class InitialEnvelopeMapFunction< MSC,CepState, Msg, Schema>
-        extends RichMapFunction<Tuple2<String, RawMessage>, Envelope<CepState, Msg>> {
+public final class InitialEnvelopeMapFunction<MSC, CepState, Msg, Schema> extends RichMapFunction<Tuple2<String, RawMessage>, Envelope<CepState, Msg>> {
 
-    private final Class<IAppContainerFactory<MSC, Msg, Schema>> factoryClass;
+    private final Class<IAppContainerFactory<MSC, CepState, Msg, Schema>> factoryClass;
     private final String containerId;
     private InitialEnvelopeFactory<CepState, Msg, Schema> factory;
 
-    public InitialEnvelopeMapFunction(Class<IAppContainerFactory<MSC, Msg, Schema>> factoryClass, String containerId) {
+    public InitialEnvelopeMapFunction(Class<IAppContainerFactory<MSC, CepState, Msg, Schema>> factoryClass, String containerId) {
         this.factoryClass = factoryClass;
         this.containerId = containerId;
     }
 
     @Override
     public void open(OpenContext parameters) {
-        InitialEnvelopeServices<Msg,Schema> container = IAppContainerFactory.resolve(factoryClass, containerId).valueOrThrow();
-        Supplier<CepEventLog> cepStateSupplier = () -> FlinkCepEventLog.from(getRuntimeContext(), "cepState");
-        this.factory = new InitialEnvelopeFactory<CepState, Msg, Schema>(container.parameterExtractor(),
+        InitialEnvelopeServices<CepState, Msg, Schema> container = IAppContainerFactory.resolve(factoryClass, containerId).valueOrThrow();
+        Supplier<CepEventLog> cepStateSupplier = () -> FlinkCepEventForMapStringObjectLog.from(getRuntimeContext(), "cepState");
+        this.factory = new InitialEnvelopeFactory<CepState, Msg, Schema>(
+                container.parameterExtractor(),
+                container.cepStateTypeClass(),
                 container.nameToSchemaMap(),
-                cepStateSupplier,
-                container.xml(),
-                container.eventTypeExtractor(),
-                container.domainTypeExtractor(),
-                container.keyToConfigMap(),
-                container.rootConfig());
+                cepStateSupplier, container.xml(),
+                container.eventTypeExtractor(), container.domainTypeExtractor(), container.keyToConfigMap(), container.rootConfig());
     }
 
     @Override

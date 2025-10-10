@@ -4,7 +4,6 @@ import com.hcltech.rmg.common.errorsor.ErrorsOr;
 
 import java.util.Collection;
 import java.util.List;
-import java.util.Map;
 
 public interface CepEventLog {
     void append(Collection<CepEvent> batch) throws Exception;
@@ -20,16 +19,13 @@ public interface CepEventLog {
     }
 
 
-    default Map<String, Object> foldAll(Map<String, Object> initialState) throws CepEventException {
-        var state = initialState;
-        for (var event : getAll())
-            state = event.fold(state);
-        return state;
+    default <CepState> Object foldAll(CepStateTypeClass<CepState> tc, CepState initialState) throws CepEventException {
+        return CepEvent.foldAll(tc, initialState, getAll());
     }
 
-    default ErrorsOr<Map<String, Object>> safeFoldAll(Map<String, Object> initialState) {
+    default <CepState> ErrorsOr<Object> safeFoldAll(CepStateTypeClass<CepState> tc, CepState initialState) {
         try {
-            return ErrorsOr.lift(foldAll(initialState));
+            return ErrorsOr.lift(foldAll(tc, initialState));
         } catch (CepEventException e) {
             return ErrorsOr.error(e.getCause().getClass().getSimpleName() + ": " + e.getCause().getMessage());
         }

@@ -1,5 +1,6 @@
 package com.hcltech.rmg.appcontainer.interfaces;
 
+import com.hcltech.rmg.cepstate.CepStateTypeClass;
 import com.hcltech.rmg.common.ITimeService;
 import com.hcltech.rmg.common.uuid.IUuidGenerator;
 import com.hcltech.rmg.config.config.Config;
@@ -12,13 +13,16 @@ import com.hcltech.rmg.xml.XmlTypeClass;
 import java.util.List;
 import java.util.Map;
 
-public record AppContainer<EventSourceConfig, Msg, Schema>(
+public record AppContainer<EventSourceConfig, CepState, Msg, Schema>(
         // infra
         ITimeService time,
         IUuidGenerator uuid,
 
         // XML services
         XmlTypeClass<Msg, Schema> xml,                // keyExtraction + parse + validate
+
+        //CepState
+        CepStateTypeClass<CepState> cepStateTypeClass,
 
         // shared config
         List<String> keyPath,
@@ -34,5 +38,5 @@ public record AppContainer<EventSourceConfig, Msg, Schema>(
 
         //The behaviour of the application. The key is the parameters key.
         Map<String, Config> keyToConfigMap
-) implements InitialEnvelopeServices<Msg, Schema> {
+) implements InitialEnvelopeServices<CepState, Msg, Schema> {
 }

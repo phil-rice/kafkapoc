@@ -20,7 +20,6 @@ import org.apache.flink.streaming.api.functions.async.AsyncFunction;
 import org.apache.flink.streaming.api.functions.async.ResultFuture;
 import org.apache.flink.streaming.api.functions.async.RichAsyncFunction;
 import org.apache.flink.util.OutputTag;
-import org.codehaus.stax2.validation.XMLValidationSchema;
 
 import java.time.Duration;
 import java.util.Map;
@@ -30,10 +29,10 @@ public final class PerfHarnessMain {
 
     // we’ll create typed tags *inside* buildPipeline to avoid casts per CEPState type
 
-    public static <CepState, Msg, Schema> Pipeline<CepState, Msg> buildPipeline(Class<IAppContainerFactory<KafkaConfig, Msg, Schema>> factoryClass, String containerId, int lanes, AsyncFunction<Envelope<CepState, Msg>, Envelope<CepState, Msg>> mainAsync, long asyncTimeoutMillis, Integer asyncParallelismOverride // null -> default to source parallelism
+    public static <CepState, Msg, Schema> Pipeline<CepState, Msg> buildPipeline(Class<IAppContainerFactory<KafkaConfig, CepState, Msg, Schema>> factoryClass, String containerId, int lanes, AsyncFunction<Envelope<CepState, Msg>, Envelope<CepState, Msg>> mainAsync, long asyncTimeoutMillis, Integer asyncParallelismOverride // null -> default to source parallelism
     ) {
         // ---- resolve DI and kafka config ----
-        AppContainer<KafkaConfig, Msg, Schema> app = IAppContainerFactory.resolve(factoryClass, containerId).valueOrThrow();
+        AppContainer<KafkaConfig, CepState, Msg, Schema> app = IAppContainerFactory.resolve(factoryClass, containerId).valueOrThrow();
         final KafkaConfig kafka = app.eventSourceConfig();
 
         final int totalPartitions = kafka.sourceParallelism();

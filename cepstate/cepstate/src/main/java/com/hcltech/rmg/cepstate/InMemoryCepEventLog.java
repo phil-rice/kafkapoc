@@ -5,7 +5,7 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
 
-public final class InMemoryCepEventLog implements CepEventLog {
+public final class InMemoryCepEventLog<CepState> implements CepEventLog {
     // Keep batches to avoid rewriting previous data; flatten on read.
     private final List<List<CepEvent>> segments = new ArrayList<>();
 
@@ -15,6 +15,7 @@ public final class InMemoryCepEventLog implements CepEventLog {
         // Defensive copy so caller can’t mutate after append
         segments.add(new ArrayList<>(batch));
     }
+
 
     @Override
     public List<CepEvent> getAll() {
