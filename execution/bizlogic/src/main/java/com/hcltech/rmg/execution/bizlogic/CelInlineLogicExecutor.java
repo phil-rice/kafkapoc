@@ -1,3 +1,4 @@
+// CelInlineLogicExecutor.java
 package com.hcltech.rmg.execution.bizlogic;
 
 import com.hcltech.rmg.celcore.CelRuleBuilderFactory;
@@ -19,7 +20,7 @@ public class CelInlineLogicExecutor<CepState, Msg>
     private final CelRuleCache<ValueEnvelope<CepState, Msg>, ValueEnvelope<CepState, Msg>> ruleCache;
 
     public CelInlineLogicExecutor(CelRuleCache<ValueEnvelope<CepState, Msg>, ValueEnvelope<CepState, Msg>> ruleCache) {
-        this.ruleCache = ruleCache;
+        this.ruleCache = Objects.requireNonNull(ruleCache, "CelRuleCache is required");
     }
 
     @Override
@@ -29,7 +30,7 @@ public class CelInlineLogicExecutor<CepState, Msg>
         return ruleCache.get(key).executor().execute(input);
     }
 
-    /** New: require the message class for safe, contextual coercion. */
+    /** Require the message class for safe, contextual coercion. */
     public static <CepState, Msg> CelInlineLogicExecutor<CepState, Msg> create(
             CelRuleBuilderFactory ruleBuilderFactory,
             BehaviorConfig config,
@@ -45,41 +46,39 @@ public class CelInlineLogicExecutor<CepState, Msg>
             }
         });
 
+        // compileFn parameter is the CEL SOURCE (not the key)
         InMemoryCelRuleCache<ValueEnvelope<CepState, Msg>, ValueEnvelope<CepState, Msg>> ruleCache =
                 new InMemoryCelRuleCache<>(
-                        key -> {
-                            String source = keyToCel.get(key);
-                            if (source == null || source.isBlank()) {
-                                throw new IllegalArgumentException(
-                                        "No CEL source for key " + key + " Legal values: " + legalKeys(keyToCel));
-                            }
-                            return ruleBuilderFactory
-                                    .<ValueEnvelope<CepState, Msg>, ValueEnvelope<CepState, Msg>>createCelRuleBuilder(source)
-                                    .withVar("message", CelVarType.DYN, ValueEnvelope::data)
-                                    // Upstream NPE check: header() must exist
-                                    .withVar("cepState", CelVarType.DYN, v ->
-                                            Objects.requireNonNull(v.header(), "ValueEnvelope.header() is null").cepState())
-                                    .withResultCoercer((ve, out) -> {
-                                        if (out == null) {
-                                            // Policy: keep original data if rule yields null
-                                            return ve;
-                                        }
-                                        if (!msgClass.isInstance(out)) {
-                                            throw new IllegalArgumentException(
-                                                    "CEL result type does not match expected message type for key "
-                                                            + key + ". Expected: " + msgClass.getName()
-                                                            + ", got: " + out.getClass().getName());
-                                        }
-                                        return ve.withData(msgClass.cast(out));
-                                    })
-                                    .compile();
-                        },
-                        /* overwriteOnPopulate = */ false
+                        source -> ruleBuilderFactory
+                                .<ValueEnvelope<CepState, Msg>, ValueEnvelope<CepState, Msg>>createCelRuleBuilder(source)
+                                .withVar("message", CelVarType.DYN, ValueEnvelope::data)
+                                .withVar("cepState", CelVarType.DYN, v ->
+                                        Objects.requireNonNull(v.header(), "ValueEnvelope.header() is null").cepState())
+                                .withResultCoercer((ve, out) -> {
+                                    if (out == null) {
+                                        // Policy: keep original data if rule yields null
+                                        return ve;
+                                    }
+                                    if (!msgClass.isInstance(out)) {
+                                        throw new IllegalArgumentException(
+                                                "CEL result type does not match expected message type. "
+                                                        + "Expected: " + msgClass.getName()
+                                                        + ", got: " + out.getClass().getName());
+                                    }
+                                    return ve.withData(msgClass.cast(out));
+                                })
+                                .compile(),
+                        /* overwriteOnPopulate */ false
                 );
 
+        // Preload deterministically
         var keys = legalKeys(keyToCel);
         for (String key : keys) {
-            ruleCache.populate(key, keyToCel.get(key));
+            String source = Objects.requireNonNull(
+                    keyToCel.get(key),
+                    "No CEL source for key " + key + " Legal values: " + keys
+            );
+            ruleCache.populate(key, source);
         }
         return new CelInlineLogicExecutor<>(ruleCache);
     }

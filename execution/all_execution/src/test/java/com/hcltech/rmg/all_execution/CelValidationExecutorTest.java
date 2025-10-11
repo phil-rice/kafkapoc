@@ -1,0 +1,12 @@
+package com.hcltech.rmg.all_execution;
+
+import com.hcltech.rmg.celcore.CelRuleBuilderFactory;
+import com.hcltech.rmg.celimpl.CelRuleBuilders;
+import com.hcltech.rmg.execution.validation.cel.AbstractCelValidationExecutorTest;
+
+public class CelValidationExecutorTest extends AbstractCelValidationExecutorTest {
+    @Override
+    protected CelRuleBuilderFactory realFactory() {
+        return CelRuleBuilders.newRuleBuilder;
+    }
+}

@@ -4,7 +4,10 @@ import com.hcltech.rmg.celcore.CompiledCelRule;
 import com.hcltech.rmg.celcore.CompiledCelRuleWithDetails;
 import com.hcltech.rmg.common.errorsor.ErrorsOr;
 
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Objects;
+import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.function.Function;
@@ -27,7 +30,11 @@ public final class InMemoryCelRuleCache<Inp, Out>
     @Override
     public CompiledCelRule<Inp, Out> get(String key) {
         var rule = byKey.get(Objects.requireNonNull(key));
-        if (rule == null) throw new CelRuleNotFoundException("No compiled rule for key: " + key);
+        if (rule == null) {
+            List<String> keys = new ArrayList<>(byKey.keySet());
+            keys.sort(String::compareTo);
+            throw new CelRuleNotFoundException("No compiled rule for key: " + key + " Legal keys: " + keys);
+        }
         return rule;
     }
 

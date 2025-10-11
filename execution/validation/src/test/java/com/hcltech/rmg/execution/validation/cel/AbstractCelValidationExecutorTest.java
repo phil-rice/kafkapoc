@@ -1,10 +1,11 @@
-// AbstractCelValidationExecutorContractTest.java
 package com.hcltech.rmg.execution.validation.cel;
 
 import com.hcltech.rmg.celcore.CelRuleBuilder;
 import com.hcltech.rmg.celcore.CelRuleBuilderFactory;
 import com.hcltech.rmg.celcore.CelVarType;
 import com.hcltech.rmg.celcore.CompiledCelRuleWithDetails;
+import com.hcltech.rmg.celcore.cache.CelRuleCache;
+import com.hcltech.rmg.celcore.cache.CelRuleNotFoundException;
 import com.hcltech.rmg.celcore.cache.InMemoryCelRuleCache;
 import com.hcltech.rmg.common.errorsor.ErrorsOr;
 import com.hcltech.rmg.config.validation.CelValidation;
@@ -22,11 +23,9 @@ import static org.junit.jupiter.api.Assertions.*;
  * Contract tests for CelValidationExecutor using REAL builder & cache.
  * Subclass this and implement {@link #realFactory()} to plug in your production factory.
  */
-public abstract class AsbtractCelValidationExecutorTest {
+public abstract class AbstractCelValidationExecutorTest {
 
-    /**
-     * Supply the production factory, e.g. CelRuleBuilders.newRuleBuilder.
-     */
+    /** Supply the production factory, e.g. CelRuleBuilders.newRuleBuilder. */
     protected abstract CelRuleBuilderFactory realFactory();
 
     /* --------------------- Counting wrapper (real builder, just counts) --------------------- */
@@ -38,9 +37,7 @@ public abstract class AsbtractCelValidationExecutorTest {
             this.delegate = Objects.requireNonNull(delegate);
         }
 
-        public int totalCompiles() {
-            return compileCount.get();
-        }
+        public int totalCompiles() { return compileCount.get(); }
 
         @Override
         public <I, O> CelRuleBuilder<I, O> createCelRuleBuilder(String source) {
@@ -51,19 +48,16 @@ public abstract class AsbtractCelValidationExecutorTest {
                     inner.withVar(name, type, getter);
                     return this;
                 }
-
                 @Override
                 public CelRuleBuilder<I, O> withResultCoercer(java.util.function.BiFunction<I, Object, O> coercer) {
                     inner.withResultCoercer(coercer);
                     return this;
                 }
-
                 @Override
                 public CelRuleBuilder<I, O> withActivationFiller(java.util.function.BiConsumer<I, Map<String, Object>> filler) {
                     inner.withActivationFiller(filler);
                     return this;
                 }
-
                 @Override
                 public ErrorsOr<CompiledCelRuleWithDetails<I, O>> compile() {
                     compileCount.incrementAndGet();
@@ -75,41 +69,39 @@ public abstract class AsbtractCelValidationExecutorTest {
 
     /* --------------------- Helpers --------------------- */
 
-    private static List<String> sortedKeys(Map<String, String> m) {
+    private static List<String> sortedKeys(Map<String,String> m) {
         var list = new ArrayList<>(m.keySet());
         list.sort(String::compareTo);
         return list;
     }
 
-    /**
-     * Build executor like production create(), but from a simple key→cel map (no BehaviorConfig needed).
-     */
+    /** Build executor like production create(), but from a simple key→cel map (no BehaviorConfig needed). */
     protected <S, M> CelValidationExecutor<S, M> makeExecutorLikeCreate(
-            CelRuleBuilderFactory factory, Map<String, String> keyToCel) {
+            CelRuleBuilderFactory factory, Map<String,String> keyToCel) {
 
-        var ruleCache = new InMemoryCelRuleCache<>(
-                key -> {
-                    String source = Objects.requireNonNull(
-                            keyToCel.get(key),
-                            "No CEL source for key " + key + " Legal values: " + sortedKeys(keyToCel)
-                    );
-                    return factory.<ValueEnvelope<S, M>, List<String>>createCelRuleBuilder(source)
-                            .withVar("msg", CelVarType.DYN, ValueEnvelope::data)
-                            .withVar("cepState", CelVarType.DYN, v -> v.header().cepState())
-                            .compile();
-                },
-                /* overwriteOnPopulate */ false
-        );
+        var ruleCache =                new InMemoryCelRuleCache<>(
+                        // IMPORTANT: compileFn receives the CEL SOURCE (not the cache key)
+                        source -> factory.<ValueEnvelope<S, M>, List<String>>createCelRuleBuilder(source)
+                                .withVar("msg", CelVarType.DYN, ValueEnvelope::data)
+                                .withVar("cepState", CelVarType.DYN, v -> v.header().cepState())
+                                .compile(),
+                        /* overwriteOnPopulate */ false
+                );
 
-        for (String k : sortedKeys(keyToCel)) {
-            ruleCache.populate(k, keyToCel.get(k));
+        // Preload deterministically (key + source)
+        for (String key : sortedKeys(keyToCel)) {
+            String source = Objects.requireNonNull(
+                    keyToCel.get(key),
+                    "No CEL source for key " + key + " Legal values: " + sortedKeys(keyToCel)
+            );
+            ruleCache.populate(key, source);
         }
         return new CelValidationExecutor<>(ruleCache);
     }
 
     private static <S, M> ValueEnvelope<S, M> envelope(S cepState, M msg) {
         var header = new EnvelopeHeader<>(
-                "domType", "domId", "evt",
+                "domType","domId","evt",
                 /* rawMessage */ null,
                 /* parameters */ null,
                 /* config */ null,
@@ -160,7 +152,7 @@ public abstract class AsbtractCelValidationExecutorTest {
     @DisplayName("preload compiles all keys once")
     void preload_compiles_all_keys_once() {
         var counting = new CountingFactory(realFactory());
-        var map = new LinkedHashMap<String, String>();
+        var map = new LinkedHashMap<String,String>();
         map.put("k2", "['2:' + msg]");
         map.put("k1", "['1:' + msg]");
         map.put("k3", "['3:' + msg]");
@@ -172,18 +164,18 @@ public abstract class AsbtractCelValidationExecutorTest {
 
     @Test
     @DisplayName("missing key throws with sorted legal keys in message")
-    void missing_key_throws_npe_with_sorted_legal_keys_in_message() {
+    void missing_key_throws_CelRuleNotFoundException_with_sorted_legal_keys_in_message() {
         var factory = realFactory();
-        var keyToCel = new LinkedHashMap<String, String>();
+        var keyToCel = new LinkedHashMap<String,String>();
         keyToCel.put("b/key", "['b:' + msg]");
         keyToCel.put("a/key", "['a:' + msg]");
 
         var exec = makeExecutorLikeCreate(factory, keyToCel);
 
-        var ex = assertThrows(NullPointerException.class, () ->
-                exec.execute("z/missing", new CelValidation("x"), envelope("S", "input"))
+        var ex = assertThrows(CelRuleNotFoundException.class, () ->
+                exec.execute("z/missing", new CelValidation("x"), envelope("S","input"))
         );
-        assertTrue(ex.getMessage().contains("No CEL source for key z/missing"));
-        assertTrue(ex.getMessage().contains("Legal values: [a/key, b/key]"));
+
+        assertEquals("No compiled rule for key: z/missing Legal keys: [a/key, b/key]",ex.getMessage());
     }
 }
