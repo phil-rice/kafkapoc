@@ -53,7 +53,7 @@ public final class WoodstoxXmlForMapStringObjectTypeClass implements XmlTypeClas
     }
 
     @Override
-    public ErrorsOr<Map<String, Object>> parseAndValidate(String xml, XMLValidationSchema schema) {
+    public Map<String, Object> parseAndValidate(String xml, XMLValidationSchema schema) throws XmlValidationException {
         XMLStreamReader2 r = null;
         try {
             r = (XMLStreamReader2) FACTORY.get().createXMLStreamReader(new StringReader(xml));
@@ -69,21 +69,22 @@ public final class WoodstoxXmlForMapStringObjectTypeClass implements XmlTypeClas
                 int ev = r.getEventType();
                 switch (ev) {
                     case XMLStreamConstants.START_ELEMENT -> b.onStart(r);
-                    case XMLStreamConstants.CHARACTERS, XMLStreamConstants.CDATA, XMLStreamConstants.SPACE ->
-                            b.onText(r);
+                    case XMLStreamConstants.CHARACTERS, XMLStreamConstants.CDATA, XMLStreamConstants.SPACE -> b.onText(r);
                     case XMLStreamConstants.END_ELEMENT -> b.onEnd(r);
                     default -> { /* ignore */ }
                 }
                 r.next();
             }
-            return ErrorsOr.lift(b.result());
+            return b.result();
+        } catch (XmlValidationException ve) {
+            // bubble up validation failures from ThrowingProblems
+            throw ve;
+        } catch (XMLStreamException e) {
+            throw new XmlValidationException("XML parsing failed: " + e.getMessage(), e);
         } catch (Exception e) {
-            return ErrorsOr.error("Parsing xml " + e);
+            throw new XmlValidationException("Unexpected parsing error: " + e.getMessage(), e);
         } finally {
-            if (r != null) try {
-                r.close();
-            } catch (Exception ignore) {
-            }
+            if (r != null) try { r.close(); } catch (Exception ignore) {}
         }
     }
 
@@ -138,10 +139,7 @@ public final class WoodstoxXmlForMapStringObjectTypeClass implements XmlTypeClas
         } catch (XMLStreamException e) {
             return ErrorsOr.error("XML key extraction failed at path '" + pathStr + "': " + e);
         } finally {
-            if (r != null) try {
-                r.close();
-            } catch (Exception ignore) {
-            }
+            if (r != null) try { r.close(); } catch (Exception ignore) {}
         }
     }
 
@@ -189,9 +187,9 @@ public final class WoodstoxXmlForMapStringObjectTypeClass implements XmlTypeClas
      * Builds a CEL-friendly map in a single pass:
      * - Leaf element (no attrs/children) → plain String (trimmed text)
      * - Non-leaf → Map with:
-     * "attr": {...}        (only if attributes exist)
-     * childName: childVal  (each child)
-     * "text": "..."        (only if mixed content non-blank)
+     *   "attr": {...}        (only if attributes exist)
+     *   childName: childVal  (each child)
+     *   "text": "..."        (only if mixed content non-blank)
      */
     private static final class CelFriendlyStreamingMapBuilder {
         private static final class Node {
@@ -200,9 +198,7 @@ public final class WoodstoxXmlForMapStringObjectTypeClass implements XmlTypeClas
             final Map<String, Object> attrs = new LinkedHashMap<>();
             final Map<String, Object> children = new LinkedHashMap<>();
 
-            Node(String name) {
-                this.name = name;
-            }
+            Node(String name) { this.name = name; }
 
             boolean hasOnlyText() {
                 return attrs.isEmpty() && children.isEmpty();
@@ -212,9 +208,7 @@ public final class WoodstoxXmlForMapStringObjectTypeClass implements XmlTypeClas
         private final Deque<Node> stack = new ArrayDeque<>();
         private final Map<String, Object> result = new LinkedHashMap<>();
 
-        Map<String, Object> result() {
-            return result;
-        }
+        Map<String, Object> result() { return result; }
 
         void onStart(XMLStreamReader2 r) {
             Node n = new Node(r.getLocalName());

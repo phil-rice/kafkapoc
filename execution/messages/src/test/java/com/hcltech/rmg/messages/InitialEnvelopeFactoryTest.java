@@ -10,6 +10,7 @@ import com.hcltech.rmg.config.config.RootConfig;
 import com.hcltech.rmg.parameters.ParameterExtractor;
 import com.hcltech.rmg.parameters.Parameters;
 import com.hcltech.rmg.xml.XmlTypeClass;
+import com.hcltech.rmg.xml.exceptions.XmlValidationException;
 import org.junit.jupiter.api.Test;
 
 import java.io.InputStream;
@@ -49,8 +50,9 @@ class InitialEnvelopeFactoryTest {
         }
 
         @Override
-        public ErrorsOr<Map<String, Object>> parseAndValidate(String xml, Object schema) {
-            return ErrorsOr.lift(parsed);
+        public Map<String, Object> parseAndValidate(String xml, Object schema) {
+            // New API: return value directly (no ErrorsOr)
+            return parsed;
         }
 
         @Override
@@ -75,8 +77,9 @@ class InitialEnvelopeFactoryTest {
         }
 
         @Override
-        public ErrorsOr<Map<String, Object>> parseAndValidate(String xml, Object schema) {
-            return ErrorsOr.error(err);
+        public Map<String, Object> parseAndValidate(String xml, Object schema) {
+            // New API: throw domain exception on failure
+            throw new XmlValidationException(err);
         }
 
         @Override
@@ -264,6 +267,7 @@ class InitialEnvelopeFactoryTest {
         verifyNoInteractions(cepLog);
     }
 
+
     @Test
     void missingConfig_recoversToErrorEnvelope_withEmptyMapPayload() {
         String domainId = "D-MISS-CFG";
@@ -283,13 +287,13 @@ class InitialEnvelopeFactoryTest {
         IDomainTypeExtractor<Map<String, Object>> domainTypeExtractor = message -> "orders";
         Map<String, Config> keyToConfig = Map.of(); // missing config
 
-        // CepEventLog (will be invoked before missing-config check)
+        // CepEventLog should NOT be called because missing config short-circuits before fold
         CepEventLog cepLog = mock(CepEventLog.class);
-        when(cepLog.safeFoldAll(eq(TC), anyMap())).thenReturn(ErrorsOr.lift(new HashMap<>()));
-        Supplier<CepEventLog> cepSupplier = cepSupplierReturning(cepLog);
+        Supplier<CepEventLog> cepSupplier = () -> cepLog;
 
         InitialEnvelopeFactory<Map<String, Object>, Map<String, Object>, Object> sut =
-                new InitialEnvelopeFactory<>(paramEx, TC, nameToSchema, cepSupplier, xml, eventTypeExtractor, domainTypeExtractor, keyToConfig, root);
+                new InitialEnvelopeFactory<>(paramEx, TC, nameToSchema, cepSupplier, xml,
+                        eventTypeExtractor, domainTypeExtractor, keyToConfig, root);
 
         RawMessage raw = mock(RawMessage.class);
         when(raw.rawValue()).thenReturn("<ok/>");
@@ -299,14 +303,19 @@ class InitialEnvelopeFactoryTest {
         assertTrue(env instanceof ErrorEnvelope, "Expected ErrorEnvelope due to missing config");
 
         @SuppressWarnings("unchecked")
-        ErrorEnvelope<Map<String, Object>, Map<String, Object>> ee = (ErrorEnvelope<Map<String, Object>, Map<String, Object>>) env;
+        ErrorEnvelope<Map<String, Object>, Map<String, Object>> ee =
+                (ErrorEnvelope<Map<String, Object>, Map<String, Object>>) env;
 
         ValueEnvelope<Map<String, Object>, Map<String, Object>> inner = ee.valueEnvelope();
-        assertEquals(null, inner.data(), "recover payload should be null");
+        assertNull(inner.data(), "recover payload should be null");
         assertNull(inner.header().eventType());
         assertSame(raw, inner.header().rawMessage());
-        verify(cepLog).safeFoldAll(eq(TC), anyMap());
+
+        // No CEP folding should occur
+        verifyNoInteractions(cepLog);
     }
+
+
 
     @Test
     void nullEventType_recoversToErrorEnvelope_withEmptyMapPayload() {

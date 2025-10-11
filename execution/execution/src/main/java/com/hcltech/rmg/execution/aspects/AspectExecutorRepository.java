@@ -1,7 +1,5 @@
 package com.hcltech.rmg.execution.aspects;
 
-import com.hcltech.rmg.common.HasType;
-import com.hcltech.rmg.common.errorsor.ErrorsOr;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -9,158 +7,105 @@ import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 
 /**
- * Registry for a single aspect. Registers executors keyed by component type.
- * Each call to build(modules, aspect) returns a dispatcher (AspectExecutor) that routes by component.type()
- * against a point-in-time snapshot of current registrations.
+ * Registry keyed by exact runtime component class.
+ * Snapshot semantics: build() freezes current registrations.
  */
-public final class AspectExecutorRepository<Component extends HasType, Inp, Out> {
+public final class AspectExecutorRepository<Component, Inp, Out> {
 
     private static final Logger log = LoggerFactory.getLogger(AspectExecutorRepository.class);
 
-    // Live registry; thread-safe for wiring at startup or runtime.
-    private final Map<String, RegisteredAspectExecutor<Component, Inp, Out>> byType = new ConcurrentHashMap<>();
+    // Live registry; thread-safe. Wildcard value so we can store base-/sub-typed executors.
+    private final Map<Class<?>, AspectExecutor<?, Inp, Out>> byClass = new ConcurrentHashMap<>();
 
-    /**
-     * Register an executor under an exact type name. Duplicate registrations are rejected.
-     */
-    public AspectExecutorRepository<Component, Inp, Out> register(
-            String typeName,
-            RegisteredAspectExecutor<Component, Inp, Out> executor
+    /** Register an executor for an exact component class. Duplicate registrations are rejected. */
+    public <T extends Component> AspectExecutorRepository<Component, Inp, Out> register(
+            Class<T> componentClass,
+            AspectExecutor<? super T, Inp, Out> executor
     ) {
-        Objects.requireNonNull(typeName, "typeName");
+        Objects.requireNonNull(componentClass, "componentClass");
         Objects.requireNonNull(executor, "executor");
-        if (typeName.isEmpty()) {
-            throw new IllegalArgumentException("typeName must not be empty");
+
+        @SuppressWarnings("unchecked")
+        AspectExecutor<?, Inp, Out> stored = (AspectExecutor<?, Inp, Out>) executor;
+
+        var prev = byClass.putIfAbsent(componentClass, stored);
+        if (prev != null) {
+            throw new IllegalStateException("Executor already registered for class '" + componentClass.getName() + "'");
         }
-        final var existing = byType.putIfAbsent(typeName, executor);
-        if (existing != null) {
-            throw new IllegalStateException("Executor already registered for type '" + typeName + "'");
-        }
-        log.info("Registered executor for type='{}'", typeName);
+        log.info("Registered executor for class='{}'", componentClass.getName());
         return this;
     }
 
     /**
-     * Register aliases that point to the same executor. Exact-match keys only.
+     * Build a snapshot dispatcher. Later registrations don’t affect it.
+     * The dispatcher routes by exact runtime class of the component.
      */
-    public AspectExecutorRepository<Component, Inp, Out> alias(String existingType, String... aliases) {
-        Objects.requireNonNull(existingType, "existingType");
-        final var target = byType.get(existingType);
-        if (target == null) {
-            throw new IllegalArgumentException("No executor registered for '" + existingType + "' to alias");
-        }
-        for (String alias : aliases) {
-            Objects.requireNonNull(alias, "alias");
-            if (alias.isEmpty()) {
-                throw new IllegalArgumentException("alias must not be empty");
-            }
-            final var prev = byType.putIfAbsent(alias, target);
-            if (prev != null) {
-                throw new IllegalStateException("Executor already registered for alias '" + alias + "'");
-            }
-            log.info("Registered alias '{}' -> '{}'", alias, existingType);
-        }
-        return this;
+    public AspectExecutor<Component, Inp, Out> build() {
+        final Map<Class<?>, AspectExecutor<?, Inp, Out>> routing =
+                Collections.unmodifiableMap(new HashMap<>(byClass)); // snapshot copy
+
+        log.info("Built dispatcher with {} executor(s): {}",
+                routing.size(), summarize(routing.keySet(), 20));
+
+        return new BuiltDispatcher<>(routing);
     }
 
-    /**
-     * Build a dispatcher bound to the provided modules and aspect.
-     * The returned executor routes by component.type() and returns ErrorsOr<Out>.
-     */
-    public AspectExecutor<Component, Inp, Out> build(List<String> modules, String aspect) {
-        if (aspect == null || aspect.isEmpty()) {
-            throw new IllegalArgumentException("aspect must not be null or empty");
+    /** Inspect what’s registered at the moment (live view). */
+    public Set<Class<?>> getRegisteredTypes() {
+        return Set.copyOf(byClass.keySet());
+    }
+
+    private static String summarize(Collection<Class<?>> keys, int max) {
+        if (keys.isEmpty()) return "[]";
+        if (keys.size() <= max) {
+            var list = new ArrayList<String>(keys.size());
+            for (Class<?> k : keys) list.add(k.getName());
+            return list.toString();
         }
-
-        // Snapshot routing (keep insertion order for nicer logs).
-        final Map<String, RegisteredAspectExecutor<Component, Inp, Out>> routing =
-                Collections.unmodifiableMap(new LinkedHashMap<>(byType));
-
-        final List<String> modulesSnapshot = (modules == null) ? List.of() : List.copyOf(modules);
-        final String aspectSnapshot = aspect;
-
-        log.info("Built dispatcher for aspect='{}' with {} executor(s): {}",
-                aspectSnapshot, routing.size(), summarizeKeys(routing.keySet(), 20));
-
-        return new BuiltAspectExecutor<>(routing, modulesSnapshot, aspectSnapshot);
-    }
-
-    /**
-     * Optional: diagnostic helper for tests/ops.
-     */
-    public Set<String> getRegisteredTypes() {
-        return Set.copyOf(byType.keySet());
-    }
-
-    private static String summarizeKeys(Collection<String> keys, int max) {
-        if (keys.size() <= max) return keys.toString();
-        final var it = keys.iterator();
-        final List<String> first = new ArrayList<>(max);
-        for (int i = 0; i < max && it.hasNext(); i++) first.add(it.next());
+        var it = keys.iterator();
+        var first = new ArrayList<String>(max);
+        for (int i = 0; i < max && it.hasNext(); i++) first.add(it.next().getName());
         return first + " … and " + (keys.size() - max) + " more";
     }
 
-    /**
-     * Private, snapshot-based dispatcher. Only the AspectExecutor interface is exposed to callers.
-     */
-    private static final class BuiltAspectExecutor<Component extends HasType, Inp, Out>
-            implements AspectExecutor<Component, Inp, Out> {
+    /** Snapshot-based dispatcher. */
+    private static final class BuiltDispatcher<Component, Inp, Out> implements AspectExecutor<Component, Inp, Out> {
+        private static final Logger log = LoggerFactory.getLogger(BuiltDispatcher.class);
 
-        private static final Logger log = LoggerFactory.getLogger(BuiltAspectExecutor.class);
+        private final Map<Class<?>, AspectExecutor<?, Inp, Out>> routing;
 
-        private final Map<String, RegisteredAspectExecutor<Component, Inp, Out>> routing;
-        private final List<String> modules;
-        private final String aspect;
-
-        BuiltAspectExecutor(
-                Map<String, RegisteredAspectExecutor<Component, Inp, Out>> routing,
-                List<String> modules,
-                String aspect
-        ) {
+        BuiltDispatcher(Map<Class<?>, AspectExecutor<?, Inp, Out>> routing) {
             this.routing = routing;
-            this.modules = modules;
-            this.aspect = aspect;
         }
 
         @Override
-        public ErrorsOr<Out> execute(String key, Component component, Inp input) {
+        public Out execute(String key, Component component, Inp input) {
             if (component == null) {
-                log.error("Dispatch failed: component is null (aspect='{}', modules={})", aspect, modules);
-                return ErrorsOr.error("Component is null for aspect '" + aspect + "', modules=" + modules);
-            }
-            final String rawType = component.type();
-            if (rawType == null || rawType.isEmpty()) {
-                log.error("Dispatch failed: component.type() is null/empty (aspect='{}', modules={}, componentClass='{}')",
-                        aspect, modules, component.getClass().getName());
-                return ErrorsOr.error("Component type is null/empty for aspect '" + aspect + "', modules=" + modules);
+                log.error("Dispatch failed: component is null (key='{}')", key);
+                throw new NullPointerException("Component is null for key '" + key + "'");
             }
 
-            final var exec = routing.get(rawType);
+            final Class<?> cls = component.getClass();
+            final AspectExecutor<?, Inp, Out> exec = routing.get(cls);
             if (exec == null) {
-                log.error("Unknown component type '{}' (aspect='{}', modules={}). Known types={}",
-                        rawType, aspect, modules, routing.keySet());
-                return ErrorsOr.error(
-                        "Unknown component type '" + rawType + "' for aspect '" + aspect +
-                                "', modules=" + modules + ". Known types: " + routing.keySet()
-                );
+                // Build a small “known classes” list without streams for speed
+                var known = new ArrayList<String>(routing.size());
+                for (Class<?> k : routing.keySet()) known.add(k.getName());
+
+                log.error("Unknown component class '{}' (key='{}'). Known classes={}", cls.getName(), key, known);
+                throw new IllegalStateException("Unknown component class '" + cls.getName()
+                        + "' for key '" + key + "'. Known classes: " + known);
             }
 
             if (log.isDebugEnabled()) {
-                log.debug("Dispatching (aspect='{}', type='{}', modules={}, componentClass='{}')",
-                        aspect, rawType, modules, component.getClass().getName());
+                log.debug("Dispatching key='{}', class='{}'", key, cls.getName());
             }
 
-            try {
-                return exec.execute(key, modules, aspect, component, input);
-            } catch (Exception ex) {
-                // Defensive: registered executors should return ErrorsOr, but protect against throws.
-                log.error("Executor threw (aspect='{}', type='{}', modules={}): {}",
-                        aspect, rawType, modules, ex.toString(), ex);
-                return ErrorsOr.error(
-                        "Executor for type '" + rawType + "' threw: " +
-                                ex.getClass().getSimpleName() + "/" + ex.getMessage()
-                );
-            }
+            // Single, centralized unchecked cast. Safe due to exact-class routing.
+            @SuppressWarnings("unchecked")
+            AspectExecutor<Component, Inp, Out> typed = (AspectExecutor<Component, Inp, Out>) exec;
+
+            return typed.execute(key, component, input);
         }
     }
 }

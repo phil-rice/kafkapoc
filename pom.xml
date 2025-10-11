@@ -22,6 +22,7 @@
 
         <module>common</module>
 
+        <module>execution/all_execution</module>
         <module>execution/bizlogic</module>
         <module>execution/execution</module>
         <module>execution/messages</module>

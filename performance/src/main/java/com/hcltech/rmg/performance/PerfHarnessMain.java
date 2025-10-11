@@ -58,7 +58,7 @@ public final class PerfHarnessMain {
 
         // ---- map to Envelope (Value/Error) ----
         var envelopes = sniff.keyBy(t -> t.f0) // domainId
-                .map(new InitialEnvelopeMapFunction<KafkaConfig, CepState, Msg, Schema>(factoryClass, containerId)).name("to-envelope"); // DataStream<Envelope<CEPState, Map<String,Object>>>
+                .map(new InitialEnvelopeMapFunction<>(factoryClass, containerId)).name("to-envelope"); // DataStream<Envelope<CEPState, Map<String,Object>>>
 
         // ---- async stage (Envelope -> Envelope) ----
         // parallelism and capacity calculation

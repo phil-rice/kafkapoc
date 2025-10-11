@@ -7,6 +7,7 @@ import org.junit.jupiter.api.Test;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -233,4 +234,84 @@ class ErrorsOrTest {
             return allErrors.isEmpty() ? ErrorsOr.lift(List.copyOf(values)) : ErrorsOr.errors(List.copyOf(allErrors));
         }
     }
+
+    @Nested
+    class ThrowingHelpersAndTryWrappers {
+
+        @Test
+        void tryingSupplier_success() {
+            ErrorsOr<String> eo = ErrorsOr.trying(() -> "ok");
+            assertEquals("ok", eo.valueOrThrow());
+        }
+
+        @Test
+        void tryingSupplier_failure() {
+            RuntimeException boom = new RuntimeException("kaput");
+            ErrorsOr<Integer> eo = ErrorsOr.trying(() -> { throw boom; });
+            var errs = eo.errorsOrThrow();
+            assertTrue(String.join(" | ", errs).toLowerCase().contains("kaput"));
+        }
+
+        @Test
+        void tryingSupplier_withCustomFormatter() {
+            ErrorsOr<Integer> eo = ErrorsOr.trying(
+                    () -> { throw new IllegalStateException("bad"); },
+                    ex -> "CUSTOM: " + ex.getClass().getSimpleName() + " / " + ex.getMessage()
+            );
+            var errs = eo.errorsOrThrow();
+            String all = String.join(" | ", errs);
+            assertTrue(all.contains("CUSTOM: IllegalStateException"));
+            assertTrue(all.contains("bad"));
+        }
+
+
+
+        @Test
+        void mapTry_onValue_success() {
+            ErrorsOr<Integer> start = ErrorsOr.lift(10);
+            ErrorsOr<String> out = start.mapTry(n -> "n=" + (n * 2));
+            assertEquals("n=20", out.valueOrThrow());
+        }
+
+        @Test
+        void mapTry_onValue_throws_becomesError() {
+            ErrorsOr<Integer> start = ErrorsOr.lift(10);
+            ErrorsOr<String> out = start.mapTry(n -> { throw new RuntimeException("boom " + n); });
+            var errs = out.errorsOrThrow();
+            String all = String.join(" | ", errs).toLowerCase();
+            assertTrue(all.contains("boom 10"));
+        }
+
+        @Test
+        void mapTry_onError_shortCircuits() {
+            ErrorsOr<Integer> start = ErrorsOr.error("bad");
+            ErrorsOr<String> out = start.mapTry(n -> "n=" + n);
+            assertEquals(List.of("bad"), out.errorsOrThrow());
+        }
+
+        @Test
+        void flatMapTry_onValue_success_value() {
+            ErrorsOr<Integer> start = ErrorsOr.lift(3);
+            ErrorsOr<Integer> out = start.flatMapTry(n -> ErrorsOr.lift(n * 7));
+            assertEquals(21, out.valueOrThrow());
+        }
+
+        @Test
+        void flatMapTry_onValue_throws_becomesError() {
+            ErrorsOr<Integer> start = ErrorsOr.lift(3);
+            ErrorsOr<Integer> out = start.flatMapTry(n -> { throw new IllegalArgumentException("x"+n); });
+            var errs = out.errorsOrThrow();
+            String all = String.join(" | ", errs).toLowerCase();
+            assertTrue(all.contains("illegalargumentexception"));
+            assertTrue(all.contains("x3"));
+        }
+
+        @Test
+        void flatMapTry_onError_shortCircuits() {
+            ErrorsOr<Integer> start = ErrorsOr.errors(List.of("e1", "e2"));
+            ErrorsOr<Integer> out = start.flatMapTry(n -> ErrorsOr.lift(n + 1));
+            assertEquals(List.of("e1", "e2"), out.errorsOrThrow());
+        }
+    }
+
 }

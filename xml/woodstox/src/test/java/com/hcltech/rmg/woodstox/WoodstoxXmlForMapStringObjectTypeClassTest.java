@@ -1,15 +1,15 @@
-// src/test/java/com/hcltech/rmg/xml/WoodstoxXmlTypeClassTest.java
+
 package com.hcltech.rmg.woodstox;
 
+import com.hcltech.rmg.xml.AbstractXmlTypeClassTest;
 import com.hcltech.rmg.xml.exceptions.LoadSchemaException;
 import org.codehaus.stax2.validation.XMLValidationSchema;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
-import com.hcltech.rmg.xml.AbstractXmlTypeClassTest;
 
 import java.nio.charset.StandardCharsets;
 
-import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 /**
  * Woodstox-specific additions to the engine-agnostic tests in AbstractXmlTypeClassTest.

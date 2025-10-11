@@ -11,8 +11,8 @@
         <relativePath>../../pom.xml</relativePath>
     </parent>
 
-    <artifactId>bizlogic</artifactId>
-    <name>bizlogic</name>
+    <artifactId>all_execution</artifactId>
+    <name>all_execution</name>
     <packaging>jar</packaging>
 
     <properties>
@@ -20,6 +20,23 @@
     </properties>
 
     <dependencies>
+        <dependency>
+            <groupId>com.hcltech.rmg</groupId>
+            <artifactId>celimpl</artifactId>
+            <version>${project.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>com.hcltech.rmg</groupId>
+            <artifactId>bizlogic</artifactId>
+            <version>${project.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>com.hcltech.rmg</groupId>
+            <artifactId>bizlogic</artifactId>
+            <version>${project.version}</version>
+            <scope>test</scope>
+            <type>test-jar</type>
+        </dependency>
         <dependency>
             <groupId>com.hcltech.rmg</groupId>
             <artifactId>common</artifactId>
@@ -32,11 +49,6 @@
         </dependency>
         <dependency>
             <groupId>com.hcltech.rmg</groupId>
-            <artifactId>celcore</artifactId>
-            <version>${project.version}</version>
-        </dependency>
-        <dependency>
-            <groupId>com.hcltech.rmg</groupId>
             <artifactId>config</artifactId>
             <version>${project.version}</version>
             <type>test-jar</type>
@@ -44,17 +56,7 @@
         </dependency>
         <dependency>
             <groupId>com.hcltech.rmg</groupId>
-            <artifactId>execution</artifactId>
-            <version>${project.version}</version>
-        </dependency>
-        <dependency>
-            <groupId>com.hcltech.rmg</groupId>
-            <artifactId>messages</artifactId>
-            <version>${project.version}</version>
-        </dependency>
-        <dependency>
-            <groupId>com.hcltech.rmg</groupId>
-            <artifactId>xml</artifactId>
+            <artifactId>consumer</artifactId>
             <version>${project.version}</version>
         </dependency>
         <dependency>

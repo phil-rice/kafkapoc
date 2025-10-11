@@ -1,110 +1,83 @@
+// CelBuilderTest.java
 package com.hcltech.rmg.celimpl;
 
+import com.hcltech.rmg.celcore.CelRuleBuilder;
+import com.hcltech.rmg.celcore.CelVarType;
+import com.hcltech.rmg.celcore.CompiledCelRule;
+import com.hcltech.rmg.celcore.CompiledCelRuleWithDetails;
 import com.hcltech.rmg.common.errorsor.ErrorsOr;
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
-import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
 
 import static org.junit.jupiter.api.Assertions.*;
 
-class CelBuilderTest {
+public class CelBuilderTest {
 
     @Test
-    void compile_ok_without_validators() {
-        var src = """
-      context["user"] == "admin" &&
-      ("amount" in input ? input["amount"] > 100 : false)
-      """;
-        var cel = CelBuilder.celBuilder(src).compile();
+    @DisplayName("compile() success with declared vars; executor runs and returns value")
+    void compileAndExecute_ok() {
+        String src = "domainId == 'A' ? ['routeA'] : (int(data.amount) > 100 ? ['discount'] : [])";
 
-        assertTrue(cel.isValue(), () -> "Compile errors: " + cel.getErrors());
-        var compiled = cel.getValue().get();
-        assertNotNull(compiled.executor());
-        assertNotNull(compiled.usage());
-        assertTrue(compiled.usage().inputPaths().contains("amount"));
-        assertTrue(compiled.usage().contextPaths().contains("user"));
+        CelRuleBuilder<Map<String, ?>, List<String>> b =
+                CelRuleBuilders.newRuleBuilder
+                        .<Map<String, ?>, List<String>>createCelRuleBuilder(src)
+                        .withVar("data", CelVarType.DYN, in -> in) // expose whole input as 'data'
+                        .withVar("domainId", CelVarType.STRING, in -> {
+                            Object dom = in.get("domainId");
+                            return dom != null ? dom : "B";
+                        })
+                        .withResultCoercer((in, o) -> (List<String>) o);
+
+        CompiledCelRule<Map<String, ?>, List<String>> compiled = b.compile().valueOrThrow();
+
+        // domainId != 'A' and amount <= 100 → []
+        assertEquals(List.of(), compiled.executor().execute(Map.of("amount", 50L, "domainId", "B")));
+        // amount > 100 → ['discount']
+        assertEquals(List.of("discount"), compiled.executor().execute(Map.of("amount", 150L, "domainId", "B")));
+        // domainId == 'A' → ['routeA']
+        assertEquals(List.of("routeA"), compiled.executor().execute(Map.of("amount", 10L, "domainId", "A")));
     }
 
     @Test
-    void compile_runs_input_and_context_validators() {
-        var src = "context[\"user\"] == \"admin\" && input[\"order\"][\"total\"] > 0";
+    @DisplayName("withResultCoercer validates and fails when wrong shape is returned")
+    void resultCoercer_validates() {
+        String src = "1 + 1"; // returns a number
 
-        var compiledOr = CelBuilder.celBuilder(src)
-                .validateInput(paths -> {
-                    var allowed = Set.of("order.total");
-                    var errs = new ArrayList<String>();
-                    for (var p : paths) if (!allowed.contains(p)) errs.add("Unknown input path: " + p);
-                    return errs;
-                })
-                .validateContext(paths -> {
-                    var required = Set.of("user");
-                    var errs = new ArrayList<String>();
-                    for (var r : required) if (!paths.contains(r)) errs.add("Missing context path: " + r);
-                    return errs;
-                })
-                .compile();
-
-        assertTrue(compiledOr.isValue(), () -> "Validator errors: " + compiledOr.getErrors());
-    }
-
-    @Test
-    void compile_collects_validator_errors_distinctly() {
-        var src = "context[\"user\"] == \"admin\" && input[\"order\"][\"total\"] > 0";
-
-        var compiledOr = CelBuilder.celBuilder(src)
-                .validateInput(paths -> List.of("bad A", "bad B", "bad A"))
-                .validateContext(paths -> List.of("bad C"))
-                .compile();
-
-        assertTrue(compiledOr.isError(), "Expected errors from validators");
-        var errs = compiledOr.getErrors();
-        assertTrue(errs.contains("bad A"));
-        assertTrue(errs.contains("bad B"));
-        assertTrue(errs.contains("bad C"));
-    }
-
-    @Test
-    void compile_respects_custom_var_names() {
-        var src = "ctx[\"user\"] == \"admin\" && inp[\"amount\"] > 100";
-
-        var compiledOr = CelBuilder
-                .celBuilder(src)
-                .withVarNames("inp", "ctx")
-                .compile();
-
-        assertTrue(compiledOr.isValue(), () -> "Compile errors: " + compiledOr.getErrors());
-        var usage = compiledOr.getValue().get().usage();
-        assertTrue(usage.inputPaths().contains("amount"));
-        assertTrue(usage.contextPaths().contains("user"));
-    }
-
-    @Test
-    void compile_fails_on_bad_cel() {
-        var badSrc = "context[\"user\"] == \"admin\" && input["; // parse error
-        var compiledOr = CelBuilder.celBuilder(badSrc).compile();
-        assertTrue(compiledOr.isError(), "Expected CEL compile error");
-        assertTrue(compiledOr.getErrors().stream().anyMatch(s -> s.toLowerCase().contains("compile")));
-    }
-
-    @Test
-    void result_coercer_applies() {
-        var src = "1 + 1";
-
-        var compiledOr = CelBuilder.celBuilder(src)
-                .withResultCoercer(o -> {
+        var compiled = CelRuleBuilders.newRuleBuilder
+                .<Map<String, ?>, Integer>createCelRuleBuilder(src)
+                .withResultCoercer((in, o) -> {
                     if (o instanceof Number n) return n.intValue();
                     throw new IllegalArgumentException("Expected number");
                 })
-                .compile();
+                .compile()
+                .valueOrThrow();
 
-        assertTrue(compiledOr.isValue(), () -> "Compile errors: " + compiledOr.getErrors());
-        var compiled = compiledOr.getValue().get();
+        assertEquals(2, compiled.executor().execute(Map.of()));
 
-        ErrorsOr<Object> res = compiled.executor().execute(Map.of(), Map.of());
-        assertTrue(res.isValue(), () -> "Eval errors: " + res.getErrors());
-        assertEquals(2, res.getValue().get());
+        // strict coercer that always throws
+        var compiledBad = CelRuleBuilders.newRuleBuilder
+                .<Map<String, ?>, List<String>>createCelRuleBuilder(src)
+                .withResultCoercer((in, o) -> { throw new IllegalArgumentException("Expected list"); })
+                .compile()
+                .valueOrThrow();
+
+        assertThrows(IllegalArgumentException.class, () -> compiledBad.executor().execute(Map.of()));
+    }
+
+    @Test
+    @DisplayName("compile() surfaces CEL compile-time error")
+    void compileError_isSurfaced() {
+        String bad = "data['x'"; // parse error
+        ErrorsOr<CompiledCelRuleWithDetails<Map<String, ?>, Object>> compiled =
+                CelRuleBuilders.newRuleBuilder
+                        .<Map<String, ?>, Object>createCelRuleBuilder(bad)
+                        .compile();
+
+        assertTrue(compiled.isError(), "Expected compile error");
+        String all = String.join(" | ", compiled.errorsOrThrow()).toLowerCase();
+        assertTrue(all.contains("compile") || all.contains("validate"), all);
     }
 }

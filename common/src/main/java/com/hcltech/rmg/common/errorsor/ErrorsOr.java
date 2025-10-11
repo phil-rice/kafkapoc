@@ -1,5 +1,9 @@
 package com.hcltech.rmg.common.errorsor;
 
+import com.hcltech.rmg.common.function.ThrowingFunction;
+import com.hcltech.rmg.common.function.ThrowingRunnable;
+import com.hcltech.rmg.common.function.ThrowingSupplier;
+
 import java.text.MessageFormat;
 import java.util.*;
 import java.util.function.*;
@@ -80,5 +84,44 @@ public interface ErrorsOr<T> {
 
     default void ifError(Consumer<? super List<String>> consumer) {
         if (isError()) consumer.accept(getErrors());
+    }
+
+    /** Wrap a throwing supplier -> ErrorsOr. */
+    static <T> ErrorsOr<T> trying(ThrowingSupplier<T> body) {
+        try {
+            return ErrorsOr.lift(body.get());
+        } catch (Exception e) {
+            return ErrorsOr.error("Evaluation error: {0}: {1}", e);
+        }
+    }
+
+    /** Wrap a throwing supplier with a custom formatter (no alloc if happy path). */
+    static <T> ErrorsOr<T> trying(ThrowingSupplier<T> body, java.util.function.Function<Exception,String> toMsg) {
+        try {
+            return ErrorsOr.lift(body.get());
+        } catch (Exception e) {
+            return ErrorsOr.error(toMsg.apply(e));
+        }
+    }
+
+
+    /** Map + try: apply f to value (which may throw). */
+    default <U> ErrorsOr<U> mapTry(ThrowingFunction<? super T, ? extends U> f) {
+        if (isError()) return ErrorsOr.errors(getErrors());
+        try {
+            return ErrorsOr.lift(f.apply(getValue().get()));
+        } catch (Exception e) {
+            return ErrorsOr.error("Evaluation error: {0}: {1}", e);
+        }
+    }
+
+    /** FlatMap + try: apply f returning ErrorsOr, where f may throw. */
+    default <U> ErrorsOr<U> flatMapTry(ThrowingFunction<? super T, ErrorsOr<U>> f) {
+        if (isError()) return ErrorsOr.errors(getErrors());
+        try {
+            return f.apply(getValue().get());
+        } catch (Exception e) {
+            return ErrorsOr.error("Evaluation error: {0}: {1}", e);
+        }
     }
 }

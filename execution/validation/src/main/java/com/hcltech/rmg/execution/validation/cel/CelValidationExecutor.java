@@ -1,33 +1,34 @@
 package com.hcltech.rmg.execution.validation.cel;
 
-import com.hcltech.rmg.celcore.RuleBuilderFactory;
-import com.hcltech.rmg.celcore.cache.InMemoryRuleCache;
-import com.hcltech.rmg.celcore.cache.RuleCache;
-import com.hcltech.rmg.common.errorsor.ErrorsOr;
+
+import com.hcltech.rmg.celcore.CelRuleBuilderFactory;
+import com.hcltech.rmg.celcore.CelVarType;
+import com.hcltech.rmg.celcore.cache.CelRuleCache;
+import com.hcltech.rmg.celcore.cache.InMemoryCelRuleCache;
 import com.hcltech.rmg.config.config.BehaviorConfig;
 import com.hcltech.rmg.config.config.BehaviorConfigVisitor;
 import com.hcltech.rmg.config.config.BehaviorConfigWalker;
 import com.hcltech.rmg.config.validation.CelValidation;
-import com.hcltech.rmg.execution.aspects.RegisteredAspectExecutor;
+import com.hcltech.rmg.execution.aspects.AspectExecutor;
+import com.hcltech.rmg.messages.ValueEnvelope;
 
 import java.util.*;
 
-public class CelValidationExecutor<Inp> implements RegisteredAspectExecutor<CelValidation, Inp, List<String>> {
+public class CelValidationExecutor<CepState, Msg> implements AspectExecutor<CelValidation, ValueEnvelope<CepState, Msg>, List<String>> {
 
-    private final RuleCache<Inp, List<String>> ruleCache;
-    private final Map<String, Object> context;
 
-    public CelValidationExecutor(RuleCache<Inp, List<String>> ruleCache, Map<String, Object> context) {
-        this.ruleCache = ruleCache;
-        this.context = context;
+    private final CelRuleCache<ValueEnvelope<CepState, Msg>, List<String>> ruleCache;
+
+    public CelValidationExecutor(CelRuleCache<ValueEnvelope<CepState, Msg>, List<String>> ruleCache) {
+        this.ruleCache = Objects.requireNonNull(ruleCache, "CelRuleCache is required");
     }
 
     @Override
-    public ErrorsOr<List<String>> execute(String key, List<String> modules, String aspect, CelValidation celValidation, Inp input) {
-        return ruleCache.get(key).flatMap(r -> r.executor().execute(input, context));
+    public List<String> execute(String key, CelValidation celValidation, ValueEnvelope<CepState, Msg> input) {
+        return ruleCache.get(key).executor().execute(input);
     }
 
-    public static <Inp> CelValidationExecutor<Inp> create(RuleBuilderFactory ruleBuilderFactory, BehaviorConfig config) {
+    public static <CepState, Msg> CelValidationExecutor<CepState, Msg> create(CelRuleBuilderFactory ruleBuilderFactory, BehaviorConfig config) {
         var keyToCel = new HashMap<String, String>();
 
         BehaviorConfigWalker.walk(config, new BehaviorConfigVisitor() {
@@ -38,15 +39,21 @@ public class CelValidationExecutor<Inp> implements RegisteredAspectExecutor<CelV
             }
         });
 
-        RuleCache<Inp, List<String>> ruleCache =
-                new InMemoryRuleCache<Inp, List<String>>(
-                        key -> {
-                            String source = Objects.requireNonNull(keyToCel.get(key), "No CEL source for key " + key + " Legal values: " + legalKeys(keyToCel));
-                            return ruleBuilderFactory.<Inp, List<String>>newRuleBuilder(source).compile();
-                        }
-                ).preloadWith(legalKeys(keyToCel));
+        var ruleCache = new InMemoryCelRuleCache<>(
+                key -> {
+                    String source = Objects.requireNonNull(keyToCel.get(key), "No CEL source for key " + key + " Legal values: " + legalKeys(keyToCel));
+                    return ruleBuilderFactory.<ValueEnvelope<CepState, Msg>, List<String>>createCelRuleBuilder(source).
+                            withVar("msg", CelVarType.DYN, v -> v.data()).
+                            withVar("cepState", CelVarType.DYN, v -> v.header().cepState())
+                            .compile();
+                }, false
+        );
+        var keys = legalKeys(keyToCel);
+        for (String key : keys) {
+            ruleCache.populate(key, keyToCel.get(key));
+        }
 
-        return new CelValidationExecutor<>(ruleCache, Map.of());
+        return new CelValidationExecutor<>(ruleCache);
     }
 
     private static List<String> legalKeys(HashMap<String, String> keyToCel) {

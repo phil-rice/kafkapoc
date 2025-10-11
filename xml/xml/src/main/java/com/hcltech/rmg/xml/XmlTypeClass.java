@@ -1,6 +1,7 @@
 package com.hcltech.rmg.xml;
 
 import com.hcltech.rmg.common.errorsor.ErrorsOr;
+import com.hcltech.rmg.xml.exceptions.XmlValidationException;
 
 import java.io.InputStream;
 import java.util.LinkedHashMap;
@@ -10,14 +11,17 @@ import java.util.Map;
 public interface XmlTypeClass<Result, Schema> extends KeyExtractor {
     Schema loadSchema(String schemaName, InputStream schemaStream);
 
-    ErrorsOr<Result> parseAndValidate(String xml, Schema schema);
+    /**
+     * Fast path: no monadic boxing; throw on validation failure.
+     */
+    Result parseAndValidate(String xml, Schema schema) throws XmlValidationException;
 
     // ---------- helpers: classpath schema loading (monadic) ----------
 
     /**
      * Load a single optional schema; returns empty map if name is null/blank.
      */
-    static <S> ErrorsOr<Map<String, S>> loadOptionalSchema(XmlTypeClass<Map<String, Object>, S> tc, String schemaName) {
+    static <S> ErrorsOr<Map<String, S>> loadOptionalSchema(XmlTypeClass<?, S> tc, String schemaName) {
         if (schemaName == null || schemaName.isBlank()) {
             return ErrorsOr.lift(Map.of());
         }
@@ -29,7 +33,8 @@ public interface XmlTypeClass<Result, Schema> extends KeyExtractor {
             S schema = tc.loadSchema(schemaName, in);
             return ErrorsOr.lift(Map.of(schemaName, schema));
         } catch (Exception e) {
-            return ErrorsOr.error("Failed to load schema {0}: {1}", e);
+            // fixed formatting: include schemaName + exception message
+            return ErrorsOr.error("Failed to load schema '" + schemaName + "': " + e.getMessage());
         }
     }
 

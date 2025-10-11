@@ -78,6 +78,21 @@
                 </configuration>
             </plugin>
 
+            <!-- PRODUCE tests.jar for the xml module -->
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-jar-plugin</artifactId>
+                <!-- version comes from parent pluginManagement -->
+                <executions>
+                    <execution>
+                        <id>attach-tests</id>
+                        <goals>
+                            <goal>test-jar</goal>
+                        </goals>
+                    </execution>
+                </executions>
+            </plugin>
         </plugins>
     </build>
+
 </project>
