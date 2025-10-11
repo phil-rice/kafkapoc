@@ -3,6 +3,9 @@ package com.hcltech.rmg.performance;
 import com.hcltech.rmg.appcontainer.impl.AppContainerFactoryForMapStringObject;
 import com.hcltech.rmg.appcontainer.interfaces.AppContainer;
 import com.hcltech.rmg.appcontainer.interfaces.IAppContainerFactory;
+import com.hcltech.rmg.config.loader.BehaviorConfigLoader;
+import com.hcltech.rmg.config.loader.ConfigsBuilder;
+import com.hcltech.rmg.config.loader.RootConfigLoader;
 import com.hcltech.rmg.flinkadapters.InitialEnvelopeMapFunction;
 import com.hcltech.rmg.flinkadapters.KeySniffAndClassify;
 import com.hcltech.rmg.kafka.KafkaSourceForFlink;
@@ -91,6 +94,9 @@ public final class PerfHarnessMain {
     // Example main wiring
     public static void main(String[] args) throws Exception {
         final String containerId = System.getProperty("app.container", "prod");
+        var rootConfig = RootConfigLoader.fromClasspath("config/root-prod.json").valueOrThrow();
+        var behaviorConfig = ConfigsBuilder.buildFromClasspath(rootConfig, ConfigsBuilder::defaultKeyFn, ConfigsBuilder.defaultResourceFn("config/prod/"),PerfHarnessMain.class.getClassLoader());
+        System.out.println("Using root config: " + rootConfig);
         var appContainer = AppContainerFactoryForMapStringObject.resolve(containerId).valueOrThrow();
         final int lanes = 1200;
 

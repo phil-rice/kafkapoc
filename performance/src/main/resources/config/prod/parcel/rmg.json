@@ -1,5 +1,12 @@
 {
   "events": {
-    "test-event": { }
+    "test-event": {
+      "bizlogic": {
+        "notification": {
+          "type": "cel",
+          "cel": "[]"
+        }
+      }
+    }
   }
 }

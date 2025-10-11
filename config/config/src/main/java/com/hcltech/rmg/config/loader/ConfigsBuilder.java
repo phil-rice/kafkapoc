@@ -13,15 +13,23 @@ import java.util.function.Function;
 
 /**
  * Builds {@link Configs} by:
- *  - permuting the parameter space in {@code root.parameterConfig()}
- *  - mapping each permutation to a key (keyFn)
- *  - mapping each permutation to a classpath resource (resourceFn)
- *  - loading BehaviorConfig JSON and pairing it with RootConfig's shared fields
- *
+ * - permuting the parameter space in {@code root.parameterConfig()}
+ * - mapping each permutation to a key (keyFn)
+ * - mapping each permutation to a classpath resource (resourceFn)
+ * - loading BehaviorConfig JSON and pairing it with RootConfig's shared fields
+ * <p>
  * Assumes {@link RootConfig} is already validated (via RootConfigLoader).
  * This class only reports problems related to key/resource functions and resource loading.
  */
 public interface ConfigsBuilder {
+
+    static String defaultKeyFn(List<String> values) {
+        return String.join(":", values);
+    }
+
+    static Function<List<String>, String> defaultResourceFn(String prefix) {
+        return list -> prefix + String.join("/", list) + ".json";
+    }
 
     static ErrorsOr<Configs> buildFromClasspath(
             RootConfig root,

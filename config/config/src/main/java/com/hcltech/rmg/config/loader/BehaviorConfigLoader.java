@@ -1,12 +1,13 @@
 package com.hcltech.rmg.config.loader;
 
-import com.fasterxml.jackson.core.json.JsonReadFeature;
+import com.fasterxml.jackson.core.JsonParser;
+import com.fasterxml.jackson.core.StreamReadFeature;
 import com.fasterxml.jackson.databind.DeserializationFeature;
-import com.fasterxml.jackson.databind.MapperFeature;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.ObjectReader;
 import com.hcltech.rmg.config.config.BehaviorConfig;
-
+import com.fasterxml.jackson.core.StreamReadFeature;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.io.InputStream;
@@ -17,7 +18,12 @@ import java.nio.file.Path;
 import static com.hcltech.rmg.config.loader.BaseConfigLoader.base;
 
 public interface BehaviorConfigLoader {
-
+    static ObjectMapper newMapper() {
+        ObjectMapper m = new ObjectMapper();
+        m.getFactory().configure(JsonParser.Feature.INCLUDE_SOURCE_IN_LOCATION, true);
+        m.disable(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES);
+        return m;
+    }
     /* ------------ Cached Jackson instances (thread-safe) ------------ */
     ObjectMapper JSON = base(new ObjectMapper());
     ObjectReader CONFIG_READER = JSON.readerFor(BehaviorConfig.class);
