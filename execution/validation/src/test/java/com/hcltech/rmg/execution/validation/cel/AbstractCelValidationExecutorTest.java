@@ -4,7 +4,6 @@ import com.hcltech.rmg.celcore.CelRuleBuilder;
 import com.hcltech.rmg.celcore.CelRuleBuilderFactory;
 import com.hcltech.rmg.celcore.CelVarType;
 import com.hcltech.rmg.celcore.CompiledCelRuleWithDetails;
-import com.hcltech.rmg.celcore.cache.CelRuleCache;
 import com.hcltech.rmg.celcore.cache.CelRuleNotFoundException;
 import com.hcltech.rmg.celcore.cache.InMemoryCelRuleCache;
 import com.hcltech.rmg.common.errorsor.ErrorsOr;
@@ -17,7 +16,8 @@ import org.junit.jupiter.api.Test;
 import java.util.*;
 import java.util.concurrent.atomic.AtomicInteger;
 
-import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 /**
  * Contract tests for CelValidationExecutor using REAL builder & cache.
