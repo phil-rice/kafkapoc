@@ -6,7 +6,7 @@
 
     <parent>
         <groupId>com.hcltech.rmg</groupId>
-        <artifactId>kafka-basic-multi-module</artifactId>
+        <artifactId>hcltech-rmg-poc</artifactId>
         <version>1.0.0-SNAPSHOT</version>
         <relativePath>../../pom.xml</relativePath>
     </parent>
@@ -33,11 +33,6 @@
         <dependency>
             <groupId>com.hcltech.rmg</groupId>
             <artifactId>woodstox</artifactId>
-            <version>${project.version}</version>
-        </dependency>
-        <dependency>
-            <groupId>com.hcltech.rmg</groupId>
-            <artifactId>consumer</artifactId>
             <version>${project.version}</version>
         </dependency>
         <dependency>
@@ -78,7 +73,6 @@
     </dependencies>
 
     <build>
-        <finalName>kafka-consumer-app</finalName>
         <plugins>
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>

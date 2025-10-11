@@ -4,11 +4,11 @@
     <modelVersion>4.0.0</modelVersion>
 
     <groupId>com.hcltech.rmg</groupId>
-    <artifactId>kafka-basic-multi-module</artifactId>
+    <artifactId>hcltech-rmg-poc</artifactId>
     <version>1.0.0-SNAPSHOT</version>
     <packaging>pom</packaging>
     <name>Kafka Basic Multi-Module</name>
-    <description>Simple Kafka consumer (no Streams) with multi-module Maven layout.</description>
+    <description>POC for Kafka</description>
 
     <modules>
         <module>appcontainer/interfaces</module>
@@ -30,14 +30,12 @@
         <module>execution/validation</module>
 
         <module>flink/interfaces</module>
-        <module>flink/domainpipeline</module>
         <module>flink/flinkadapter</module>
 
         <module>optics</module>
         <module>performance</module>
         <module>kafka/kafkaconfig</module>
         <module>kafka/kafka</module>
-        <module>kafkaconsumer</module>
         <module>tools-producer</module>
         <module>xml/xml</module>
         <module>xml/woodstox</module>

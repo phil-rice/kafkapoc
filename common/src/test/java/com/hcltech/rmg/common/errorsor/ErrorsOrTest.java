@@ -7,7 +7,6 @@ import org.junit.jupiter.api.Test;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
-import java.util.concurrent.atomic.AtomicBoolean;
 
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -247,7 +246,9 @@ class ErrorsOrTest {
         @Test
         void tryingSupplier_failure() {
             RuntimeException boom = new RuntimeException("kaput");
-            ErrorsOr<Integer> eo = ErrorsOr.trying(() -> { throw boom; });
+            ErrorsOr<Integer> eo = ErrorsOr.trying(() -> {
+                throw boom;
+            });
             var errs = eo.errorsOrThrow();
             assertTrue(String.join(" | ", errs).toLowerCase().contains("kaput"));
         }
@@ -255,7 +256,9 @@ class ErrorsOrTest {
         @Test
         void tryingSupplier_withCustomFormatter() {
             ErrorsOr<Integer> eo = ErrorsOr.trying(
-                    () -> { throw new IllegalStateException("bad"); },
+                    () -> {
+                        throw new IllegalStateException("bad");
+                    },
                     ex -> "CUSTOM: " + ex.getClass().getSimpleName() + " / " + ex.getMessage()
             );
             var errs = eo.errorsOrThrow();
@@ -263,7 +266,6 @@ class ErrorsOrTest {
             assertTrue(all.contains("CUSTOM: IllegalStateException"));
             assertTrue(all.contains("bad"));
         }
-
 
 
         @Test
@@ -276,7 +278,9 @@ class ErrorsOrTest {
         @Test
         void mapTry_onValue_throws_becomesError() {
             ErrorsOr<Integer> start = ErrorsOr.lift(10);
-            ErrorsOr<String> out = start.mapTry(n -> { throw new RuntimeException("boom " + n); });
+            ErrorsOr<String> out = start.mapTry(n -> {
+                throw new RuntimeException("boom " + n);
+            });
             var errs = out.errorsOrThrow();
             String all = String.join(" | ", errs).toLowerCase();
             assertTrue(all.contains("boom 10"));
@@ -299,7 +303,9 @@ class ErrorsOrTest {
         @Test
         void flatMapTry_onValue_throws_becomesError() {
             ErrorsOr<Integer> start = ErrorsOr.lift(3);
-            ErrorsOr<Integer> out = start.flatMapTry(n -> { throw new IllegalArgumentException("x"+n); });
+            ErrorsOr<Integer> out = start.flatMapTry(n -> {
+                throw new IllegalArgumentException("x" + n);
+            });
             var errs = out.errorsOrThrow();
             String all = String.join(" | ", errs).toLowerCase();
             assertTrue(all.contains("illegalargumentexception"));
@@ -312,6 +318,46 @@ class ErrorsOrTest {
             ErrorsOr<Integer> out = start.flatMapTry(n -> ErrorsOr.lift(n + 1));
             assertEquals(List.of("e1", "e2"), out.errorsOrThrow());
         }
+    }
+
+    @Test
+    void recover_applies_function_on_error_and_returns_value() {
+        ErrorsOr<String> err = ErrorsOr.errors(List.of("e1", "e2"));
+        ErrorsOr<String> recovered = err.recover(es -> "fixed:" + String.join("|", es));
+        assertTrue(recovered.isValue());
+        assertEquals("fixed:e1|e2", recovered.valueOrThrow());
+    }
+
+    @Test
+    void recover_on_value_is_noop_and_does_not_invoke_function() {
+        ErrorsOr<Integer> val = ErrorsOr.lift(123);
+        java.util.concurrent.atomic.AtomicBoolean called = new java.util.concurrent.atomic.AtomicBoolean(false);
+
+        ErrorsOr<Integer> same = val.recover(es -> {
+            called.set(true);
+            return -1; // should not run
+        });
+
+        assertSame(val, same, "recover() on value should return the same instance");
+        assertFalse(called.get(), "recover() must not invoke the function when already a value");
+        assertEquals(123, same.valueOrThrow());
+    }
+
+    @Test
+    void trying_with_custom_formatter_success_path_does_not_call_formatter() {
+        java.util.concurrent.atomic.AtomicBoolean formatterCalled = new java.util.concurrent.atomic.AtomicBoolean(false);
+
+        ErrorsOr<String> ok = ErrorsOr.trying(
+                () -> "ok",
+                ex -> {
+                    formatterCalled.set(true);
+                    return "SHOULD_NOT_BE_USED";
+                }
+        );
+
+        assertTrue(ok.isValue());
+        assertEquals("ok", ok.valueOrThrow());
+        assertFalse(formatterCalled.get(), "Formatter must not be called on success");
     }
 
 }

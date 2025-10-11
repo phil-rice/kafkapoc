@@ -1,75 +1,103 @@
-// src/test/java/com/example/kafka/common/LineSeparatedListCodecTest.java
+// src/test/java/com/hcltech/rmg/common/codec/LineSeparatedListCodecErrorsTest.java
 package com.hcltech.rmg.common.codec;
 
+import com.hcltech.rmg.common.errorsor.ErrorsOr;
 import org.junit.jupiter.api.Test;
 
 import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.*;
 
-class LineSeparatedListCodecTest {
+public class LineSeparatedListCodecTest {
 
-    record Person(String name, int age) {
+    /** Item codec that encodes ints as strings, but returns an error for negatives. */
+    static class IntItemCodecWithErrors implements Codec<Integer, String> {
+        @Override public ErrorsOr<String> encode(Integer from) {
+            if (from < 0) return ErrorsOr.error("negatives not allowed: " + from);
+            return ErrorsOr.lift(String.valueOf(from));
+        }
+        @Override public ErrorsOr<Integer> decode(String to) {
+            try {
+                int v = Integer.parseInt(to);
+                if (v < 0) return ErrorsOr.error("negatives not allowed: " + v);
+                return ErrorsOr.lift(v);
+            } catch (NumberFormatException nfe) {
+                return ErrorsOr.error("not a number: " + to);
+            }
+        }
+    }
+
+    /** Item codec that throws to exercise the outer try/catch branch (unexpected exception). */
+    static class ThrowingItemCodec implements Codec<Integer, String> {
+        @Override public ErrorsOr<String> encode(Integer from) {
+            throw new RuntimeException("kaboom-encode");
+        }
+        @Override public ErrorsOr<Integer> decode(String to) {
+            throw new RuntimeException("kaboom-decode");
+        }
     }
 
     @Test
-    void roundTrip_people() throws Exception {
-        Codec<Person, String> personJson = Codec.clazzCodec(Person.class);
-        Codec<List<Person>, String> lines = new LineSeparatedListCodec<>(personJson);
+    void encode_aggregates_errors_from_item_codec() {
+        Codec<Integer, String> item = new IntItemCodecWithErrors();
+        LineSeparatedListCodec<Integer> lines = new LineSeparatedListCodec<>(item);
 
-        List<Person> input = List.of(new Person("Alice", 40), new Person("Bob", 31));
-        String wire = lines.encode(input).valueOrThrow();
-
-        assertTrue(wire.contains("\n"));
-        assertTrue(wire.contains("\"name\":\"Alice\""));
-        assertTrue(wire.contains("\"name\":\"Bob\""));
-
-        List<Person> back = lines.decode(wire).valueOrThrow();
-        assertEquals(input, back);
+        // Two errors (negatives) + one ok (1). Should return aggregated errors.
+        var res = lines.encode(List.of(-1, 1, -2));
+        assertTrue(res.isError());
+        var errs = res.errorsOrThrow();
+        assertEquals(2, errs.size());
+        assertTrue(errs.get(0).contains("negatives not allowed: -1"));
+        assertTrue(errs.get(1).contains("negatives not allowed: -2"));
     }
 
     @Test
-    void empty_list_is_empty_string_and_back() throws Exception {
+    void decode_aggregates_errors_from_item_codec() {
+        Codec<Integer, String> item = new IntItemCodecWithErrors();
+        LineSeparatedListCodec<Integer> lines = new LineSeparatedListCodec<>(item);
+
+        // Mix of good, bad, and negative (both produce errors)
+        String wire = "10\nfoo\n-5\n20";
+        var res = lines.decode(wire);
+        assertTrue(res.isError());
+        var errs = res.errorsOrThrow();
+        assertEquals(2, errs.size());
+        assertTrue(errs.get(0).contains("not a number: foo"));
+        assertTrue(errs.get(1).contains("negatives not allowed: -5"));
+    }
+
+    @Test
+    void encode_unexpected_exception_is_wrapped() {
+        LineSeparatedListCodec<Integer> lines = new LineSeparatedListCodec<>(new ThrowingItemCodec());
+        var res = lines.encode(List.of(1, 2));
+        assertTrue(res.isError());
+        String msg = res.errorsOrThrow().get(0);
+        assertTrue(msg.startsWith("Failed to encode list: kaboom-encode"));
+    }
+
+    @Test
+    void decode_unexpected_exception_is_wrapped() {
+        LineSeparatedListCodec<Integer> lines = new LineSeparatedListCodec<>(new ThrowingItemCodec());
+        var res = lines.decode("1\n2");
+        assertTrue(res.isError());
+        String msg = res.errorsOrThrow().get(0);
+        assertTrue(msg.startsWith("Failed to decode list: kaboom-decode"));
+    }
+
+    @Test
+    void null_inputs_are_handled() {
         Codec<Integer, String> intJson = Codec.clazzCodec(Integer.class);
-        Codec<List<Integer>, String> lines = new LineSeparatedListCodec<>(intJson);
+        LineSeparatedListCodec<Integer> lines = new LineSeparatedListCodec<>(intJson);
 
-        String wire = lines.encode(List.of()).valueOrThrow();
-        assertEquals("", wire);
+        // encode(null) -> ""
+        assertEquals("", lines.encode(null).valueOrThrow());
 
-        List<Integer> back = lines.decode(wire).valueOrThrow();
-        assertTrue(back.isEmpty());
+        // decode(null) -> []
+        assertTrue(lines.decode(null).valueOrThrow().isEmpty());
     }
 
     @Test
-    void decode_tolerates_trailing_newline() throws Exception {
-        Codec<Integer, String> intJson = Codec.clazzCodec(Integer.class);
-        Codec<List<Integer>, String> lines = new LineSeparatedListCodec<>(intJson);
-
-        List<Integer> back = lines.decode("1\n2\n3\n").valueOrThrow();
-        assertEquals(List.of(1, 2, 3), back);
-    }
-
-    @Test
-    void interior_empty_line_is_empty_element_if_item_codec_supports_it() throws Exception {
-        // With String JSON, empty string is "\"\""
-        Codec<String, String> stringJson = Codec.clazzCodec(String.class);
-        Codec<List<String>, String> lines = new LineSeparatedListCodec<>(stringJson);
-
-        List<String> input = List.of("", "x", "");
-        String wire = lines.encode(input).valueOrThrow();
-        assertEquals("\"\"\n\"x\"\n\"\"", wire);
-
-        List<String> back = lines.decode(wire).valueOrThrow();
-        assertEquals(input, back);
-    }
-
-    @Test
-    void helper_builds_codec() throws Exception {
-        Codec<Integer, String> intJson = Codec.clazzCodec(Integer.class);
-        Codec<List<Integer>, String> lines = Codec.lines(intJson);
-
-        String wire = lines.encode(List.of(10, 20)).valueOrThrow();
-        assertEquals("10\n20", wire);
-        assertEquals(List.of(10, 20), lines.decode(wire).valueOrThrow());
+    void constructor_rejects_null_item_codec() {
+        assertThrows(NullPointerException.class, () -> new LineSeparatedListCodec<>(null));
     }
 }

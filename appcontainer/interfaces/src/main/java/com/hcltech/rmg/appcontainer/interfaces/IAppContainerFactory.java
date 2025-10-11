@@ -1,6 +1,5 @@
 package com.hcltech.rmg.appcontainer.interfaces;
 
-import com.hcltech.rmg.cepstate.CepState;
 import com.hcltech.rmg.common.errorsor.ErrorsOr;
 
 import java.util.concurrent.ConcurrentHashMap;

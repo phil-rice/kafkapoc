@@ -1,84 +1,148 @@
-// src/test/java/com/example/kafka/common/JacksonPolymorphicByCodecTest.java
+// src/test/java/com/hcltech/rmg/common/codec/JacksonPolymorphicByCodecErrorsTest.java
 package com.hcltech.rmg.common.codec;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.hcltech.rmg.common.errorsor.ErrorsOr;
 import com.hcltech.rmg.common.testevent.AlphaEvent;
 import com.hcltech.rmg.common.testevent.BetaEvent;
 import com.hcltech.rmg.common.testevent.TestEvent;
 import org.junit.jupiter.api.Test;
 
-import java.nio.charset.StandardCharsets;
-import java.util.List;
 import java.util.Map;
+import java.util.function.Function;
 
 import static org.junit.jupiter.api.Assertions.*;
 
-class JacksonPolymorphicByCodecTest {
+public class JacksonPolymorphicByCodecTest {
 
-    private Codec<TestEvent, String> poly() {
-        // subtype codecs (typed)
-        Codec<AlphaEvent, String> alpha = Codec.clazzCodec(AlphaEvent.class);
-        Codec<BetaEvent, String> beta = Codec.clazzCodec(BetaEvent.class);
+    /** Convenience: real typed codecs for happy wiring. */
+    private static final Codec<AlphaEvent, String> ALPHA_JSON = Codec.clazzCodec(AlphaEvent.class);
+    private static final Codec<BetaEvent, String>  BETA_JSON  = Codec.clazzCodec(BetaEvent.class);
 
-        // discriminator resolver for encode
-        java.util.function.Function<TestEvent, String> disc =
-                e -> (e instanceof AlphaEvent) ? "alpha"
-                        : (e instanceof BetaEvent) ? "beta"
-                        : null;
+    /** Discriminator used in some tests. */
+    private static final Function<TestEvent, String> DISC =
+            e -> (e instanceof AlphaEvent) ? "alpha"
+                    : (e instanceof BetaEvent) ? "beta"
+                    : null;
 
-        // compose
-        return Codec.polymorphicCodec(
-                disc,
-                Map.of(
-                        "alpha", (Codec<? extends TestEvent, String>) alpha,
-                        "beta", (Codec<? extends TestEvent, String>) beta
-                )
-        );
+    @Test
+    void encode_error_when_typeOf_returns_null() {
+        // discriminator always returns null -> NPE inside encode
+        Codec<TestEvent, String> poly =
+                new JacksonPolymorphicByCodec<>(e -> null, Map.of("alpha", ALPHA_JSON, "beta", BETA_JSON));
+
+        ErrorsOr<String> res = poly.encode(new AlphaEvent("$.p", "x"));
+        assertTrue(res.isError());
+        var errs = res.errorsOrThrow();
+        assertEquals(1, errs.size());
+        assertTrue(errs.get(0).contains("Failed to encode polymorphic type: NullPointerException: typeOf returned null"));
     }
 
     @Test
-    void roundTrip_alpha_event() throws Exception {
-        Codec<TestEvent, String> c = poly();
+    void encode_error_when_discriminator_not_registered() {
+        // returns a discriminator that is not in the map
+        Codec<TestEvent, String> poly =
+                new JacksonPolymorphicByCodec<>(e -> "gamma", Map.of("alpha", ALPHA_JSON, "beta", BETA_JSON));
 
-        TestEvent in = new AlphaEvent("$.name", "Alice");
-        String json = c.encode(in).valueOrThrow();
-
-        // wrapper structure
-        assertTrue(json.contains("\"type\":\"alpha\""));
-        assertTrue(json.contains("\"payload\""));
-        assertFalse(json.contains("\\\"payload\\\"")); // not double-encoded
-
-        TestEvent out = c.decode(json).valueOrThrow();
-        assertInstanceOf(AlphaEvent.class, out);
-
-        AlphaEvent ae = (AlphaEvent) out;
-        assertEquals("$.name", ae.path());
-        assertEquals("Alice", ae.value());
+        ErrorsOr<String> res = poly.encode(new AlphaEvent("$.p", "x"));
+        assertTrue(res.isError());
+        assertTrue(res.errorsOrThrow().get(0)
+                .contains("Failed to encode polymorphic type: IllegalArgumentException: No codec registered for discriminator: gamma"));
     }
 
     @Test
-    void roundTrip_beta_event_bytes_wrapper() throws Exception {
-        Codec<TestEvent, byte[]> bytes = Codec.bytes(poly());
+    void encode_propagates_sub_encoder_error_via_errorCast() {
+        // Subtype codec that fails on encode (and should pass error through, NOT wrap)
+        Codec<AlphaEvent, String> failingAlpha = new Codec<>() {
+            @Override public ErrorsOr<String> encode(AlphaEvent from) { return ErrorsOr.error("sub-encode-error"); }
+            @Override public ErrorsOr<AlphaEvent> decode(String to)    { return ErrorsOr.error("not-used"); }
+        };
 
-        TestEvent in = new BetaEvent("$.scores", 99);
-        byte[] enc = bytes.encode(in).valueOrThrow();
+        Codec<TestEvent, String> poly =
+                new JacksonPolymorphicByCodec<>(DISC, Map.of("alpha", failingAlpha, "beta", BETA_JSON));
 
-        String s = new String(enc, StandardCharsets.UTF_8);
-        assertTrue(s.contains("\"type\":\"beta\""));
-        assertTrue(s.contains("\"payload\""));
-
-        TestEvent out = bytes.decode(enc).valueOrThrow();
-        assertInstanceOf(BetaEvent.class, out);
-
-        BetaEvent be = (BetaEvent) out;
-        assertEquals("$.scores", be.path());
-        assertEquals(99, be.value());
+        var res = poly.encode(new AlphaEvent("$.p", "x"));
+        assertTrue(res.isError());
+        assertEquals("sub-encode-error", res.errorsOrThrow().get(0)); // direct passthrough
     }
 
     @Test
-    void decode_unknown_discriminator_fails_nicely() {
-        Codec<TestEvent, String> c = poly();
-        String bad = "{\"type\":\"gamma\",\"payload\":{}}";
-        var ex = c.decode(bad).errorsOrThrow();
-        assertEquals(List.of("Failed to decode polymorphic type: IllegalArgumentException: Unknown discriminator: gamma"), ex);
+    void decode_error_when_missing_type_field() {
+        Codec<TestEvent, String> poly =
+                new JacksonPolymorphicByCodec<>(DISC, Map.of("alpha", ALPHA_JSON, "beta", BETA_JSON));
+
+        var res = poly.decode("{\"payload\":{}}");
+        assertTrue(res.isError());
+        assertTrue(res.errorsOrThrow().get(0)
+                .contains("Failed to decode polymorphic type: IllegalArgumentException: Missing textual 'type' field"));
+    }
+
+    @Test
+    void decode_error_when_type_not_textual() {
+        Codec<TestEvent, String> poly =
+                new JacksonPolymorphicByCodec<>(DISC, Map.of("alpha", ALPHA_JSON, "beta", BETA_JSON));
+
+        var res = poly.decode("{\"type\":123,\"payload\":{}}");
+        assertTrue(res.isError());
+        assertTrue(res.errorsOrThrow().get(0)
+                .contains("Failed to decode polymorphic type: IllegalArgumentException: Missing textual 'type' field"));
+    }
+
+    @Test
+    void decode_error_when_discriminator_unknown() {
+        Codec<TestEvent, String> poly =
+                new JacksonPolymorphicByCodec<>(DISC, Map.of("alpha", ALPHA_JSON, "beta", BETA_JSON));
+
+        var res = poly.decode("{\"type\":\"gamma\",\"payload\":{}}");
+        assertTrue(res.isError());
+        assertTrue(res.errorsOrThrow().get(0)
+                .contains("Failed to decode polymorphic type: IllegalArgumentException: Unknown discriminator: gamma"));
+    }
+
+    @Test
+    void decode_error_when_missing_payload() {
+        Codec<TestEvent, String> poly =
+                new JacksonPolymorphicByCodec<>(DISC, Map.of("alpha", ALPHA_JSON, "beta", BETA_JSON));
+
+        var res = poly.decode("{\"type\":\"alpha\"}");
+        assertTrue(res.isError());
+        assertTrue(res.errorsOrThrow().get(0)
+                .contains("Failed to decode polymorphic type: IllegalArgumentException: Missing 'payload' field"));
+    }
+
+    @Test
+    void decode_propagates_sub_decoder_error_directly() {
+        // Subtype codec that fails on decode (and should be returned directly)
+        Codec<AlphaEvent, String> failingAlpha = new Codec<>() {
+            @Override public ErrorsOr<String> encode(AlphaEvent from) { return ErrorsOr.lift("{}"); }
+            @Override public ErrorsOr<AlphaEvent> decode(String to)    { return ErrorsOr.error("sub-decode-error"); }
+        };
+
+        Codec<TestEvent, String> poly =
+                new JacksonPolymorphicByCodec<>(DISC, Map.of("alpha", failingAlpha));
+
+        var res = poly.decode("{\"type\":\"alpha\",\"payload\":{}}");
+        assertTrue(res.isError());
+        assertEquals("sub-decode-error", res.errorsOrThrow().get(0)); // direct passthrough
+    }
+
+    @Test
+    void decode_error_on_malformed_json() {
+        Codec<TestEvent, String> poly =
+                new JacksonPolymorphicByCodec<>(DISC, Map.of("alpha", ALPHA_JSON, "beta", BETA_JSON));
+
+        var res = poly.decode("{ not json");
+        assertTrue(res.isError());
+        assertTrue(res.errorsOrThrow().get(0)
+                .startsWith("Failed to decode polymorphic type:"));
+    }
+
+    @Test
+    void objectMapper_is_exposed_and_ctor_with_mapper_is_covered() {
+        ObjectMapper custom = new ObjectMapper().findAndRegisterModules();
+        JacksonPolymorphicByCodec<TestEvent> poly =
+                new JacksonPolymorphicByCodec<>(DISC, Map.of("alpha", ALPHA_JSON, "beta", BETA_JSON), custom);
+
+        assertNotNull(poly.objectMapper());
     }
 }

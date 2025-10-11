@@ -5,8 +5,9 @@ import com.hcltech.rmg.celcore.CelRuleBuilderFactory;
 import com.hcltech.rmg.celcore.CelVarType;
 import com.hcltech.rmg.celcore.CompiledCelRuleWithDetails;
 import com.hcltech.rmg.celcore.cache.CelRuleNotFoundException;
-import com.hcltech.rmg.celcore.cache.InMemoryCelRuleCache;
 import com.hcltech.rmg.common.errorsor.ErrorsOr;
+import com.hcltech.rmg.config.aspect.AspectMap;
+import com.hcltech.rmg.config.config.BehaviorConfig;
 import com.hcltech.rmg.config.validation.CelValidation;
 import com.hcltech.rmg.messages.EnvelopeHeader;
 import com.hcltech.rmg.messages.ValueEnvelope;
@@ -16,28 +17,33 @@ import org.junit.jupiter.api.Test;
 import java.util.*;
 import java.util.concurrent.atomic.AtomicInteger;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.*;
 
 /**
- * Contract tests for CelValidationExecutor using REAL builder & cache.
- * Subclass this and implement {@link #realFactory()} to plug in your production factory.
+ * Hexagonal, abstract contract tests for {@link CelValidationExecutor}.
+ * Subclasses must supply the production {@link CelRuleBuilderFactory} via {@link #realFactory()}.
+ *
+ * These tests ONLY call {@link CelValidationExecutor#create(CelRuleBuilderFactory, BehaviorConfig)}
+ * and execute rules via {@link CelValidationExecutor#execute(String, CelValidation, ValueEnvelope)}.
  */
 public abstract class AbstractCelValidationExecutorTest {
 
-    /** Supply the production factory, e.g. CelRuleBuilders.newRuleBuilder. */
+    /** Provide your production factory here (e.g., CelRuleBuilders.newRuleBuilderFactory()). */
     protected abstract CelRuleBuilderFactory realFactory();
 
-    /* --------------------- Counting wrapper (real builder, just counts) --------------------- */
+    /**
+     * Wrapper around the real factory that counts how many times {@code compile()} is called.
+     * Used to assert one-time pre-compilation and caching semantics — no test doubles of rules themselves.
+     */
     protected static final class CountingFactory implements CelRuleBuilderFactory {
         private final CelRuleBuilderFactory delegate;
-        private final AtomicInteger compileCount = new AtomicInteger();
+        private final AtomicInteger compiles = new AtomicInteger();
 
         public CountingFactory(CelRuleBuilderFactory delegate) {
             this.delegate = Objects.requireNonNull(delegate);
         }
 
-        public int totalCompiles() { return compileCount.get(); }
+        public int totalCompiles() { return compiles.get(); }
 
         @Override
         public <I, O> CelRuleBuilder<I, O> createCelRuleBuilder(String source) {
@@ -60,122 +66,126 @@ public abstract class AbstractCelValidationExecutorTest {
                 }
                 @Override
                 public ErrorsOr<CompiledCelRuleWithDetails<I, O>> compile() {
-                    compileCount.incrementAndGet();
+                    compiles.incrementAndGet();
                     return inner.compile();
                 }
             };
         }
     }
 
-    /* --------------------- Helpers --------------------- */
-
-    private static List<String> sortedKeys(Map<String,String> m) {
-        var list = new ArrayList<>(m.keySet());
-        list.sort(String::compareTo);
-        return list;
-    }
-
-    /** Build executor like production create(), but from a simple key→cel map (no BehaviorConfig needed). */
-    protected <S, M> CelValidationExecutor<S, M> makeExecutorLikeCreate(
-            CelRuleBuilderFactory factory, Map<String,String> keyToCel) {
-
-        var ruleCache =                new InMemoryCelRuleCache<>(
-                        // IMPORTANT: compileFn receives the CEL SOURCE (not the cache key)
-                        source -> factory.<ValueEnvelope<S, M>, List<String>>createCelRuleBuilder(source)
-                                .withVar("msg", CelVarType.DYN, ValueEnvelope::data)
-                                .withVar("cepState", CelVarType.DYN, v -> v.header().cepState())
-                                .compile(),
-                        /* overwriteOnPopulate */ false
-                );
-
-        // Preload deterministically (key + source)
-        for (String key : sortedKeys(keyToCel)) {
-            String source = Objects.requireNonNull(
-                    keyToCel.get(key),
-                    "No CEL source for key " + key + " Legal values: " + sortedKeys(keyToCel)
-            );
-            ruleCache.populate(key, source);
-        }
-        return new CelValidationExecutor<>(ruleCache);
-    }
-
-    private static <S, M> ValueEnvelope<S, M> envelope(S cepState, M msg) {
+    /** Build a real ValueEnvelope with a real EnvelopeHeader (unused fields kept null deliberately). */
+    protected static <S, M> ValueEnvelope<S, M> env(S cepState, M msg) {
         var header = new EnvelopeHeader<>(
-                "domType","domId","evt",
-                /* rawMessage */ null,
-                /* parameters */ null,
-                /* config */ null,
-                cepState
+                "domType",
+                "domId",
+                "evt",          // eventType (executor exposes only msg + cepState vars)
+                null,           // rawMessage
+                null,           // parameters
+                null,           // config
+                cepState        // cepState variable bound in executor
         );
         return new ValueEnvelope<>(header, msg, List.of());
     }
 
-    /* --------------------- Tests --------------------- */
+    // ---------------------------------------------------------------------
+    // create(...) CONTRACT TESTS (only real executor via static factory)
+    // ---------------------------------------------------------------------
 
     @Test
-    @DisplayName("execute runs compiled rule and returns value")
-    void execute_runs_compiled_rule_and_returns_value() {
-        var factory = realFactory();
-        String cel = "['executed:' + msg]"; // real CEL
-        var exec = makeExecutorLikeCreate(factory, Map.of("mod:validation:eventA", cel));
-
-        var out = exec.execute("mod:validation:eventA", new CelValidation("IGNORED"), envelope("S", "input"));
-        assertEquals(List.of("executed:input"), out);
-    }
-
-    @Test
-    @DisplayName("runtime CEL ignored; compile snapshot by key")
-    void runtime_cel_is_ignored_compilation_is_by_key_snapshot() {
-        var factory = realFactory();
-        var exec = makeExecutorLikeCreate(factory, Map.of("k", "['SNAP:' + msg]"));
-
-        var out = exec.execute("k", new CelValidation("DIFFERENT AT RUNTIME"), envelope("S", "x"));
-        assertEquals(List.of("SNAP:x"), out);
-    }
-
-    @Test
-    @DisplayName("caches one compile per key across multiple executes")
-    void caches_one_compile_per_key_across_multiple_executes() {
+    @DisplayName("create(...): preloads one compile per discovered key; execute runs compiled rules")
+    void create_preloads_and_executes_from_behavior_config() {
         var counting = new CountingFactory(realFactory());
-        String src = "['X:' + msg]";
-        var exec = makeExecutorLikeCreate(counting, Map.of("k", src));
 
-        var r1 = exec.execute("k", new CelValidation("ignored"), envelope("S", "a"));
-        var r2 = exec.execute("k", new CelValidation("ignored"), envelope("S", "b"));
+        // BehaviorConfig with two events and one validation module each.
+        var orderEvt = new AspectMap(
+                Map.of("orderMod", new CelValidation("['ORD:' + msg]")),
+                Map.of(), Map.of(), Map.of()
+        );
+        var invoiceEvt = new AspectMap(
+                Map.of("invoiceMod", new CelValidation("['INV:' + msg]")),
+                Map.of(), Map.of(), Map.of()
+        );
+        var cfg = new BehaviorConfig(new LinkedHashMap<>(Map.of(
+                "orderCreated", orderEvt,
+                "invoicePosted", invoiceEvt
+        )));
+
+        CelValidationExecutor<String, String> exec = CelValidationExecutor.create(counting, cfg);
+
+        // Preload once per key
+        assertEquals(2, counting.totalCompiles(), "Expected one compile per derived key");
+
+        String k1 = BehaviorConfig.configKey("orderMod", BehaviorConfig.validationAspectName, "orderCreated");
+        String k2 = BehaviorConfig.configKey("invoiceMod", BehaviorConfig.validationAspectName, "invoicePosted");
+
+        var r1 = exec.execute(k1, new CelValidation("IGNORED_AT_RUNTIME"), env("CEP", "abc"));
+        var r2 = exec.execute(k2, new CelValidation("IGNORED_AT_RUNTIME"), env("CEP", "xyz"));
+
+        assertEquals(List.of("ORD:abc"), r1);
+        assertEquals(List.of("INV:xyz"), r2);
+    }
+
+    @Test
+    @DisplayName("create(...): key format = module:validation:event")
+    void create_uses_expected_key_format() {
+        var counting = new CountingFactory(realFactory());
+
+        var evt = new AspectMap(
+                Map.of("modA", new CelValidation("['A:' + msg]")),
+                Map.of(), Map.of(), Map.of()
+        );
+        var cfg = new BehaviorConfig(Map.of("eventX", evt));
+
+        CelValidationExecutor<String, String> exec = CelValidationExecutor.create(counting, cfg);
+
+        String expectedKey = BehaviorConfig.configKey("modA", BehaviorConfig.validationAspectName, "eventX");
+        var out = exec.execute(expectedKey, new CelValidation("ignored"), env("S", "in"));
+        assertEquals(List.of("A:in"), out);
+    }
+
+    @Test
+    @DisplayName("create(...): repeated execute on same key does not recompile")
+    void create_caches_one_compile_per_key_across_multiple_executes() {
+        var counting = new CountingFactory(realFactory());
+
+        var evt = new AspectMap(
+                Map.of("kmod", new CelValidation("['X:' + msg]")),
+                Map.of(), Map.of(), Map.of()
+        );
+        var cfg = new BehaviorConfig(Map.of("evt", evt));
+
+        CelValidationExecutor<String, String> exec = CelValidationExecutor.create(counting, cfg);
+
+        // Preload should have compiled exactly 1 rule
+        assertEquals(1, counting.totalCompiles(), "One compile expected during preload");
+
+        String k = BehaviorConfig.configKey("kmod", BehaviorConfig.validationAspectName, "evt");
+        var r1 = exec.execute(k, new CelValidation("ignored"), env("S", "a"));
+        var r2 = exec.execute(k, new CelValidation("ignored"), env("S", "b"));
 
         assertEquals(List.of("X:a"), r1);
         assertEquals(List.of("X:b"), r2);
-        assertEquals(1, counting.totalCompiles(), "one compile for the key");
+
+        // Still exactly one compile (compile-once, execute-many)
+        assertEquals(1, counting.totalCompiles(), "No recompile on repeated execute");
     }
 
     @Test
-    @DisplayName("preload compiles all keys once")
-    void preload_compiles_all_keys_once() {
+    @DisplayName("create(...): no validation rules → no compiles; executing unknown key throws")
+    void create_with_no_rules_compiles_nothing_and_throws_on_unknown_key() {
         var counting = new CountingFactory(realFactory());
-        var map = new LinkedHashMap<String,String>();
-        map.put("k2", "['2:' + msg]");
-        map.put("k1", "['1:' + msg]");
-        map.put("k3", "['3:' + msg]");
 
-        makeExecutorLikeCreate(counting, map); // preload happens here
+        var noVal = new AspectMap(Map.of(), Map.of(), Map.of(), Map.of());
+        var cfg = new BehaviorConfig(Map.of("evt", noVal));
 
-        assertEquals(3, counting.totalCompiles());
-    }
+        CelValidationExecutor<String, String> exec = CelValidationExecutor.create(counting, cfg);
+        assertEquals(0, counting.totalCompiles(), "No validation rules → no compiles");
 
-    @Test
-    @DisplayName("missing key throws with sorted legal keys in message")
-    void missing_key_throws_CelRuleNotFoundException_with_sorted_legal_keys_in_message() {
-        var factory = realFactory();
-        var keyToCel = new LinkedHashMap<String,String>();
-        keyToCel.put("b/key", "['b:' + msg]");
-        keyToCel.put("a/key", "['a:' + msg]");
-
-        var exec = makeExecutorLikeCreate(factory, keyToCel);
-
-        var ex = assertThrows(CelRuleNotFoundException.class, () ->
-                exec.execute("z/missing", new CelValidation("x"), envelope("S","input"))
+        var ex = assertThrows(
+                CelRuleNotFoundException.class,
+                () -> exec.execute("unknown:key", new CelValidation("x"), env("S", "msg"))
         );
-
-        assertEquals("No compiled rule for key: z/missing Legal keys: [a/key, b/key]",ex.getMessage());
+        assertTrue(ex.getMessage().startsWith("No compiled rule for key:"),
+                "Should indicate missing compiled key, got: " + ex.getMessage());
     }
 }

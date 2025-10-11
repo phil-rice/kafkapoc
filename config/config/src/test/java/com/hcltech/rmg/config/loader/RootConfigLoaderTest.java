@@ -200,4 +200,82 @@ class RootConfigLoaderTest {
                 () -> "Got: " + errs
         );
     }
+    @Test
+    void fromClasspath_uses_fallback_when_provided_classloader_returns_null() {
+        String path = "RootConfigLoaderTest/valid-root.json";
+
+        // CL that never finds anything
+        ClassLoader nullCL = new ClassLoader(null) {
+            @Override public InputStream getResourceAsStream(String name) { return null; }
+        };
+
+        ErrorsOr<RootConfig> eo = RootConfigLoader.fromClasspath(path, nullCL);
+        assertTrue(eo.isValue(), () -> "Expected fallback classloader to find resource, got: " + eo.getErrors());
+
+        RootConfig rc = eo.valueOrThrow();
+        assertNotNull(rc.parameterConfig());
+        assertEquals("schemas/config.xsd", rc.xmlSchemaPath());
+    }
+
+    @Test
+    void strictJson_returns_cached_objectmapper_instance() {
+        assertSame(RootConfigLoader.JSON, RootConfigLoader.strictJson());
+    }
+    @Test
+    void minimal_single_parameter_config_parses_and_validates() {
+        String json = """
+        {
+          "xmlSchemaPath":"schemas/min.xsd",
+          "parameterConfig": {
+            "parameters":[ { "legalValue":["x"], "defaultValue":"x", "description":"only" } ]
+          }
+        }
+        """;
+        ErrorsOr<RootConfig> eo = RootConfigLoader.fromJson(json);
+        assertTrue(eo.isValue(), () -> "Expected value but got: " + eo.getErrors());
+
+        RootConfig rc = eo.valueOrThrow();
+        assertEquals("schemas/min.xsd", rc.xmlSchemaPath());
+        assertEquals(1, rc.parameterConfig().parameters().size());
+    }
+    @Test
+    void json_literal_null_yields_rootconfig_is_null_error() {
+        ErrorsOr<RootConfig> eo = RootConfigLoader.fromJson("null"); // Jackson -> rc == null
+        assertTrue(eo.isError());
+        assertTrue(
+                eo.errorsOrThrow().stream().anyMatch(m -> m.equals("RootConfig is null")),
+                "Expected 'RootConfig is null' but got: " + eo.errorsOrThrow()
+        );
+    }
+
+    @Test
+    void fromClasspath_wraps_loader_exceptions_with_path() {
+        String path = "RootConfigLoaderTest/valid-root.json";
+
+        // ClassLoader that THROWS (exercises outer catch in fromClasspath)
+        ClassLoader throwingCL = new ClassLoader(null) {
+            @Override public InputStream getResourceAsStream(String name) {
+                throw new RuntimeException("boom-loader");
+            }
+        };
+
+        ErrorsOr<RootConfig> eo = RootConfigLoader.fromClasspath(path, throwingCL);
+        assertTrue(eo.isError());
+
+        String msg = String.join(" | ", eo.errorsOrThrow());
+        assertTrue(msg.contains("Failed to load RootConfig from classpath '" + path + "':"),
+                "Should prefix with path. Got: " + msg);
+        assertTrue(msg.contains("RuntimeException: boom-loader"),
+                "Should include thrown exception. Got: " + msg);
+    }
+
+    @Test
+    void fromJson_with_null_inputstream_reports_parse_error() {
+        ErrorsOr<RootConfig> eo = RootConfigLoader.fromJson((InputStream) null);
+        assertTrue(eo.isError());
+        String msg = String.join(" | ", eo.errorsOrThrow()).toLowerCase();
+        assertTrue(msg.contains("failed to parse rootconfig"), "Got: " + msg);
+    }
+
+
 }

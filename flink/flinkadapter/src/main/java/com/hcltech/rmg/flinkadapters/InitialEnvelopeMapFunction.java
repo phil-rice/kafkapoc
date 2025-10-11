@@ -19,7 +19,7 @@ import java.util.function.Supplier;
  * <p>
  * All error paths are wrapped as ErrorEnvelope by the factory (via recover()).
  */
-public final class InitialEnvelopeMapFunction<MSC, CepState, Msg, Schema> extends RichMapFunction<Tuple2<String, RawMessage>, Envelope<CepState, Msg>> {
+public class InitialEnvelopeMapFunction<MSC, CepState, Msg, Schema> extends RichMapFunction<Tuple2<String, RawMessage>, Envelope<CepState, Msg>> {
 
     private final Class<IAppContainerFactory<MSC, CepState, Msg, Schema>> factoryClass;
     private final String containerId;

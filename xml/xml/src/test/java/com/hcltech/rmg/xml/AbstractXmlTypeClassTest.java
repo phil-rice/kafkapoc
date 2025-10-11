@@ -277,4 +277,82 @@ public abstract class AbstractXmlTypeClassTest<S> {
 
         assertTrue(id.isError(), "Expected error for empty id element");
     }
+
+    // -----------------------------
+// XmlTypeClass helper tests (classpath schema loading)
+// -----------------------------
+
+    @Test
+    @DisplayName("loadOptionalSchema: null/blank → empty map")
+    void loadOptionalSchema_null_or_blank_returns_empty() {
+        var e1 = XmlTypeClass.loadOptionalSchema(eng, null);
+        var e2 = XmlTypeClass.loadOptionalSchema(eng, "   ");
+        assertTrue(e1.isValue() && e1.valueOrThrow().isEmpty());
+        assertTrue(e2.isValue() && e2.valueOrThrow().isEmpty());
+    }
+
+    @Test
+    @DisplayName("loadOptionalSchema: not found → error with path")
+    void loadOptionalSchema_not_found_returns_error() {
+        String missing = resourcePrefix() + "nope-does-not-exist.xsd";
+        var eo = XmlTypeClass.loadOptionalSchema(eng, missing);
+        assertTrue(eo.isError());
+        assertTrue(eo.errorsOrThrow().get(0).contains("Schema resource not found on classpath: " + missing));
+    }
+
+    @Test
+    @DisplayName("loadOptionalSchema: success → single-entry map {name→schema}")
+    void loadOptionalSchema_success_returns_singleton() {
+        String name = resourcePrefix() + "a.xsd";
+        var eo = XmlTypeClass.loadOptionalSchema(eng, name);
+        assertTrue(eo.isValue(), () -> "Load failed: " + eo.getErrors());
+        var m = eo.valueOrThrow();
+        assertEquals(1, m.size());
+        assertTrue(m.containsKey(name));
+        assertNotNull(m.get(name));
+    }
+    @Test
+    @DisplayName("loadSchemas: mixed list → collects all errors (blank, missing, duplicate)")
+    void loadSchemas_mixed_collects_errors() {
+        String ok = resourcePrefix() + "a.xsd";
+        String missing = resourcePrefix() + "missing.xsd";
+
+        var names = java.util.Arrays.asList(
+                null,          // blank → error
+                "   ",         // blank → error
+                ok,            // first OK
+                missing,       // not found → error
+                ok             // duplicate → error
+        );
+
+        var eo = XmlTypeClass.loadSchemas(eng, names);
+        assertTrue(eo.isError(), () -> "Expected errors but got value: " + eo.valueOrThrow());
+
+        var errs = eo.errorsOrThrow();
+        assertTrue(errs.stream().anyMatch(s -> s.equals("Schema name must be non-empty")),
+                "Should report blank name");
+        assertTrue(errs.stream().anyMatch(s -> s.contains("Schema resource not found on classpath: " + missing)),
+                "Should report missing resource");
+        assertTrue(errs.stream().anyMatch(s -> s.equals("Duplicate schema name: " + ok)),
+                "Should report duplicate schema name");
+    }
+
+    @Test
+    @DisplayName("loadSchemas: all OK → returns immutable copy map in input order")
+    void loadSchemas_success_returns_map() {
+        String a = resourcePrefix() + "a.xsd";
+        String b = resourcePrefix() + "b.xsd";
+        var eo = XmlTypeClass.loadSchemas(eng, List.of(a, b));
+        assertTrue(eo.isValue(), () -> "Schema load failed: " + eo.getErrors());
+
+        Map<String, ?> m = eo.valueOrThrow();
+        assertEquals(2, m.size());
+        assertTrue(m.containsKey(a) && m.containsKey(b));
+        assertNotNull(m.get(a));
+        assertNotNull(m.get(b));
+
+        // Map.copyOf(...) should make it unmodifiable
+        assertThrows(UnsupportedOperationException.class, () -> m.put("x", null));
+    }
+
 }

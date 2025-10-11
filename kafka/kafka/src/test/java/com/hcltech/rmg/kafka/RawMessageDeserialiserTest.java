@@ -175,10 +175,92 @@ final class RawMessageDeserialiserTest {
         );
     }
 
+
+    @Test
+    @DisplayName("open(): test-only ctor keeps injected services (no container lookup)")
+    void open_is_noop_when_services_injected() {
+        // deterministic clock + UUIDs so we can assert traceparent precisely
+        ITimeService clock = () -> FIXED_NOW;
+        IUuidGenerator uuid = new IUuidGenerator() {
+            private int i = 0;
+            @Override public String generate() {
+                return (i++ == 0)
+                        ? "123e4567-e89b-12d3-a456-426614174000" // traceId (32 hex after strip/pad)
+                        : "abcdefab-cdef-abcd-efab-cdefabcdefab"; // parentId (16 hex after strip/pad)
+            }
+        };
+
+        var deser = new RawMessageDeserialiser(clock, uuid);
+
+        // This should NO-OP (early return) and NOT touch AppContainerFactory...
+        deser.open(null);
+
+        var rec = buildRecord(TOPIC, PARTITION, OFFSET, BROKER_TS, null, "{\"z\":9}", new RecordHeaders());
+        var out = new CaptureCollector<RawMessage>();
+        deser.deserialize(rec, out);
+
+        assertEquals(1, out.items.size());
+        RawMessage msg = out.items.get(0);
+
+        // Still using injected services after open()
+        assertEquals(FIXED_NOW, msg.processingTimestamp());
+        assertEquals("00-123e4567e89b12d3a456426614174000-abcdefabcdefabcd-01", msg.traceparent());
+    }
+
     /** Minimal in-memory Collector. */
     private static final class CaptureCollector<T> implements Collector<T> {
         final List<T> items = new ArrayList<>();
         @Override public void collect(T record) { items.add(record); }
         @Override public void close() {}
     }
+
+    @Test
+    @DisplayName("synthesizeTraceparent: pads too-short UUID hex to 32/16")
+    void synthesizeTraceparent_pads_short_hex() {
+        // First call -> traceId ("abc"), second call -> parentId ("def")
+        IUuidGenerator shortGen = new IUuidGenerator() {
+            private int i = 0;
+            @Override public String generate() { return (i++ == 0) ? "abc" : "def"; }
+        };
+        ITimeService clock = () -> FIXED_NOW;
+
+        var deser = new RawMessageDeserialiser(clock, shortGen);
+        var rec = buildRecord(TOPIC, PARTITION, OFFSET, BROKER_TS, null, "v", new RecordHeaders());
+        var out = new CaptureCollector<RawMessage>();
+        deser.deserialize(rec, out);
+
+        assertEquals(1, out.items.size());
+        var tp = out.items.get(0).traceparent();
+
+        String pad32 = "abc" + "0".repeat(32 - "abc".length());  // right-pad to 32
+        String pad16 = "def" + "0".repeat(16 - "def".length());  // right-pad to 16
+        assertEquals("00-" + pad32 + "-" + pad16 + "-01", tp);
+    }
+
+    @Test
+    @DisplayName("synthesizeTraceparent: truncates too-long UUID hex to 32/16")
+    void synthesizeTraceparent_truncates_long_hex() {
+        // 40-hex chars (will be truncated to first 32), and 22-hex (to first 16)
+        String long32ish = ("0123456789abcdef0123456789abcdef01234567").toLowerCase(); // 40
+        String long16ish = ("abcdef0123456789abcdef").toLowerCase();                     // 22
+
+        IUuidGenerator longGen = new IUuidGenerator() {
+            private int i = 0;
+            @Override public String generate() { return (i++ == 0) ? long32ish : long16ish; }
+        };
+        ITimeService clock = () -> FIXED_NOW;
+
+        var deser = new RawMessageDeserialiser(clock, longGen);
+        var rec = buildRecord(TOPIC, PARTITION, OFFSET, BROKER_TS, null, "v", new RecordHeaders());
+        var out = new CaptureCollector<RawMessage>();
+        deser.deserialize(rec, out);
+
+        assertEquals(1, out.items.size());
+        var tp = out.items.get(0).traceparent();
+
+        String cut32 = long32ish.substring(0, 32);
+        String cut16 = long16ish.substring(0, 16);
+        assertEquals("00-" + cut32 + "-" + cut16 + "-01", tp);
+    }
+
 }

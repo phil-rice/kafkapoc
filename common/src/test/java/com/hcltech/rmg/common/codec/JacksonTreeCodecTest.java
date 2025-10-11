@@ -1,97 +1,81 @@
+// src/test/java/com/hcltech/rmg/common/codec/JacksonTreeCodecTest.java
 package com.hcltech.rmg.common.codec;
 
-import com.fasterxml.jackson.annotation.JsonCreator;
-import com.fasterxml.jackson.annotation.JsonProperty;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.Test;
 
+import java.util.LinkedHashMap;
 import java.util.Map;
 
 import static org.junit.jupiter.api.Assertions.*;
 
 class JacksonTreeCodecTest {
 
-    // Simple domain record for testing
-    public static class Person {
-        public final String name;
-        public final int age;
+    record Person(String name, int age) {}
 
-        @JsonCreator
-        public Person(@JsonProperty("name") String name,
-                      @JsonProperty("age") int age) {
-            this.name = name;
-            this.age = age;
-        }
-
-        // equals/hashCode for assertions
-        @Override
-        public boolean equals(Object o) {
-            if (this == o) return true;
-            if (!(o instanceof Person)) return false;
-            Person other = (Person) o;
-            return age == other.age && name.equals(other.name);
-        }
-
-        @Override
-        public int hashCode() {
-            return name.hashCode() * 31 + age;
+    /** Bean whose getter throws to force encode failure. */
+    static class BadBean {
+        public String getExplode() {
+            throw new RuntimeException("boom");
         }
     }
 
     @Test
-    void encodeProducesMapWithFields() {
-        JacksonTreeCodec<Person> codec = new JacksonTreeCodec<>(Person.class);
-        Person p = new Person("Alice", 30);
+    void roundTrip_person_to_map_and_back() {
+        JacksonTreeCodec<Person> c = new JacksonTreeCodec<>(Person.class);
 
-        Map<String, Object> encoded = codec.encode(p).valueOrThrow();
+        Person alice = new Person("Alice", 42);
+        Map<String, Object> asMap = c.encode(alice).valueOrThrow();
 
-        assertEquals("Alice", encoded.get("name"));
-        assertEquals(30, encoded.get("age"));
+        assertEquals("Alice", asMap.get("name"));
+        assertEquals(42, asMap.get("age"));
+
+        Person back = c.decode(asMap).valueOrThrow();
+        assertEquals(alice, back);
     }
 
     @Test
-    void decodeReconstructsObject() {
-        JacksonTreeCodec<Person> codec = new JacksonTreeCodec<>(Person.class);
-        Map<String, Object> map = Map.of("name", "Bob", "age", 40);
+    void objectMapper_is_a_copy_not_the_same_instance() {
+        ObjectMapper base = new ObjectMapper();
+        JacksonTreeCodec<Person> c = new JacksonTreeCodec<>(base, Person.class);
 
-        Person decoded = codec.decode(map).valueOrThrow();
-
-        assertEquals(new Person("Bob", 40), decoded);
+        ObjectMapper fromCodec = c.objectMapper();
+        assertNotSame(base, fromCodec, "Codec should copy the provided ObjectMapper");
+        assertNotNull(fromCodec);
     }
 
     @Test
-    void roundTripMaintainsEquality() {
-        JacksonTreeCodec<Person> codec = new JacksonTreeCodec<>(Person.class);
-        Person original = new Person("Carol", 25);
+    void decode_ignores_unknown_properties() {
+        JacksonTreeCodec<Person> c = new JacksonTreeCodec<>(Person.class);
 
-        Map<String, Object> encoded = codec.encode(original).valueOrThrow();
-        Person decoded = codec.decode(encoded).valueOrThrow();
+        Map<String, Object> map = new LinkedHashMap<>();
+        map.put("name", "Bob");
+        map.put("age", 30);
+        map.put("extra", "ignored"); // should be ignored due to FAIL_ON_UNKNOWN_PROPERTIES=false
 
-        assertEquals(original, decoded);
+        Person back = c.decode(map).valueOrThrow();
+        assertEquals(new Person("Bob", 30), back);
     }
 
     @Test
-    void decodeIgnoresExtraFields() {
-        JacksonTreeCodec<Person> codec = new JacksonTreeCodec<>(Person.class);
-        Map<String, Object> map = Map.of(
-                "name", "Dan",
-                "age", 50,
-                "extra", "ignored"
-        );
+    void decode_type_mismatch_returns_error() {
+        JacksonTreeCodec<Person> c = new JacksonTreeCodec<>(Person.class);
 
-        Person decoded = codec.decode(map).valueOrThrow();
+        Map<String, Object> bad = Map.of("name", "Carol", "age", "notAnInt");
 
-        assertEquals(new Person("Dan", 50), decoded);
+        var res = c.decode(bad);
+        assertTrue(res.isError());
+        assertThrows(IllegalStateException.class, res::valueOrThrow);
+        assertFalse(res.errorsOrThrow().isEmpty());
     }
 
     @Test
-    void encodeHandlesNullValues() {
-        JacksonTreeCodec<Person> codec = new JacksonTreeCodec<>(Person.class);
-        Person p = new Person(null, 0);
+    void encode_failure_is_wrapped_in_error() {
+        JacksonTreeCodec<BadBean> c = new JacksonTreeCodec<>(BadBean.class);
 
-        Map<String, Object> encoded = codec.encode(p).valueOrThrow();
-
-        assertTrue(encoded.containsKey("name"));
-        assertNull(encoded.get("name"));
-        assertEquals(0, encoded.get("age"));
+        var res = c.encode(new BadBean());
+        assertTrue(res.isError());
+        assertThrows(IllegalStateException.class, res::valueOrThrow);
+        assertFalse(res.errorsOrThrow().isEmpty());
     }
 }
