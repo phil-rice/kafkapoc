@@ -1,4 +1,3 @@
-// src/test/java/com/example/optics/JXPathInterpreterTest.java
 package com.hcltech.rmg.optics;
 
 import org.apache.commons.jxpath.JXPathContext;

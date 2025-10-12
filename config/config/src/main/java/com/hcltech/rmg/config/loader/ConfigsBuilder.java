@@ -3,7 +3,7 @@ package com.hcltech.rmg.config.loader;
 import com.hcltech.rmg.common.errorsor.ErrorsOr;
 import com.hcltech.rmg.config.config.BehaviorConfig;
 import com.hcltech.rmg.config.config.Config;
-import com.hcltech.rmg.config.config.Configs;
+import com.hcltech.rmg.config.configs.Configs;
 import com.hcltech.rmg.config.config.RootConfig;
 import com.hcltech.rmg.parameters.ParamPermutations;
 

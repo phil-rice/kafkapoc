@@ -1,4 +1,3 @@
-// src/test/java/com/hcltech/rmg/common/codec/LineSeparatedListCodecErrorsTest.java
 package com.hcltech.rmg.common.codec;
 
 import com.hcltech.rmg.common.errorsor.ErrorsOr;

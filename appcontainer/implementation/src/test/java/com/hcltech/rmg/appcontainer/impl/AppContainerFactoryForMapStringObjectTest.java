@@ -1,4 +1,3 @@
-// src/test/java/com/hcltech/rmg/appcontainer/impl/AppContainerFactoryTest.java
 package com.hcltech.rmg.appcontainer.impl;
 
 import com.hcltech.rmg.appcontainer.interfaces.AppContainer;

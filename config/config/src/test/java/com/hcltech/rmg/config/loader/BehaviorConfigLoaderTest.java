@@ -5,6 +5,8 @@ import com.hcltech.rmg.config.bizlogic.CelFileLogic;
 import com.hcltech.rmg.config.bizlogic.CelInlineLogic;
 import com.hcltech.rmg.config.config.BehaviorConfig;
 import com.hcltech.rmg.config.enrich.ApiEnrichment;
+import com.hcltech.rmg.config.transformation.XmlTransform;
+import com.hcltech.rmg.config.transformation.XsltTransform;
 import com.hcltech.rmg.config.validation.CelValidation;
 import org.junit.jupiter.api.Test;
 
@@ -53,7 +55,7 @@ class BehaviorConfigLoaderTest {
                     entry("readyForDelivery",
                             new AspectMap(
                                     v(kv("notification", new CelValidation("a + b > 0"))),
-                                    t(kv("notification", new com.hcltech.rmg.config.transformation.XsltTransform("xforms/ready.xslt", "schemas/ready.xml"))),
+                                    t(kv("notification", new XmlTransform("schemas/ready.xsd"))),
                                     e(kv("api", new ApiEnrichment("http://example", Map.of("q", "1")))),
                                     b(
                                       kv("fileLogic", new CelFileLogic("logic.cel")),

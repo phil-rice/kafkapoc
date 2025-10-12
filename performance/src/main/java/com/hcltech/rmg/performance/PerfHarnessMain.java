@@ -1,9 +1,10 @@
 package com.hcltech.rmg.performance;
 
+import com.hcltech.rmg.all_execution.AllBizLogic;
 import com.hcltech.rmg.appcontainer.impl.AppContainerFactoryForMapStringObject;
 import com.hcltech.rmg.appcontainer.interfaces.AppContainer;
 import com.hcltech.rmg.appcontainer.interfaces.IAppContainerFactory;
-import com.hcltech.rmg.config.loader.BehaviorConfigLoader;
+import com.hcltech.rmg.config.configs.Configs;
 import com.hcltech.rmg.config.loader.ConfigsBuilder;
 import com.hcltech.rmg.config.loader.RootConfigLoader;
 import com.hcltech.rmg.flinkadapters.InitialEnvelopeMapFunction;
@@ -61,7 +62,8 @@ public final class PerfHarnessMain {
 
         // ---- map to Envelope (Value/Error) ----
         var envelopes = sniff.keyBy(t -> t.f0) // domainId
-                .map(new InitialEnvelopeMapFunction<>(factoryClass, containerId)).name("to-envelope"); // DataStream<Envelope<CEPState, Map<String,Object>>>
+                .map(new InitialEnvelopeMapFunction<>(factoryClass, containerId)).name("to-envelope")
+                .map(new ExecutionPipeline<KafkaConfig, CepState, Msg, Schema>(factoryClass, containerId, "notification")); // DataStream<Envelope<CEPState, Map<String,Object>>>
 
         // ---- async stage (Envelope -> Envelope) ----
         // parallelism and capacity calculation
@@ -94,11 +96,8 @@ public final class PerfHarnessMain {
     // Example main wiring
     public static void main(String[] args) throws Exception {
         final String containerId = System.getProperty("app.container", "prod");
-        var rootConfig = RootConfigLoader.fromClasspath("config/root-prod.json").valueOrThrow();
-        var behaviorConfig = ConfigsBuilder.buildFromClasspath(rootConfig, ConfigsBuilder::defaultKeyFn, ConfigsBuilder.defaultResourceFn("config/prod/"),PerfHarnessMain.class.getClassLoader());
-        System.out.println("Using root config: " + rootConfig);
         var appContainer = AppContainerFactoryForMapStringObject.resolve(containerId).valueOrThrow();
-        final int lanes = 1200;
+        final int lanes = 300;
 
         // a trivial pass-through async (replace with your real async)
         AsyncFunction<Envelope<Map<String, Object>, Map<String, Object>>, Envelope<Map<String, Object>, Map<String, Object>>> mainAsync = new RichAsyncFunction<>() {

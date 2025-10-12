@@ -1,4 +1,3 @@
-// src/test/java/com/hcltech/rmg/cepstate/AbstractCepEventLogContractTest.java
 package com.hcltech.rmg.cepstate;
 
 import org.junit.jupiter.api.Test;

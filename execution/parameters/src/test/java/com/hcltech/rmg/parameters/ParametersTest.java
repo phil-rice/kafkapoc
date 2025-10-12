@@ -1,4 +1,3 @@
-// src/test/java/com/hcltech/rmg/parameters/ParametersTest.java
 package com.hcltech.rmg.parameters;
 
 import org.junit.jupiter.api.DisplayName;

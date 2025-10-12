@@ -1,4 +1,3 @@
-// src/test/java/com/hcltech/rmg/cepstate/InMemoryCepEventLogContractTest.java
 package com.hcltech.rmg.cepstate;
 
 import java.util.*;

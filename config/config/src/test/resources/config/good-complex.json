@@ -11,7 +11,7 @@
         "notification": {
           "type": "xml",
           "file": "xforms/ready.xslt",
-          "schema": "schemas/ready.xml"
+          "schema": "schemas/ready.xsd"
         }
       },
       "enrichment": {

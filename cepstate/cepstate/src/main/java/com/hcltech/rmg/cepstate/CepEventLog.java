@@ -19,11 +19,11 @@ public interface CepEventLog {
     }
 
 
-    default <CepState> Object foldAll(CepStateTypeClass<CepState> tc, CepState initialState) throws CepEventException {
+    default <CepState> CepState foldAll(CepStateTypeClass<CepState> tc, CepState initialState) throws CepEventException {
         return CepEvent.foldAll(tc, initialState, getAll());
     }
 
-    default <CepState> ErrorsOr<Object> safeFoldAll(CepStateTypeClass<CepState> tc, CepState initialState) {
+    default <CepState> ErrorsOr<CepState> safeFoldAll(CepStateTypeClass<CepState> tc, CepState initialState) {
         try {
             return ErrorsOr.lift(foldAll(tc, initialState));
         } catch (CepEventException e) {

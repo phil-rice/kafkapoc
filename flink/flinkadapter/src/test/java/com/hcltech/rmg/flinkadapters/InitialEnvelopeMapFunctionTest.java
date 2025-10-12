@@ -1,4 +1,3 @@
-// src/test/java/com/hcltech/rmg/flinkadapters/InitialEnvelopeMapFunctionTest.java
 package com.hcltech.rmg.flinkadapters;
 
 import com.hcltech.rmg.messages.Envelope;

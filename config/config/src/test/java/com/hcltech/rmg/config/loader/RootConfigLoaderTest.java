@@ -1,4 +1,3 @@
-// src/test/java/com/hcltech/rmg/config/loader/RootConfigLoaderTest.java
 package com.hcltech.rmg.config.loader;
 
 import com.hcltech.rmg.common.errorsor.ErrorsOr;

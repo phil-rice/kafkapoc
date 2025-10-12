@@ -1,4 +1,3 @@
-// src/main/java/com/hcltech/rmg/performance/EnvelopeRouting.java
 package com.hcltech.rmg.performance;
 
 import com.hcltech.rmg.messages.ErrorEnvelope;

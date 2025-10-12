@@ -1,4 +1,3 @@
-// src/main/java/com/hcltech/rmg/performance/PerfStats.java
 package com.hcltech.rmg.performance;
 
 import java.util.concurrent.*;

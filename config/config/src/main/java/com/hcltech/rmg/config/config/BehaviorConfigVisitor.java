@@ -1,4 +1,3 @@
-// File: src/main/java/com/hcltech/rmg/config/walker/ConfigVisitor.java
 package com.hcltech.rmg.config.config;
 
 import com.hcltech.rmg.config.aspect.AspectMap;
@@ -8,6 +7,7 @@ import com.hcltech.rmg.config.bizlogic.CelInlineLogic;
 import com.hcltech.rmg.config.enrich.ApiEnrichment;
 import com.hcltech.rmg.config.enrich.EnrichmentAspect;
 import com.hcltech.rmg.config.transformation.TransformationAspect;
+import com.hcltech.rmg.config.transformation.XmlTransform;
 import com.hcltech.rmg.config.transformation.XsltTransform;
 import com.hcltech.rmg.config.validation.CelValidation;
 import com.hcltech.rmg.config.validation.ValidationAspect;
@@ -35,6 +35,7 @@ public interface BehaviorConfigVisitor {
     // Transformation family
     default void onTransformation(String eventName, String moduleName, TransformationAspect t) {}
     default void onXsltTransform(String eventName, String moduleName, XsltTransform t) {}
+    default void onXmlTransform(String eventName, String moduleName, XmlTransform t) {}   // <—
 
     // Enrichment family
     default void onEnrichment(String eventName, String moduleName, EnrichmentAspect e) {}

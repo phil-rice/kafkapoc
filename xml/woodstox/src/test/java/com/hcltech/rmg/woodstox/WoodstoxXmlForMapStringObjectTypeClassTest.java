@@ -1,4 +1,3 @@
-// src/test/java/com/hcltech/rmg/woodstox/WoodstoxXmlForMapStringObjectTypeClassTest.java
 package com.hcltech.rmg.woodstox;
 
 import com.ctc.wstx.exc.WstxLazyException;

@@ -1,4 +1,3 @@
-// src/main/java/com/hcltech/rmg/performance/MetricsTap.java
 package com.hcltech.rmg.performance;
 
 import org.apache.flink.api.common.functions.RichMapFunction;

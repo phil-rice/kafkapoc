@@ -33,13 +33,13 @@ public class InitialEnvelopeFactory<CepState, Msg, Schema> {
                                   Map<String, Config> keyToConfigMap,
                                   RootConfig rootConfig) {
         this.cepStateTypeClass = Objects.requireNonNull(cepStateTypeClass, "cepStateTypeClass cannot be null");
-        this.cepStateSupplier  = Objects.requireNonNull(cepStateSupplier, "cepStateSupplier cannot be null");
-        this.nameToSchemaMap   = Objects.requireNonNull(nameToSchemaMap, "nameToSchemaMap cannot be null");
-        this.parameterExtractor= Objects.requireNonNull(parameterExtractor, "parameterExtractor cannot be null");
-        this.xmlTypeClass      = Objects.requireNonNull(xmlTypeClass, "xmlTypeClass cannot be null");
-        this.eventTypeExtractor= Objects.requireNonNull(eventTypeExtractor, "eventTypeExtractor cannot be null");
-        this.domainTypeExtractor=Objects.requireNonNull(domainTypeExtractor, "domainTypeExtractor cannot be null");
-        this.keyToConfigMap    = Objects.requireNonNull(keyToConfigMap, "keyToConfigMap cannot be null");
+        this.cepStateSupplier = Objects.requireNonNull(cepStateSupplier, "cepStateSupplier cannot be null");
+        this.nameToSchemaMap = Objects.requireNonNull(nameToSchemaMap, "nameToSchemaMap cannot be null");
+        this.parameterExtractor = Objects.requireNonNull(parameterExtractor, "parameterExtractor cannot be null");
+        this.xmlTypeClass = Objects.requireNonNull(xmlTypeClass, "xmlTypeClass cannot be null");
+        this.eventTypeExtractor = Objects.requireNonNull(eventTypeExtractor, "eventTypeExtractor cannot be null");
+        this.domainTypeExtractor = Objects.requireNonNull(domainTypeExtractor, "domainTypeExtractor cannot be null");
+        this.keyToConfigMap = Objects.requireNonNull(keyToConfigMap, "keyToConfigMap cannot be null");
         Objects.requireNonNull(rootConfig, "rootConfig cannot be null");
 
         this.schema = nameToSchemaMap.get(rootConfig.xmlSchemaPath());
@@ -65,7 +65,7 @@ public class InitialEnvelopeFactory<CepState, Msg, Schema> {
 
         ErrorsOr<Envelope<CepState, Msg>> result = parsed.flatMap(message -> {
             var domainType = domainTypeExtractor.extractDomainType(message);
-            var eventType  = eventTypeExtractor.extractEventType(message);
+            var eventType = eventTypeExtractor.extractEventType(message);
             if (eventType == null) {
                 return ErrorsOr.error("eventType cannot be null. Check eventTypeExtractor function");
             }
@@ -73,17 +73,15 @@ public class InitialEnvelopeFactory<CepState, Msg, Schema> {
             return parameterExtractor.parameters(message, eventType, domainType, domainId)
                     .flatMap(parameters -> {
                         var config = keyToConfigMap.get(parameters.key());
-                        if (config == null) {
-                            return ErrorsOr.error("missing config for key: " + parameters.key()
-                                    + " Legal values: " + keyToConfigMap.keySet());
-                        }
+                        if (config == null)
+                            return ErrorsOr.error("missing config for key: " + parameters.key() + " Legal values: " + keyToConfigMap.keySet());
 
                         return cepStateSupplier.get()
                                 .safeFoldAll(cepStateTypeClass, cepStateTypeClass.createEmpty())
                                 .flatMap(cepState ->
                                         ErrorsOr.lift(
-                                                new ValueEnvelope<>(
-                                                        new EnvelopeHeader(
+                                                new ValueEnvelope<CepState, Msg>(
+                                                        new EnvelopeHeader<CepState>(
                                                                 domainType,
                                                                 domainId,
                                                                 eventType,
@@ -101,7 +99,7 @@ public class InitialEnvelopeFactory<CepState, Msg, Schema> {
         });
 
         return result.foldError(errors -> {
-            var header   = new EnvelopeHeader<CepState>(IEventTypeExtractor.unknownEventType, domainId, null, rawMessage, null, null, null);
+            var header = new EnvelopeHeader<CepState>(IEventTypeExtractor.unknownEventType, domainId, null, rawMessage, null, null, null);
             var valueEnv = new ValueEnvelope<CepState, Msg>(header, null, List.of());
             return new ErrorEnvelope<CepState, Msg>(valueEnv, "initial-envelope-factory", errors);
         });

@@ -1,6 +1,7 @@
 // com.hcltech.rmg.appcontainer.impl.AppContainerFactory
 package com.hcltech.rmg.appcontainer.impl;
 
+import com.hcltech.rmg.all_execution.AllBizLogic;
 import com.hcltech.rmg.appcontainer.interfaces.AppContainer;
 import com.hcltech.rmg.appcontainer.interfaces.IAppContainerFactory;
 import com.hcltech.rmg.cepstate.CepStateTypeClass;
@@ -126,6 +127,7 @@ public final class AppContainerFactoryForMapStringObject implements IAppContaine
                                         schemaMap,
                                         domainTypeExtractor,
                                         eventTypeExtractor,
+                                        AllBizLogic.create(configs, (Class<Map<String, Object>>) (Class) Map.class),
                                         configs.keyToConfigMap()
                                 )
                         )

@@ -1,4 +1,3 @@
-// src/test/java/com/hcltech/rmg/common/codec/JacksonTreeCodecTest.java
 package com.hcltech.rmg.common.codec;
 
 import com.fasterxml.jackson.databind.ObjectMapper;

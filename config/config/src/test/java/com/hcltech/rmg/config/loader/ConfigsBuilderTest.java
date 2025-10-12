@@ -1,8 +1,7 @@
-// src/test/java/com/hcltech/rmg/config/loader/ConfigsBuilderTest.java
 package com.hcltech.rmg.config.loader;
 
 import com.hcltech.rmg.common.errorsor.ErrorsOr;
-import com.hcltech.rmg.config.config.Configs;
+import com.hcltech.rmg.config.configs.Configs;
 import com.hcltech.rmg.config.config.RootConfig;
 import org.junit.jupiter.api.Test;
 

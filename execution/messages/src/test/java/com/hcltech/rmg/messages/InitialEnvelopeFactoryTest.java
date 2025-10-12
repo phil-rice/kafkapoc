@@ -1,4 +1,3 @@
-// src/test/java/com/hcltech/rmg/messages/InitialEnvelopeFactoryTest.java
 package com.hcltech.rmg.messages;
 
 import com.hcltech.rmg.cepstate.CepEventLog;

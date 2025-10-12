@@ -1,4 +1,3 @@
-// src/main/java/com/hcltech/rmg/config/xml/XmlSchemasLoader.java
 package com.hcltech.rmg.config.xml;
 
 import com.hcltech.rmg.common.resources.ClasspathLSResourceResolver;

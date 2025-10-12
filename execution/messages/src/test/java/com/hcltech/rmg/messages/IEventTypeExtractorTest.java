@@ -1,4 +1,3 @@
-// src/test/java/com/hcltech/rmg/appcontainer/interfaces/IEventTypeExtractorTest.java
 package com.hcltech.rmg.messages;
 
 import org.junit.jupiter.api.Test;

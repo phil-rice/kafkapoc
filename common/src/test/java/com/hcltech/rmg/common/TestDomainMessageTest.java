@@ -1,4 +1,3 @@
-// src/test/java/com/hcltech/rmg/common/TestDomainMessageTest.java
 package com.hcltech.rmg.common;
 
 import com.hcltech.rmg.common.codec.Codec;

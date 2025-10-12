@@ -1,4 +1,3 @@
-// src/main/java/com/hcltech/rmg/config/xml/ClasspathLSResourceResolver.java
 package com.hcltech.rmg.common.resources;
 
 import org.w3c.dom.ls.LSInput;

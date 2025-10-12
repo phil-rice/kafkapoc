@@ -1,19 +1,12 @@
-// src/test/java/com/hcltech/rmg/config/config/BehaviorConfigTest.java
 package com.hcltech.rmg.config.config;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.hcltech.rmg.config.aspect.AspectMap;
-import com.hcltech.rmg.config.bizlogic.BizLogicAspect;
-import com.hcltech.rmg.config.enrich.EnrichmentAspect;
-import com.hcltech.rmg.config.transformation.TransformationAspect;
-import com.hcltech.rmg.config.validation.ValidationAspect;
 import org.junit.jupiter.api.Test;
 
-import java.util.List;
 import java.util.Map;
 
 import static org.junit.jupiter.api.Assertions.*;
-import static org.mockito.Mockito.mock;
 
 class BehaviorConfigTest {
 

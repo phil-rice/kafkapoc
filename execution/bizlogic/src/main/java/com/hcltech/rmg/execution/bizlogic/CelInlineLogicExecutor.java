@@ -1,47 +1,59 @@
 // CelInlineLogicExecutor.java
 package com.hcltech.rmg.execution.bizlogic;
 
+import com.hcltech.rmg.celcore.CelExecutor;
 import com.hcltech.rmg.celcore.CelRuleBuilderFactory;
 import com.hcltech.rmg.celcore.CelVarType;
+import com.hcltech.rmg.celcore.CompiledCelRule;
 import com.hcltech.rmg.celcore.cache.CelRuleCache;
 import com.hcltech.rmg.celcore.cache.InMemoryCelRuleCache;
 import com.hcltech.rmg.config.bizlogic.CelInlineLogic;
 import com.hcltech.rmg.config.config.BehaviorConfig;
-import com.hcltech.rmg.config.config.BehaviorConfigVisitor;
-import com.hcltech.rmg.config.config.BehaviorConfigWalker;
+import com.hcltech.rmg.config.configs.Configs;
+import com.hcltech.rmg.config.configs.ConfigsVisitor;
+import com.hcltech.rmg.config.configs.ConfigsWalker;
 import com.hcltech.rmg.execution.aspects.AspectExecutor;
 import com.hcltech.rmg.messages.ValueEnvelope;
 
-import java.util.*;
+import java.util.Map;
+import java.util.Objects;
 
-public class CelInlineLogicExecutor<CepState, Msg>
+public record CelInlineLogicExecutor<CepState, Msg>(
+        CelRuleCache<ValueEnvelope<CepState, Msg>, ValueEnvelope<CepState, Msg>> ruleCache,
+        Map<String, String> keyToCel)
         implements AspectExecutor<CelInlineLogic, ValueEnvelope<CepState, Msg>, ValueEnvelope<CepState, Msg>> {
 
-    private final CelRuleCache<ValueEnvelope<CepState, Msg>, ValueEnvelope<CepState, Msg>> ruleCache;
-
-    public CelInlineLogicExecutor(CelRuleCache<ValueEnvelope<CepState, Msg>, ValueEnvelope<CepState, Msg>> ruleCache) {
+    public CelInlineLogicExecutor(CelRuleCache<ValueEnvelope<CepState, Msg>, ValueEnvelope<CepState, Msg>> ruleCache, Map<String, String> keyToCel) {
         this.ruleCache = Objects.requireNonNull(ruleCache, "CelRuleCache is required");
+        this.keyToCel = keyToCel;
     }
 
     @Override
     public ValueEnvelope<CepState, Msg> execute(String key,
                                                 CelInlineLogic celInlineLogic,
                                                 ValueEnvelope<CepState, Msg> input) {
-        return ruleCache.get(key).executor().execute(input);
+        var rule = ruleCache.get(key);
+        var executor = rule.executor();
+        var result = executor.execute(input);
+        return result;
     }
 
-    /** Require the message class for safe, contextual coercion. */
+    /**
+     * Require the message class for safe, contextual coercion.
+     */
     public static <CepState, Msg> CelInlineLogicExecutor<CepState, Msg> create(
             CelRuleBuilderFactory ruleBuilderFactory,
-            BehaviorConfig config,
+            Configs configs,                    // <— now Configs, not BehaviorConfig
             Class<Msg> msgClass) {
 
-        var keyToCel = new HashMap<String, String>();
+        var keyToCel = new java.util.HashMap<String, String>();
 
-        BehaviorConfigWalker.walk(config, new BehaviorConfigVisitor() {
+        // Walk all configs; collect inline CEL by (paramKey,event,module)
+        ConfigsWalker.walk(configs, new ConfigsVisitor() {
             @Override
-            public void onCelInlineLogic(String eventName, String moduleName, CelInlineLogic b) {
-                String key = BehaviorConfig.configKey(moduleName, BehaviorConfig.bizlogicAspectName, eventName);
+            public void onCelInlineLogic(String paramKey, String eventName, String moduleName, com.hcltech.rmg.config.bizlogic.CelInlineLogic b) {
+                // Centralize how keys are made so you can swap in your final form later.
+                String key = Configs.composeKey(paramKey, eventName, moduleName);
                 keyToCel.put(key, b.cel());
             }
         });
@@ -53,7 +65,7 @@ public class CelInlineLogicExecutor<CepState, Msg>
                                 .<ValueEnvelope<CepState, Msg>, ValueEnvelope<CepState, Msg>>createCelRuleBuilder(source)
                                 .withVar("message", CelVarType.DYN, ValueEnvelope::data)
                                 .withVar("cepState", CelVarType.DYN, v ->
-                                        Objects.requireNonNull(v.header(), "ValueEnvelope.header() is null").cepState())
+                                        java.util.Objects.requireNonNull(v.header(), "ValueEnvelope.header() is null").cepState())
                                 .withResultCoercer((ve, out) -> {
                                     if (out == null) {
                                         // Policy: keep original data if rule yields null
@@ -74,18 +86,26 @@ public class CelInlineLogicExecutor<CepState, Msg>
         // Preload deterministically
         var keys = legalKeys(keyToCel);
         for (String key : keys) {
-            String source = Objects.requireNonNull(
+            String source = java.util.Objects.requireNonNull(
                     keyToCel.get(key),
                     "No CEL source for key " + key + " Legal values: " + keys
             );
             ruleCache.populate(key, source);
         }
-        return new CelInlineLogicExecutor<>(ruleCache);
+        return new CelInlineLogicExecutor<>(ruleCache, keyToCel);
     }
 
-    private static List<String> legalKeys(Map<String, String> keyToCel) {
-        ArrayList<String> result = new ArrayList<>(keyToCel.keySet());
+    /**
+     * Compose the cache key for inline CEL rules.
+     * Replace this with your "correct form" once decided.
+     * <p>
+     * Current default: include paramKey + existing behavior key shape.
+     */
+
+    private static java.util.List<String> legalKeys(java.util.Map<String, String> keyToCel) {
+        var result = new java.util.ArrayList<String>(keyToCel.keySet());
         result.sort(String::compareTo);
         return result;
     }
+
 }

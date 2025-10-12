@@ -5,7 +5,9 @@ import com.fasterxml.jackson.annotation.JsonTypeInfo;
 
 @JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "type")
 @JsonSubTypes({
-        @JsonSubTypes.Type(value = XsltTransform.class, name = "xml")
+        @JsonSubTypes.Type(value = XmlTransform.class, name = "xml"),
+        @JsonSubTypes.Type(value = XsltTransform.class, name = "xslt")
 })
 public sealed interface TransformationAspect permits XmlTransform, XsltTransform {
 }
+

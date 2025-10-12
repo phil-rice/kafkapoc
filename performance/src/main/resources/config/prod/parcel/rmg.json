@@ -4,7 +4,7 @@
       "bizlogic": {
         "notification": {
           "type": "cel",
-          "cel": "[]"
+          "cel": "{'out': []}"
         }
       }
     }

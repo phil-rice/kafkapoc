@@ -1,5 +1,6 @@
 package com.hcltech.rmg.appcontainer.interfaces;
 
+import com.hcltech.rmg.all_execution.AllBizLogic;
 import com.hcltech.rmg.cepstate.CepStateTypeClass;
 import com.hcltech.rmg.common.ITimeService;
 import com.hcltech.rmg.common.uuid.IUuidGenerator;
@@ -15,8 +16,7 @@ import java.util.Map;
 
 public record AppContainer<EventSourceConfig, CepState, Msg, Schema>(
         // infra
-        ITimeService time,
-        IUuidGenerator uuid,
+        ITimeService time, IUuidGenerator uuid,
 
         // XML services
         XmlTypeClass<Msg, Schema> xml,                // keyExtraction + parse + validate
@@ -25,18 +25,14 @@ public record AppContainer<EventSourceConfig, CepState, Msg, Schema>(
         CepStateTypeClass<CepState> cepStateTypeClass,
 
         // shared config
-        List<String> keyPath,
-        EventSourceConfig eventSourceConfig,
-        RootConfig rootConfig,
+        List<String> keyPath, EventSourceConfig eventSourceConfig, RootConfig rootConfig,
 
         // getting things out of messages
-        ParameterExtractor<Msg> parameterExtractor,
-        Map<String, Schema> nameToSchemaMap,
-        IDomainTypeExtractor<Msg> domainTypeExtractor,
-        IEventTypeExtractor<Msg> eventTypeExtractor,
-
+        ParameterExtractor<Msg> parameterExtractor, Map<String, Schema> nameToSchemaMap,
+        IDomainTypeExtractor<Msg> domainTypeExtractor, IEventTypeExtractor<Msg> eventTypeExtractor,
+        //Execution
+        AllBizLogic<CepState, Msg> bizLogic,
 
         //The behaviour of the application. The key is the parameters key.
-        Map<String, Config> keyToConfigMap
-) implements InitialEnvelopeServices<CepState, Msg, Schema> {
+        Map<String, Config> keyToConfigMap) implements InitialEnvelopeServices<CepState, Msg, Schema> {
 }

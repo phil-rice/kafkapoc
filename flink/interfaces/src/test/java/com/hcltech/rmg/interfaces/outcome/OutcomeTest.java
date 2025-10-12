@@ -1,4 +1,3 @@
-// src/test/java/com/hcltech/rmg/interfaces/outcome/OutcomeTest.java
 package com.hcltech.rmg.interfaces.outcome;
 
 import org.junit.jupiter.api.Nested;

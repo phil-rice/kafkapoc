@@ -7,12 +7,14 @@ import com.hcltech.rmg.config.bizlogic.CelInlineLogic;
 import com.hcltech.rmg.config.enrich.ApiEnrichment;
 import com.hcltech.rmg.config.enrich.EnrichmentAspect;
 import com.hcltech.rmg.config.transformation.TransformationAspect;
+import com.hcltech.rmg.config.transformation.XmlTransform;
 import com.hcltech.rmg.config.transformation.XsltTransform;
 import com.hcltech.rmg.config.validation.CelValidation;
 import com.hcltech.rmg.config.validation.ValidationAspect;
 
 import java.util.Map;
 import java.util.Objects;
+import java.util.function.BiConsumer;
 
 /**
  * Depth-first walker over the configuration graph starting at {@link BehaviorConfig}.
@@ -27,8 +29,7 @@ import java.util.Objects;
  */
 public final class BehaviorConfigWalker {
 
-    private BehaviorConfigWalker() {
-    }
+    private BehaviorConfigWalker() {}
 
     public static void walk(BehaviorConfig config, BehaviorConfigVisitor visitor) {
         Objects.requireNonNull(config, "config");
@@ -36,67 +37,49 @@ public final class BehaviorConfigWalker {
 
         visitor.onConfig(config);
 
-        for (Map.Entry<String, AspectMap> evt : config.events().entrySet()) {
-            final String eventName = evt.getKey();
-            final AspectMap aspects = evt.getValue();
-            if (aspects == null) continue;
-
+        forEachNonNull(config.events(), (eventName, aspects) -> {
             visitor.onEvent(eventName, aspects);
 
             // --- Validation ---
-            if (aspects.validation() != null) {
-                for (Map.Entry<String, ValidationAspect> e : aspects.validation().entrySet()) {
-                    String name = e.getKey();
-                    ValidationAspect v = e.getValue();
-                    if (v == null) continue;
-
-                    visitor.onValidation(eventName, name, v);
-                    if (v instanceof CelValidation xsv)
-                        visitor.onCelValidation(eventName, name, xsv);
+            forEachNonNull(aspects.validation(), (moduleName, v) -> {
+                visitor.onValidation(eventName, moduleName, v);
+                if (v instanceof CelValidation cv) {
+                    visitor.onCelValidation(eventName, moduleName, cv);
                 }
-            }
+            });
 
             // --- Transformation ---
-            if (aspects.transformation() != null) {
-                for (Map.Entry<String, TransformationAspect> e : aspects.transformation().entrySet()) {
-                    String name = e.getKey();
-                    TransformationAspect t = e.getValue();
-                    if (t == null) continue;
-
-                    visitor.onTransformation(eventName, name, t);
-                    if (t instanceof XsltTransform xslt)
-                        visitor.onXsltTransform(eventName, name, xslt);
+            forEachNonNull(aspects.transformation(), (moduleName, t) -> {
+                visitor.onTransformation(eventName, moduleName, t);
+                if (t instanceof XmlTransform xt) {
+                    visitor.onXmlTransform(eventName, moduleName, xt);
+                } else if (t instanceof XsltTransform xslt) {
+                    visitor.onXsltTransform(eventName, moduleName, xslt);
                 }
-            }
+            });
 
             // --- Enrichment ---
-            if (aspects.enrichment() != null) {
-                for (Map.Entry<String, EnrichmentAspect> e : aspects.enrichment().entrySet()) {
-                    String name = e.getKey();
-                    EnrichmentAspect enr = e.getValue();
-                    if (enr == null) continue;
-
-                    visitor.onEnrichment(eventName, name, enr);
-                    if (enr instanceof ApiEnrichment api)
-                        visitor.onApiEnrichment(eventName, name, api);
+            forEachNonNull(aspects.enrichment(), (moduleName, e) -> {
+                visitor.onEnrichment(eventName, moduleName, e);
+                if (e instanceof ApiEnrichment api) {
+                    visitor.onApiEnrichment(eventName, moduleName, api);
                 }
-            }
+            });
 
             // --- BizLogic ---
-            if (aspects.bizlogic() != null) {
-                for (Map.Entry<String, BizLogicAspect> e : aspects.bizlogic().entrySet()) {
-                    String name = e.getKey();
-                    BizLogicAspect b = e.getValue();
-                    if (b == null) continue;
-
-                    visitor.onBizLogic(eventName, name, b);
-                    if (b instanceof CelFileLogic file)
-                        visitor.onCelFileLogic(eventName, name, file);
-                    else if (b instanceof CelInlineLogic inline)
-                        visitor.onCelInlineLogic(eventName, name, inline);
+            forEachNonNull(aspects.bizlogic(), (moduleName, b) -> {
+                visitor.onBizLogic(eventName, moduleName, b);
+                if (b instanceof CelFileLogic file) {
+                    visitor.onCelFileLogic(eventName, moduleName, file);
+                } else if (b instanceof CelInlineLogic inline) {
+                    visitor.onCelInlineLogic(eventName, moduleName, inline);
                 }
-            }
-        }
+            });
+        });
     }
 
+    private static <K, V> void forEachNonNull(Map<K, V> map, BiConsumer<K, V> consumer) {
+        if (map == null || map.isEmpty()) return;
+        map.forEach((k, v) -> { if (v != null) consumer.accept(k, v); });
+    }
 }

@@ -1,4 +1,3 @@
-// src/main/java/com/example/kafka/common/LineSeparatedListCodec.java
 package com.hcltech.rmg.common.codec;
 
 import com.hcltech.rmg.common.errorsor.ErrorsOr;

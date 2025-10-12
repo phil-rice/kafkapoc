@@ -1,4 +1,3 @@
-// src/test/java/com/hcltech/rmg/common/errorsor/ErrorsOrTest.java
 package com.hcltech.rmg.common.errorsor;
 
 import org.junit.jupiter.api.Nested;
