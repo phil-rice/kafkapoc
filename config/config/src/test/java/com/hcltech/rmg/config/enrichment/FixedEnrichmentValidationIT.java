@@ -1,13 +1,11 @@
-package com.hcltech.rmg.enrichment;
+package com.hcltech.rmg.config.enrichment;
 
 import com.hcltech.rmg.dag.ProducerValidation;
 import org.junit.jupiter.api.Test;
 
-import static com.hcltech.rmg.enrichment.FixedEnrichmentFixture.*;
+import static com.hcltech.rmg.config.enrichment.dag.FixedEnrichmentFixture.*;
 import static com.hcltech.rmg.dag.ProducerValidation.validate;
 import static org.junit.jupiter.api.Assertions.*;
-
-import java.util.Set;
 
 public class FixedEnrichmentValidationIT {
 

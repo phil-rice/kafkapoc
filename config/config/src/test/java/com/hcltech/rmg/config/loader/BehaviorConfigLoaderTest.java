@@ -5,6 +5,7 @@ import com.hcltech.rmg.config.bizlogic.CelFileLogic;
 import com.hcltech.rmg.config.bizlogic.CelInlineLogic;
 import com.hcltech.rmg.config.config.BehaviorConfig;
 import com.hcltech.rmg.config.enrich.ApiEnrichment;
+import com.hcltech.rmg.config.enrich.FixedEnrichment;
 import com.hcltech.rmg.config.transformation.XmlTransform;
 import com.hcltech.rmg.config.transformation.XsltTransform;
 import com.hcltech.rmg.config.validation.CelValidation;
@@ -13,6 +14,7 @@ import org.junit.jupiter.api.Test;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.List;
 import java.util.Map;
 
 import static com.hcltech.rmg.config.fixture.ConfigTestFixture.*;
@@ -56,16 +58,27 @@ class BehaviorConfigLoaderTest {
                             new AspectMap(
                                     v(kv("notification", new CelValidation("a + b > 0"))),
                                     t(kv("notification", new XmlTransform("schemas/ready.xsd"))),
-                                    e(kv("api", new ApiEnrichment("http://example", Map.of("q", "1")))),
+                                    e(
+                                            kv("api", new ApiEnrichment("http://example", Map.of("q", "1"))),
+                                            kv("fixed", new FixedEnrichment(
+                                                    // inputs
+                                                    List.of(List.of("addr","line1"), List.of("addr","line2")),
+                                                    // output
+                                                    List.of("addr","postcode"),
+                                                    // lookup (values not used by loader logic, but must round-trip)
+                                                    Map.of("L1.L2", "PC1")
+                                            ))
+                                    ),
                                     b(
-                                      kv("fileLogic", new CelFileLogic("logic.cel")),
-                                      kv("inlineLogic", new CelInlineLogic("a + b"))
+                                            kv("fileLogic", new CelFileLogic("logic.cel")),
+                                            kv("inlineLogic", new CelInlineLogic("a + b"))
                                     )
                             ))
             ));
             assertEquals(expected, actual);
         }
     }
+
 
     @Test
     void fails_on_bad_missing_leaf() {

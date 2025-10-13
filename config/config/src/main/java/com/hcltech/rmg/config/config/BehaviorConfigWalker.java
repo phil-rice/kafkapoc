@@ -6,6 +6,7 @@ import com.hcltech.rmg.config.bizlogic.CelFileLogic;
 import com.hcltech.rmg.config.bizlogic.CelInlineLogic;
 import com.hcltech.rmg.config.enrich.ApiEnrichment;
 import com.hcltech.rmg.config.enrich.EnrichmentAspect;
+import com.hcltech.rmg.config.enrich.FixedEnrichment;
 import com.hcltech.rmg.config.transformation.TransformationAspect;
 import com.hcltech.rmg.config.transformation.XmlTransform;
 import com.hcltech.rmg.config.transformation.XsltTransform;
@@ -63,6 +64,8 @@ public final class BehaviorConfigWalker {
                 visitor.onEnrichment(eventName, moduleName, e);
                 if (e instanceof ApiEnrichment api) {
                     visitor.onApiEnrichment(eventName, moduleName, api);
+                }else if (e instanceof FixedEnrichment fixed) {   // <-- NEW
+                    visitor.onFixedEnrichment(eventName, moduleName, fixed);
                 }
             });
 

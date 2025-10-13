@@ -1,5 +1,7 @@
-package com.hcltech.rmg.enrichment;
+package com.hcltech.rmg.config.enrich.dag;
 
+
+import com.hcltech.rmg.config.enrich.FixedEnrichment;
 import com.hcltech.rmg.dag.NodeTC;
 
 import java.util.List;

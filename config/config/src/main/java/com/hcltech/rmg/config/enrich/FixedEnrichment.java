@@ -1,4 +1,4 @@
-package com.hcltech.rmg.enrichment;
+package com.hcltech.rmg.config.enrich;
 
 import java.util.List;
 import java.util.Map;
@@ -15,5 +15,5 @@ public record FixedEnrichment(
         List<List<String>> inputs,
         List<String> output,
         Map<String, Object> lookup
-) implements Enrichment {
+) implements EnrichmentAspect {
 }

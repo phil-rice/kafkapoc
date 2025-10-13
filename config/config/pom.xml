@@ -27,6 +27,18 @@
         </dependency>
         <dependency>
             <groupId>com.hcltech.rmg</groupId>
+            <artifactId>dag</artifactId>
+            <version>${project.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>com.hcltech.rmg</groupId>
+            <artifactId>dag</artifactId>
+            <version>${project.version}</version>
+            <type>test-jar</type>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>com.hcltech.rmg</groupId>
             <artifactId>parameters</artifactId>
             <version>${project.version}</version>
         </dependency>

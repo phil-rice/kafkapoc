@@ -6,6 +6,7 @@ import com.hcltech.rmg.config.bizlogic.CelFileLogic;
 import com.hcltech.rmg.config.bizlogic.CelInlineLogic;
 import com.hcltech.rmg.config.enrich.ApiEnrichment;
 import com.hcltech.rmg.config.enrich.EnrichmentAspect;
+import com.hcltech.rmg.config.enrich.FixedEnrichment;
 import com.hcltech.rmg.config.transformation.TransformationAspect;
 import com.hcltech.rmg.config.transformation.XmlTransform;
 import com.hcltech.rmg.config.transformation.XsltTransform;
@@ -23,7 +24,7 @@ import static org.junit.jupiter.api.Assertions.*;
  * Comprehensive tests for {@link BehaviorConfigWalker} that validate
  * dispatch into {@link BehaviorConfigVisitor}, covering all families and subtypes.
  */
-class BehaviorConfigWalkerTest {
+public class BehaviorConfigWalkerTest {
 
     /** Records calls in order for verification. */
     static class RecordingVisitor implements BehaviorConfigVisitor {
@@ -46,6 +47,7 @@ class BehaviorConfigWalkerTest {
         // Enrichment
         @Override public void onEnrichment(String e, String m, EnrichmentAspect a) { hit("onEnrichment(" + e + "," + m + ")"); }
         @Override public void onApiEnrichment(String e, String m, ApiEnrichment a) { hit("onApiEnrichment(" + e + "," + m + ")"); }
+        @Override public void onFixedEnrichment(String e, String m, FixedEnrichment a) { hit("onFixedEnrichment(" + e + "," + m + ")"); }
 
         // BizLogic
         @Override public void onBizLogic(String e, String m, BizLogicAspect b) { hit("onBizLogic(" + e + "," + m + ")"); }
@@ -68,9 +70,8 @@ class BehaviorConfigWalkerTest {
     private static List<String> sorted(List<String> list) {
         return list.stream().sorted().toList();
     }
-
     @Test
-    void walks_full_graph_and_invokes_generic_then_specific_per_item_including_xml_and_xslt() {
+    void walks_full_graph_and_invokes_generic_then_specific_per_item_including_xml_xslt_and_fixed() {
         var evt = new AspectMap(
                 Map.of(
                         "cel", new CelValidation("a + b > 0")
@@ -80,7 +81,12 @@ class BehaviorConfigWalkerTest {
                         "xslt", new XsltTransform("transform.xslt", "transform.xsd")
                 ),
                 Map.of(
-                        "api", new ApiEnrichment("http://example", Map.of("q", "1"))
+                        "api", new ApiEnrichment("http://example", Map.of("q", "1")),
+                        "fixed", new FixedEnrichment(
+                                List.of(List.of("addr","line1"), List.of("addr","line2")),
+                                List.of("addr","postcode"),
+                                Map.of("L1.L2", "PC1")
+                        )
                 ),
                 Map.of(
                         "fileLogic",   new CelFileLogic("logic.cel"),
@@ -92,43 +98,52 @@ class BehaviorConfigWalkerTest {
         var v = new RecordingVisitor();
         BehaviorConfigWalker.walk(config, v);
 
-        // Presence checks
-        List<String> expectedPresence = List.of(
+        // Build the exact expected set of calls (no duplicates, include fixed)
+        var expected = List.of(
+                // root + event
                 "onConfig",
                 "onEvent(orderPlaced)",
 
-                // Validation
+                // validation
                 "onValidation(orderPlaced,cel)",
                 "onCelValidation(orderPlaced,cel)",
 
-                // Transformation (both)
+                // transformation
                 "onTransformation(orderPlaced,xml)",
                 "onXmlTransform(orderPlaced,xml)",
                 "onTransformation(orderPlaced,xslt)",
                 "onXsltTransform(orderPlaced,xslt)",
 
-                // Enrichment
+                // enrichment (generic + specific for BOTH api and fixed)
                 "onEnrichment(orderPlaced,api)",
                 "onApiEnrichment(orderPlaced,api)",
+                "onEnrichment(orderPlaced,fixed)",
+                "onFixedEnrichment(orderPlaced,fixed)",
 
-                // BizLogic
+                // bizlogic (generic + specific)
                 "onBizLogic(orderPlaced,fileLogic)",
                 "onCelFileLogic(orderPlaced,fileLogic)",
                 "onBizLogic(orderPlaced,inlineLogic)",
                 "onCelInlineLogic(orderPlaced,inlineLogic)"
         );
-        for (var exp : expectedPresence) {
-            assertTrue(v.calls.contains(exp), "Missing: " + exp + " in " + v.calls);
-        }
 
-        // Generic-then-specific ordering per item
+        // Sort both lists and assert exact equality (catches dupes/missing)
+        var expectedSorted = new ArrayList<>(expected);
+        var actualSorted   = new ArrayList<>(v.calls);
+        expectedSorted.sort(String::compareTo);
+        actualSorted.sort(String::compareTo);
+        assertEquals(expectedSorted, actualSorted, "Sorted calls mismatch.\nActual: " + v.calls);
+
+        // Keep order guarantees for each item (generic before specific)
         assertBefore(v.calls, "onValidation(orderPlaced,cel)", "onCelValidation(orderPlaced,cel)");
-        assertBefore(v.calls, "onTransformation(orderPlaced,xml)", "onXmlTransform(orderPlaced,xml)");
-        assertBefore(v.calls, "onTransformation(orderPlaced,xslt)", "onXsltTransform(orderPlaced,xslt)");
-        assertBefore(v.calls, "onEnrichment(orderPlaced,api)", "onApiEnrichment(orderPlaced,api)");
+        assertBefore(v.calls, "onTransformation(orderPlaced,xml)",  "onXmlTransform(orderPlaced,xml)");
+        assertBefore(v.calls, "onTransformation(orderPlaced,xslt)","onXsltTransform(orderPlaced,xslt)");
+        assertBefore(v.calls, "onEnrichment(orderPlaced,api)",     "onApiEnrichment(orderPlaced,api)");
+        assertBefore(v.calls, "onEnrichment(orderPlaced,fixed)",   "onFixedEnrichment(orderPlaced,fixed)");
         assertBefore(v.calls, "onBizLogic(orderPlaced,fileLogic)", "onCelFileLogic(orderPlaced,fileLogic)");
-        assertBefore(v.calls, "onBizLogic(orderPlaced,inlineLogic)", "onCelInlineLogic(orderPlaced,inlineLogic)");
+        assertBefore(v.calls, "onBizLogic(orderPlaced,inlineLogic)","onCelInlineLogic(orderPlaced,inlineLogic)");
     }
+
     @Test
     void tolerates_empty_and_nulls_including_null_values_inside_families() {
         // 1) Null events map

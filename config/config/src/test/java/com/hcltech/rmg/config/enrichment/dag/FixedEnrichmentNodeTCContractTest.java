@@ -1,9 +1,9 @@
-package com.hcltech.rmg.enrichment;
+package com.hcltech.rmg.config.enrichment.dag;
 
+import com.hcltech.rmg.config.enrich.FixedEnrichment;
+import com.hcltech.rmg.config.enrich.dag.FixedEnrichmentNodeTC;
 import com.hcltech.rmg.dag.NodeTC;
 import com.hcltech.rmg.dag.NodeTCContractTest;
-
-import org.junit.jupiter.api.Test;
 
 import java.util.*;
 
