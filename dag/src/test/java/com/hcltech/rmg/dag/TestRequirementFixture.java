@@ -1,5 +1,7 @@
 package com.hcltech.rmg.dag;
 
+import com.hcltech.rmg.common.errorsor.ErrorsOr;
+
 import java.util.*;
 
 import static java.util.Arrays.asList;
@@ -39,13 +41,13 @@ public final class TestRequirementFixture {
         return new LinkedHashSet<>(asList(xs));
     }
 
-    /** Build a RequirementGraph from nodes using the tested typeclasses. */
-    public static RequirementGraph<TestRequirementNode> build(Set<TestRequirementNode> nodes) {
+    /** Build a RequirementGraph from nodes using the tested typeclasses (monadic). */
+    public static ErrorsOr<RequirementGraph<TestRequirementNode>> build(Set<TestRequirementNode> nodes) {
         return RequirementGraphBuilder.build(nodes, ptc(), ntc);
     }
 
-    /** Topologically sort a RequirementGraph into generations (Kahn). */
-    public static List<Set<TestRequirementNode>> sort(RequirementGraph<TestRequirementNode> g) {
+    /** Topologically sort a RequirementGraph into generations (Kahn) (monadic). */
+    public static ErrorsOr<List<Set<TestRequirementNode>>> sort(RequirementGraph<TestRequirementNode> g) {
         return Topo.topoSort(g);
     }
 

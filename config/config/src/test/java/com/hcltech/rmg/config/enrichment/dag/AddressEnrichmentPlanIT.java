@@ -46,18 +46,18 @@ public class AddressEnrichmentPlanIT {
                 Set.of(POSTCODE_FROM_ADDR, SUFFIX_FROM_L12_PC, INSTR_FROM_PC_SUFF),
                 new ListPathTC(),
                 new FixedEnrichmentNodeTC()
-        );
-
+        ).valueOrThrow();
 
         // Assert the whole generations list in one go
         assertEquals(
                 List.of(
-                        Set.of(POSTCODE_FROM_ADDR), //generation 1
-                        Set.of(SUFFIX_FROM_L12_PC), //generation 2
-                        Set.of(INSTR_FROM_PC_SUFF)  //generation 3
+                        Set.of(POSTCODE_FROM_ADDR), // generation 1
+                        Set.of(SUFFIX_FROM_L12_PC), // generation 2
+                        Set.of(INSTR_FROM_PC_SUFF)  // generation 3
                 ),
-                Topo.topoSort(graph)
+                Topo.topoSort(graph).valueOrThrow()
         );
+
         // Assert edges for clarity (optional, but nice)
         assertEquals(
                 Set.of(
@@ -92,10 +92,10 @@ public class AddressEnrichmentPlanIT {
                 Set.of(POSTCODE_FROM_SUFFIX, SUFFIX_FROM_POSTCODE),
                 new ListPathTC(),
                 new FixedEnrichmentNodeTC()
-        );
+        ).valueOrThrow();
 
-        var ex = assertThrows(IllegalStateException.class, () -> Topo.topoSort(graph));
-        assertTrue(ex.getMessage().toLowerCase().contains("cycle"),
-                "Expected a cycle error, got: " + ex.getMessage());
+        var errs = Topo.topoSort(graph).errorsOrThrow();
+        var msg = String.join("\n", errs);
+        assertTrue(msg.toLowerCase().contains("cycle"), "Expected a cycle error, got: " + msg);
     }
 }
