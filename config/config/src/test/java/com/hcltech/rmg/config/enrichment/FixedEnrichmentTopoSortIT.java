@@ -1,4 +1,4 @@
-package com.hcltech.rmg.config.enrichment.dag;
+package com.hcltech.rmg.config.enrichment;
 
 import com.hcltech.rmg.dag.Topo;
 import org.junit.jupiter.api.Test;
@@ -6,7 +6,7 @@ import org.junit.jupiter.api.Test;
 import java.util.List;
 import java.util.Set;
 
-import static com.hcltech.rmg.config.enrichment.dag.FixedEnrichmentFixture.*;
+import static com.hcltech.rmg.config.enrichment.FixedEnrichmentFixture.*;
 import static org.junit.jupiter.api.Assertions.*;
 
 /**

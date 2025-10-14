@@ -6,8 +6,6 @@ import com.hcltech.rmg.config.bizlogic.CelFileLogic;
 import com.hcltech.rmg.config.bizlogic.CelInlineLogic;
 import com.hcltech.rmg.config.config.BehaviorConfig;
 import com.hcltech.rmg.config.config.Config;
-import com.hcltech.rmg.config.configs.Configs;
-import com.hcltech.rmg.config.enrich.ApiEnrichment;
 import com.hcltech.rmg.config.enrich.EnrichmentAspect;
 import com.hcltech.rmg.config.transformation.TransformationAspect;
 import com.hcltech.rmg.config.transformation.XmlTransform;
@@ -41,7 +39,6 @@ public interface ConfigsVisitor {
 
     // Enrichment
     default void onEnrichment(String paramKey, String eventName, String moduleName, EnrichmentAspect e) {}
-    default void onApiEnrichment(String paramKey, String eventName, String moduleName, ApiEnrichment e) {}
 
     // BizLogic
     default void onBizLogic(String paramKey, String eventName, String moduleName, BizLogicAspect b) {}

@@ -4,7 +4,6 @@ import com.hcltech.rmg.config.aspect.AspectMap;
 import com.hcltech.rmg.config.bizlogic.CelFileLogic;
 import com.hcltech.rmg.config.bizlogic.CelInlineLogic;
 import com.hcltech.rmg.config.config.BehaviorConfig;
-import com.hcltech.rmg.config.enrich.ApiEnrichment;
 import com.hcltech.rmg.config.enrich.FixedEnrichment;
 import com.hcltech.rmg.config.transformation.XmlTransform;
 import com.hcltech.rmg.config.transformation.XsltTransform;
@@ -59,7 +58,6 @@ class BehaviorConfigLoaderTest {
                                     v(kv("notification", new CelValidation("a + b > 0"))),
                                     t(kv("notification", new XmlTransform("schemas/ready.xsd"))),
                                     e(
-                                            kv("api", new ApiEnrichment("http://example", Map.of("q", "1"))),
                                             kv("fixed", new FixedEnrichment(
                                                     // inputs
                                                     List.of(List.of("addr","line1"), List.of("addr","line2")),

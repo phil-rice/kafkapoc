@@ -1,23 +1,29 @@
 package com.hcltech.rmg.enrichment;
 
+import com.hcltech.rmg.cepstate.CepEvent;
 import com.hcltech.rmg.config.configs.Configs;
 import com.hcltech.rmg.config.enrich.EnrichmentAspect;
+import com.hcltech.rmg.config.enrich.EnrichmentWithDependencies;
 import com.hcltech.rmg.config.enrich.FixedEnrichment;
 import com.hcltech.rmg.execution.aspects.AspectExecutor;
 import com.hcltech.rmg.execution.aspects.AspectExecutorRepository;
+import com.hcltech.rmg.messages.MsgTypeClass;
 import com.hcltech.rmg.messages.ValueEnvelope;
 
-public class EnrichmentExecutor<CepState, Msg> implements AspectExecutor<EnrichmentAspect, ValueEnvelope<CepState, Msg>, ValueEnvelope<CepState, Msg>> {
-    private final AspectExecutor<EnrichmentAspect, ValueEnvelope<CepState, Msg>, ValueEnvelope<CepState, Msg>> executor;
-    AspectExecutorRepository<EnrichmentAspect, ValueEnvelope<CepState, Msg>, ValueEnvelope<CepState, Msg>> aspectRepository = new AspectExecutorRepository<>();
+import java.util.List;
 
-    public EnrichmentExecutor(Configs configs,  Class<Msg> msgClass) {
-        aspectRepository.register(FixedEnrichment.class, new FixedEnrichmentExecutor<>());
+public class EnrichmentExecutor<CepState, Msg> implements AspectExecutor<EnrichmentWithDependencies, ValueEnvelope<CepState, Msg>, CepEvent> {
+    private final AspectExecutor<EnrichmentWithDependencies, ValueEnvelope<CepState, Msg>, CepEvent> executor;
+    AspectExecutorRepository<EnrichmentWithDependencies, ValueEnvelope<CepState, Msg>, CepEvent> aspectRepository = new AspectExecutorRepository<>();
+
+
+    public EnrichmentExecutor(MsgTypeClass<Msg, List<String>> msgTypeClass) {
+        aspectRepository.register(FixedEnrichment.class, new FixedEnrichmentExecutor<CepState, Msg>(msgTypeClass));
         this.executor = aspectRepository.build();
     }
 
     @Override
-    public ValueEnvelope<CepState, Msg> execute(String key, EnrichmentAspect aspect, ValueEnvelope<CepState, Msg> input) {
+    public CepEvent execute(String key, EnrichmentWithDependencies aspect, ValueEnvelope<CepState, Msg> input) {
         return executor.execute(key, aspect, input);
     }
 

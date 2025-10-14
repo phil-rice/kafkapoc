@@ -56,6 +56,7 @@ public final class RawMessageDeserialiser implements KafkaRecordDeserializationS
             traceparent = synthesizeTraceparent(uuid);
         }
 
+
         out.collect(new RawMessage(
                 value,
                 rec.timestamp(),                      // brokerTimestamp

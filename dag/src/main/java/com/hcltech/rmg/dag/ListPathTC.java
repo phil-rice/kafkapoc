@@ -4,6 +4,10 @@ import java.util.List;
 import java.util.Objects;
 
 public final class ListPathTC implements PathTC<List<String>> {
+    public static ListPathTC INSTANCE = new ListPathTC();
+    private ListPathTC() {
+        // Singleton
+    }
     @Override public boolean isPrefix(List<String> prefix, List<String> full) {
         if (Objects.equals(prefix, full)) return true;
         if (prefix == null || full == null || prefix.isEmpty() || prefix.size() > full.size()) return false;

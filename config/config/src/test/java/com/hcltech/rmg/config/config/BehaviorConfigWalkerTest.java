@@ -4,7 +4,6 @@ import com.hcltech.rmg.config.aspect.AspectMap;
 import com.hcltech.rmg.config.bizlogic.BizLogicAspect;
 import com.hcltech.rmg.config.bizlogic.CelFileLogic;
 import com.hcltech.rmg.config.bizlogic.CelInlineLogic;
-import com.hcltech.rmg.config.enrich.ApiEnrichment;
 import com.hcltech.rmg.config.enrich.EnrichmentAspect;
 import com.hcltech.rmg.config.enrich.FixedEnrichment;
 import com.hcltech.rmg.config.transformation.TransformationAspect;
@@ -26,33 +25,80 @@ import static org.junit.jupiter.api.Assertions.*;
  */
 public class BehaviorConfigWalkerTest {
 
-    /** Records calls in order for verification. */
+    /**
+     * Records calls in order for verification.
+     */
     static class RecordingVisitor implements BehaviorConfigVisitor {
         final List<String> calls = new ArrayList<>();
-        private void hit(String m) { calls.add(m); }
+
+        private void hit(String m) {
+            calls.add(m);
+        }
 
         // Root & container
-        @Override public void onConfig(BehaviorConfig config) { hit("onConfig"); }
-        @Override public void onEvent(String eventName, AspectMap aspects) { hit("onEvent(" + eventName + ")"); }
+        @Override
+        public void onConfig(BehaviorConfig config) {
+            hit("onConfig");
+        }
+
+        @Override
+        public void onEvent(String eventName, AspectMap aspects) {
+            hit("onEvent(" + eventName + ")");
+        }
 
         // Validation
-        @Override public void onValidation(String e, String m, ValidationAspect v) { hit("onValidation(" + e + "," + m + ")"); }
-        @Override public void onCelValidation(String e, String m, CelValidation v) { hit("onCelValidation(" + e + "," + m + ")"); }
+        @Override
+        public void onValidation(String e, String m, ValidationAspect v) {
+            hit("onValidation(" + e + "," + m + ")");
+        }
+
+        @Override
+        public void onCelValidation(String e, String m, CelValidation v) {
+            hit("onCelValidation(" + e + "," + m + ")");
+        }
 
         // Transformation
-        @Override public void onTransformation(String e, String m, TransformationAspect t) { hit("onTransformation(" + e + "," + m + ")"); }
-        @Override public void onXmlTransform(String e, String m, XmlTransform t) { hit("onXmlTransform(" + e + "," + m + ")"); }
-        @Override public void onXsltTransform(String e, String m, XsltTransform t) { hit("onXsltTransform(" + e + "," + m + ")"); }
+        @Override
+        public void onTransformation(String e, String m, TransformationAspect t) {
+            hit("onTransformation(" + e + "," + m + ")");
+        }
+
+        @Override
+        public void onXmlTransform(String e, String m, XmlTransform t) {
+            hit("onXmlTransform(" + e + "," + m + ")");
+        }
+
+        @Override
+        public void onXsltTransform(String e, String m, XsltTransform t) {
+            hit("onXsltTransform(" + e + "," + m + ")");
+        }
 
         // Enrichment
-        @Override public void onEnrichment(String e, String m, EnrichmentAspect a) { hit("onEnrichment(" + e + "," + m + ")"); }
-        @Override public void onApiEnrichment(String e, String m, ApiEnrichment a) { hit("onApiEnrichment(" + e + "," + m + ")"); }
-        @Override public void onFixedEnrichment(String e, String m, FixedEnrichment a) { hit("onFixedEnrichment(" + e + "," + m + ")"); }
+        @Override
+        public void onEnrichment(String e, String m, EnrichmentAspect a) {
+            hit("onEnrichment(" + e + "," + m + ")");
+        }
+
+        @Override
+        public void onFixedEnrichment(String e, String m, FixedEnrichment a) {
+            hit("onFixedEnrichment(" + e + "," + m + ")");
+        }
 
         // BizLogic
-        @Override public void onBizLogic(String e, String m, BizLogicAspect b) { hit("onBizLogic(" + e + "," + m + ")"); }
-        @Override public void onCelFileLogic(String e, String m, CelFileLogic b) { hit("onCelFileLogic(" + e + "," + m + ")"); }
-        @Override public void onCelInlineLogic(String e, String m, CelInlineLogic b) { hit("onCelInlineLogic(" + e + "," + m + ")"); }
+        @Override
+        public void onBizLogic(String e, String m, BizLogicAspect b) {
+            hit("onBizLogic(" + e + "," + m + ")");
+        }
+
+        @Override
+        public void onCelFileLogic(String e, String m, CelFileLogic b) {
+            hit("onCelFileLogic(" + e + "," + m + ")");
+        }
+
+        @Override
+        public void onCelInlineLogic(String e, String m, CelInlineLogic b) {
+            hit("onCelInlineLogic(" + e + "," + m + ")");
+        }
     }
 
     private static int indexOf(List<String> calls, String needle) {
@@ -70,6 +116,7 @@ public class BehaviorConfigWalkerTest {
     private static List<String> sorted(List<String> list) {
         return list.stream().sorted().toList();
     }
+
     @Test
     void walks_full_graph_and_invokes_generic_then_specific_per_item_including_xml_xslt_and_fixed() {
         var evt = new AspectMap(
@@ -77,19 +124,18 @@ public class BehaviorConfigWalkerTest {
                         "cel", new CelValidation("a + b > 0")
                 ),
                 Map.of(
-                        "xml",  new XmlTransform("schema.xsd"),
+                        "xml", new XmlTransform("schema.xsd"),
                         "xslt", new XsltTransform("transform.xslt", "transform.xsd")
                 ),
                 Map.of(
-                        "api", new ApiEnrichment("http://example", Map.of("q", "1")),
                         "fixed", new FixedEnrichment(
-                                List.of(List.of("addr","line1"), List.of("addr","line2")),
-                                List.of("addr","postcode"),
+                                List.of(List.of("addr", "line1"), List.of("addr", "line2")),
+                                List.of("addr", "postcode"),
                                 Map.of("L1.L2", "PC1")
                         )
                 ),
                 Map.of(
-                        "fileLogic",   new CelFileLogic("logic.cel"),
+                        "fileLogic", new CelFileLogic("logic.cel"),
                         "inlineLogic", new CelInlineLogic("a + b")
                 )
         );
@@ -114,9 +160,6 @@ public class BehaviorConfigWalkerTest {
                 "onTransformation(orderPlaced,xslt)",
                 "onXsltTransform(orderPlaced,xslt)",
 
-                // enrichment (generic + specific for BOTH api and fixed)
-                "onEnrichment(orderPlaced,api)",
-                "onApiEnrichment(orderPlaced,api)",
                 "onEnrichment(orderPlaced,fixed)",
                 "onFixedEnrichment(orderPlaced,fixed)",
 
@@ -129,7 +172,7 @@ public class BehaviorConfigWalkerTest {
 
         // Sort both lists and assert exact equality (catches dupes/missing)
         var expectedSorted = new ArrayList<>(expected);
-        var actualSorted   = new ArrayList<>(v.calls);
+        var actualSorted = new ArrayList<>(v.calls);
         expectedSorted.sort(String::compareTo);
         actualSorted.sort(String::compareTo);
         assertEquals(expectedSorted, actualSorted, "Sorted calls mismatch.\nActual: " + v.calls);
@@ -138,10 +181,9 @@ public class BehaviorConfigWalkerTest {
         assertBefore(v.calls, "onValidation(orderPlaced,cel)", "onCelValidation(orderPlaced,cel)");
         assertBefore(v.calls, "onTransformation(orderPlaced,xml)",  "onXmlTransform(orderPlaced,xml)");
         assertBefore(v.calls, "onTransformation(orderPlaced,xslt)","onXsltTransform(orderPlaced,xslt)");
-        assertBefore(v.calls, "onEnrichment(orderPlaced,api)",     "onApiEnrichment(orderPlaced,api)");
         assertBefore(v.calls, "onEnrichment(orderPlaced,fixed)",   "onFixedEnrichment(orderPlaced,fixed)");
         assertBefore(v.calls, "onBizLogic(orderPlaced,fileLogic)", "onCelFileLogic(orderPlaced,fileLogic)");
-        assertBefore(v.calls, "onBizLogic(orderPlaced,inlineLogic)","onCelInlineLogic(orderPlaced,inlineLogic)");
+        assertBefore(v.calls, "onBizLogic(orderPlaced,inlineLogic)", "onCelInlineLogic(orderPlaced,inlineLogic)");
     }
 
     @Test
@@ -171,7 +213,7 @@ public class BehaviorConfigWalkerTest {
 
         java.util.Map<String, com.hcltech.rmg.config.enrich.EnrichmentAspect> enrichments =
                 new java.util.LinkedHashMap<>();
-        enrichments.put("e1", new ApiEnrichment("u", java.util.Map.of()));
+        enrichments.put("e1", new FixedEnrichment(List.of(List.of("p")), List.of("o"), Map.of()));
         enrichments.put("eNull", null); // intentional
 
         java.util.Map<String, com.hcltech.rmg.config.bizlogic.BizLogicAspect> bizlogics =
@@ -195,7 +237,7 @@ public class BehaviorConfigWalkerTest {
         assertFalse(v3.calls.stream().anyMatch(s -> s.contains("tNull")));
 
         assertTrue(v3.calls.contains("onEnrichment(evt,e1)"));
-        assertTrue(v3.calls.contains("onApiEnrichment(evt,e1)"));
+        assertTrue(v3.calls.contains("onFixedEnrichment(evt,e1)"));
         assertFalse(v3.calls.stream().anyMatch(s -> s.contains("eNull")));
 
         assertTrue(v3.calls.contains("onBizLogic(evt,b1)"));
@@ -204,7 +246,9 @@ public class BehaviorConfigWalkerTest {
     }
 
 
-    /** Helper: build a LinkedHashMap allowing null values. */
+    /**
+     * Helper: build a LinkedHashMap allowing null values.
+     */
     @SafeVarargs
     private static <K, V> Map<K, V> mapWithNulls(Object... kv) {
         if (kv.length % 2 != 0) throw new IllegalArgumentException("Expected even number of kv args");
@@ -229,9 +273,8 @@ public class BehaviorConfigWalkerTest {
                         "tXslt", new XsltTransform("a.xslt", "a.xsd")
                 ),
                 Map.of(
-                        "e2", new ApiEnrichment("u2", Map.of()),
-                        "e1", new ApiEnrichment("u1", Map.of())
-                ),
+                        "e2", new FixedEnrichment(List.of(List.of("p2")), List.of("o2"), Map.of()),
+                        "e1", new FixedEnrichment(List.of(List.of("p1")), List.of("o1"), Map.of())),
                 Map.of(
                         "b2", new CelInlineLogic("x"),
                         "b1", new CelFileLogic("f1")
@@ -244,13 +287,13 @@ public class BehaviorConfigWalkerTest {
         BehaviorConfigWalker.walk(config, v);
 
         var expected = List.of(
-                "onApiEnrichment(evt,e1)", "onApiEnrichment(evt,e2)",
                 "onBizLogic(evt,b1)", "onBizLogic(evt,b2)",    // <- fix case here
                 "onCelFileLogic(evt,b1)", "onCelInlineLogic(evt,b2)",
                 "onCelValidation(evt,v1)", "onCelValidation(evt,v2)",
                 "onConfig",
                 "onEnrichment(evt,e1)", "onEnrichment(evt,e2)",
                 "onEvent(evt)",
+                "onFixedEnrichment(evt,e1)", "onFixedEnrichment(evt,e2)",
                 "onTransformation(evt,tXml)", "onTransformation(evt,tXslt)",
                 "onValidation(evt,v1)", "onValidation(evt,v2)",
                 "onXmlTransform(evt,tXml)", "onXsltTransform(evt,tXslt)"
@@ -278,7 +321,7 @@ public class BehaviorConfigWalkerTest {
         var evt2 = new AspectMap(
                 null,
                 Map.of("xslt", new XsltTransform("t.xslt", "s.xsd")),
-                Map.of("api", new ApiEnrichment("u", Map.of())),
+                Map.of("fixed", new FixedEnrichment(List.of(List.of("p")), List.of("o"), Map.of())),
                 Map.of("b", new CelInlineLogic("x"))
         );
         var config = new BehaviorConfig(Map.of(
@@ -296,7 +339,7 @@ public class BehaviorConfigWalkerTest {
         assertTrue(v.calls.contains("onValidation(evtA,v)"));
         assertTrue(v.calls.contains("onXmlTransform(evtA,xml)"));
         assertTrue(v.calls.contains("onXsltTransform(evtB,xslt)"));
-        assertTrue(v.calls.contains("onApiEnrichment(evtB,api)"));
+        assertTrue(v.calls.contains("onFixedEnrichment(evtB,fixed)"));
         assertTrue(v.calls.contains("onCelInlineLogic(evtB,b)"));
     }
 }

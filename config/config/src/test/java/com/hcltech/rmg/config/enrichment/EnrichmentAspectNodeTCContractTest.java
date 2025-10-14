@@ -1,21 +1,27 @@
-package com.hcltech.rmg.config.enrichment.dag;
+package com.hcltech.rmg.config.enrichment;
 
+import com.hcltech.rmg.config.enrich.EnrichmentAspect;
+import com.hcltech.rmg.config.enrich.EnrichmentWithDepedenciesNodeTc;
 import com.hcltech.rmg.config.enrich.FixedEnrichment;
-import com.hcltech.rmg.config.enrich.dag.FixedEnrichmentNodeTC;
 import com.hcltech.rmg.dag.NodeTC;
 import com.hcltech.rmg.dag.NodeTCContractTest;
 
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
+import java.util.Map;
 
-public final class FixedEnrichmentNodeTCContractTest
-        extends NodeTCContractTest<FixedEnrichment, List<String>> {
+public final class EnrichmentAspectNodeTCContractTest
+        extends NodeTCContractTest<EnrichmentAspect, List<String>> {
 
     @Override
-    protected boolean allowsMultipleProducedRoots() { return false; }
+    protected boolean allowsMultipleProducedRoots() {
+        return false;
+    }
 
     @Override
-    protected NodeTC<FixedEnrichment, List<String>> ntc() {
-        return new FixedEnrichmentNodeTC();
+    protected NodeTC<EnrichmentAspect, List<String>> ntc() {
+        return EnrichmentWithDepedenciesNodeTc.INSTANCE;
     }
 
     @Override

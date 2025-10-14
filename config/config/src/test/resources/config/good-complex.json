@@ -15,26 +15,36 @@
         }
       },
       "enrichment": {
-        "api": {
-          "type": "api",
-          "api": "http://example",
-          "params": { "q": "1" }
-        },
         "fixed": {
           "type": "fixed",
           "inputs": [
-            ["addr", "line1"],
-            ["addr", "line2"]
+            [
+              "addr",
+              "line1"
+            ],
+            [
+              "addr",
+              "line2"
+            ]
           ],
-          "output": ["addr", "postcode"],
+          "output": [
+            "addr",
+            "postcode"
+          ],
           "lookup": {
             "L1.L2": "PC1"
           }
         }
       },
       "bizlogic": {
-        "fileLogic": { "type": "celFile", "file": "logic.cel" },
-        "inlineLogic": { "type": "cel", "cel": "a + b" }
+        "fileLogic": {
+          "type": "celFile",
+          "file": "logic.cel"
+        },
+        "inlineLogic": {
+          "type": "cel",
+          "cel": "a + b"
+        }
       }
     }
   }

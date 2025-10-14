@@ -34,5 +34,16 @@ public record EnvelopeHeader<CepState>(
                 cepState
         );
     }
+    public EnvelopeHeader<CepState> withCepState(CepState newCepState) {
+        return new EnvelopeHeader<>(
+                domainType,
+                domainId,
+                eventType,
+                rawMessage,
+                parameters,
+                config,
+                newCepState
+        );
+    }
 
 }

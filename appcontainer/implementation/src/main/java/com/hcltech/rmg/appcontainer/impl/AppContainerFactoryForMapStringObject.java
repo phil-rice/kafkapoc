@@ -4,17 +4,25 @@ package com.hcltech.rmg.appcontainer.impl;
 import com.hcltech.rmg.all_execution.AllBizLogic;
 import com.hcltech.rmg.appcontainer.interfaces.AppContainer;
 import com.hcltech.rmg.appcontainer.interfaces.IAppContainerFactory;
+import com.hcltech.rmg.cepstate.CepEvent;
 import com.hcltech.rmg.cepstate.CepStateTypeClass;
 import com.hcltech.rmg.cepstate.MapStringObjectCepStateTypeClass;
 import com.hcltech.rmg.common.ITimeService;
 import com.hcltech.rmg.common.errorsor.ErrorsOr;
 import com.hcltech.rmg.common.uuid.IUuidGenerator;
 import com.hcltech.rmg.config.config.RootConfig;
+import com.hcltech.rmg.config.enrich.EnrichmentAspect;
+import com.hcltech.rmg.config.enrich.EnrichmentWithDependencies;
 import com.hcltech.rmg.config.loader.ConfigsBuilder;
 import com.hcltech.rmg.config.loader.RootConfigLoader;
+import com.hcltech.rmg.enrichment.EnrichmentExecutor;
+import com.hcltech.rmg.enrichment.IEnrichmentAspectExecutor;
+import com.hcltech.rmg.execution.aspects.AspectExecutor;
 import com.hcltech.rmg.kafkaconfig.KafkaConfig;
 import com.hcltech.rmg.messages.IDomainTypeExtractor;
 import com.hcltech.rmg.messages.IEventTypeExtractor;
+import com.hcltech.rmg.messages.MapStringObjectAndListStringMsgTypeClass;
+import com.hcltech.rmg.messages.ValueEnvelope;
 import com.hcltech.rmg.parameters.ParameterExtractor;
 import com.hcltech.rmg.parameters.Parameters;
 import com.hcltech.rmg.woodstox.WoodstoxXmlForMapStringObjectTypeClass;
@@ -105,6 +113,7 @@ public final class AppContainerFactoryForMapStringObject implements IAppContaine
                 AppContainerFactoryForMapStringObject.class::getClassLoader
         );
 
+        var msgTypeClass = new MapStringObjectAndListStringMsgTypeClass();
 
         // RootConfig -> Configs -> SchemaMap -> Container
         return RootConfigLoader.fromClasspath(rootConfigPath).flatMap((RootConfig root) ->
@@ -114,23 +123,29 @@ public final class AppContainerFactoryForMapStringObject implements IAppContaine
                         Parameters.defaultResourceFn(configResourcePrefix),
                         cl
                 ).flatMap(configs ->
-                        XmlTypeClass.loadOptionalSchema(xml, root.xmlSchemaPath()).map(schemaMap ->
-                                new AppContainer<>(
-                                        time,
-                                        uuid,
-                                        xml,
-                                        cepStateTypeClass,
-                                        keyPath,
-                                        eventSourceConfig,
-                                        root,
-                                        parameterExtractor,
-                                        schemaMap,
-                                        domainTypeExtractor,
-                                        eventTypeExtractor,
-                                        AllBizLogic.create(configs, (Class<Map<String, Object>>) (Class) Map.class),
-                                        configs.keyToConfigMap()
-                                )
-                        )
+                        XmlTypeClass.loadOptionalSchema(xml, root.xmlSchemaPath()).flatMap(schemaMap -> {
+                            Class<Map<String, Object>> msgClass = (Class) Map.class;
+                            AspectExecutor<EnrichmentWithDependencies, ValueEnvelope<Map<String, Object>, Map<String, Object>>, CepEvent> oneEnrichmentExecutor = new EnrichmentExecutor<>(msgTypeClass);
+                            return IEnrichmentAspectExecutor.<Map<String, Object>, Map<String, Object>>create(cepStateTypeClass, configs, oneEnrichmentExecutor).map(
+                                    enricher ->
+
+                                            new AppContainer<>(
+                                                    time,
+                                                    uuid,
+                                                    xml,
+                                                    cepStateTypeClass,
+                                                    keyPath,
+                                                    eventSourceConfig,
+                                                    root,
+                                                    parameterExtractor,
+                                                    schemaMap,
+                                                    domainTypeExtractor,
+                                                    eventTypeExtractor,
+                                                    enricher,
+                                                    AllBizLogic.create(configs, msgClass),
+                                                    configs.keyToConfigMap()
+                                            ));
+                        })
                 )
         );
     }

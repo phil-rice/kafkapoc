@@ -1,7 +1,7 @@
-package com.hcltech.rmg.config.enrichment.dag;
+package com.hcltech.rmg.config.enrichment;
 
+import com.hcltech.rmg.config.enrich.EnrichmentWithDepedenciesNodeTc;
 import com.hcltech.rmg.config.enrich.FixedEnrichment;
-import com.hcltech.rmg.config.enrich.dag.FixedEnrichmentNodeTC;
 import com.hcltech.rmg.dag.Edge;
 import com.hcltech.rmg.dag.ListPathTC;
 import com.hcltech.rmg.dag.RequirementGraphBuilder;
@@ -12,7 +12,8 @@ import java.util.List;
 import java.util.Set;
 
 import static java.util.List.of;
-import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 public class AddressEnrichmentPlanIT {
 
@@ -45,7 +46,7 @@ public class AddressEnrichmentPlanIT {
         var graph = RequirementGraphBuilder.build(
                 Set.of(POSTCODE_FROM_ADDR, SUFFIX_FROM_L12_PC, INSTR_FROM_PC_SUFF),
                 new ListPathTC(),
-                new FixedEnrichmentNodeTC()
+                EnrichmentWithDepedenciesNodeTc.INSTANCE
         ).valueOrThrow();
 
         // Assert the whole generations list in one go
@@ -91,7 +92,7 @@ public class AddressEnrichmentPlanIT {
         var graph = RequirementGraphBuilder.build(
                 Set.of(POSTCODE_FROM_SUFFIX, SUFFIX_FROM_POSTCODE),
                 new ListPathTC(),
-                new FixedEnrichmentNodeTC()
+                EnrichmentWithDepedenciesNodeTc.INSTANCE
         ).valueOrThrow();
 
         var errs = Topo.topoSort(graph).errorsOrThrow();

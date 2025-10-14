@@ -4,7 +4,7 @@ import org.junit.jupiter.api.Test;
 
 import java.util.List;
 
-import static com.hcltech.rmg.config.enrichment.dag.FixedEnrichmentFixture.*;
+import static com.hcltech.rmg.config.enrichment.FixedEnrichmentFixture.*;
 import static com.hcltech.rmg.dag.ProducerValidation.validate;
 import static org.junit.jupiter.api.Assertions.*;
 

@@ -6,8 +6,8 @@ import com.hcltech.rmg.config.bizlogic.CelFileLogic;
 import com.hcltech.rmg.config.bizlogic.CelInlineLogic;
 import com.hcltech.rmg.config.config.BehaviorConfig;
 import com.hcltech.rmg.config.config.BehaviorConfigVisitor;
-import com.hcltech.rmg.config.enrich.ApiEnrichment;
 import com.hcltech.rmg.config.enrich.EnrichmentAspect;
+import com.hcltech.rmg.config.enrich.FixedEnrichment;
 import com.hcltech.rmg.config.transformation.TransformationAspect;
 import com.hcltech.rmg.config.transformation.XsltTransform;
 import com.hcltech.rmg.config.validation.CelValidation;
@@ -22,10 +22,13 @@ import java.util.stream.Collectors;
 
 import static java.util.Map.entry;
 
-/** Test-only helpers to keep config tests terse and intention-revealing. */
+/**
+ * Test-only helpers to keep config tests terse and intention-revealing.
+ */
 public final class ConfigTestFixture {
 
-    private ConfigTestFixture() {}
+    private ConfigTestFixture() {
+    }
 
     /* ------------ I/O helpers ------------ */
 
@@ -47,6 +50,7 @@ public final class ConfigTestFixture {
     public static Map<String, ValidationAspect> v(Map<String, ValidationAspect> m) {
         return (m == null || m.isEmpty()) ? Map.of() : new LinkedHashMap<>(m);
     }
+
     @SafeVarargs
     public static Map<String, ValidationAspect> v(Map.Entry<String, ValidationAspect>... entries) {
         if (entries == null || entries.length == 0) return Map.of();
@@ -59,6 +63,7 @@ public final class ConfigTestFixture {
     public static Map<String, TransformationAspect> t(Map<String, TransformationAspect> m) {
         return (m == null || m.isEmpty()) ? Map.of() : new LinkedHashMap<>(m);
     }
+
     @SafeVarargs
     public static Map<String, TransformationAspect> t(Map.Entry<String, TransformationAspect>... entries) {
         if (entries == null || entries.length == 0) return Map.of();
@@ -71,6 +76,7 @@ public final class ConfigTestFixture {
     public static Map<String, EnrichmentAspect> e(Map<String, EnrichmentAspect> m) {
         return (m == null || m.isEmpty()) ? Map.of() : new LinkedHashMap<>(m);
     }
+
     @SafeVarargs
     public static Map<String, EnrichmentAspect> e(Map.Entry<String, EnrichmentAspect>... entries) {
         if (entries == null || entries.length == 0) return Map.of();
@@ -83,6 +89,7 @@ public final class ConfigTestFixture {
     public static Map<String, BizLogicAspect> b(Map<String, BizLogicAspect> m) {
         return (m == null || m.isEmpty()) ? Map.of() : new LinkedHashMap<>(m);
     }
+
     @SafeVarargs
     public static Map<String, BizLogicAspect> b(Map.Entry<String, BizLogicAspect>... entries) {
         if (entries == null || entries.length == 0) return Map.of();
@@ -101,7 +108,7 @@ public final class ConfigTestFixture {
         AspectMap expectedAspectMap = new AspectMap(
                 v(kv("notification", new CelValidation("somecel"))),
                 t(kv("notification", new XsltTransform("xforms/ready.xslt", "schemas/ready.xml"))),
-                e(kv("notification", new ApiEnrichment("getRecipient", Map.of("id", "${inp.recipientId}")))),
+                e(kv("notification", new FixedEnrichment(List.of(List.of("order", "customer", "id")), List.of("output"), Map.of("lookupTable", "customer-ids")))),
                 b(kv("notification", new CelFileLogic("cel/ready.cel")))
         );
         return new BehaviorConfig(Map.ofEntries(entry("readyForDelivery", expectedAspectMap)));
@@ -113,7 +120,7 @@ public final class ConfigTestFixture {
                         kv("xml", new CelValidation("somecel"))
                 ),
                 t(kv("xslt", new XsltTransform("transform.xslt", "transform.xsd"))),
-                e(kv("api", new ApiEnrichment("http://example", Map.of("q", "1")))),
+                e(kv("api", new FixedEnrichment(List.of(List.of("path", "to", "id")), List.of("output"), Map.of("url", "http://my.api.com/data")))),
                 b(
                         kv("notification", new CelFileLogic("logic.cel")),
                         kv("rules", new CelInlineLogic("a + b"))
@@ -127,19 +134,28 @@ public final class ConfigTestFixture {
 
     /* ------------ Visitor & assertions support ------------ */
 
-    /** Recording visitor used across tests. */
+    /**
+     * Recording visitor used across tests.
+     */
     public static final class RecordingVisitorBehavior implements BehaviorConfigVisitor {
         public final List<String> calls = new ArrayList<>();
 
-        private void hit(String m) { calls.add(m); }
+        private void hit(String m) {
+            calls.add(m);
+        }
 
-        @Override public void onConfig(BehaviorConfig config) { hit("onConfig"); }
+        @Override
+        public void onConfig(BehaviorConfig config) {
+            hit("onConfig");
+        }
 
-        @Override public void onEvent(String eventName, AspectMap aspects) {
+        @Override
+        public void onEvent(String eventName, AspectMap aspects) {
             hit("onEvent(" + eventName + ")");
         }
 
-        @Override public void onValidation(String e, String n, ValidationAspect v) {
+        @Override
+        public void onValidation(String e, String n, ValidationAspect v) {
             hit("onValidation(" + e + "," + n + ")");
         }
 
@@ -148,31 +164,38 @@ public final class ConfigTestFixture {
             hit("onCelValidation(" + eventName + "," + name + ")");
         }
 
-        @Override public void onTransformation(String e, String n, TransformationAspect t) {
+        @Override
+        public void onTransformation(String e, String n, TransformationAspect t) {
             hit("onTransformation(" + e + "," + n + ")");
         }
 
-        @Override public void onXsltTransform(String e, String n, XsltTransform t) {
+        @Override
+        public void onXsltTransform(String e, String n, XsltTransform t) {
             hit("onXsltTransform(" + e + "," + n + ")");
         }
 
-        @Override public void onEnrichment(String e, String n, EnrichmentAspect a) {
+        @Override
+        public void onEnrichment(String e, String n, EnrichmentAspect a) {
             hit("onEnrichment(" + e + "," + n + ")");
         }
 
-        @Override public void onApiEnrichment(String e, String n, ApiEnrichment a) {
-            hit("onApiEnrichment(" + e + "," + n + ")");
+        @Override
+        public void onFixedEnrichment(String e, String n, FixedEnrichment f) {
+            hit("onFixedEnrichment(" + e + "," + n + ")");
         }
 
-        @Override public void onBizLogic(String e, String n, BizLogicAspect b) {
+        @Override
+        public void onBizLogic(String e, String n, BizLogicAspect b) {
             hit("onBizLogic(" + e + "," + n + ")");
         }
 
-        @Override public void onCelFileLogic(String e, String n, CelFileLogic b) {
+        @Override
+        public void onCelFileLogic(String e, String n, CelFileLogic b) {
             hit("onCelFileLogic(" + e + "," + n + ")");
         }
 
-        @Override public void onCelInlineLogic(String e, String n, CelInlineLogic b) {
+        @Override
+        public void onCelInlineLogic(String e, String n, CelInlineLogic b) {
             hit("onCelInlineLogic(" + e + "," + n + ")");
         }
     }

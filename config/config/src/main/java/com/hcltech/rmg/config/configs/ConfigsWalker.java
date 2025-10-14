@@ -8,7 +8,6 @@ import com.hcltech.rmg.config.config.BehaviorConfig;
 import com.hcltech.rmg.config.config.BehaviorConfigVisitor;
 import com.hcltech.rmg.config.config.BehaviorConfigWalker;
 import com.hcltech.rmg.config.config.Config;
-import com.hcltech.rmg.config.enrich.ApiEnrichment;
 import com.hcltech.rmg.config.enrich.EnrichmentAspect;
 import com.hcltech.rmg.config.transformation.TransformationAspect;
 import com.hcltech.rmg.config.transformation.XmlTransform;
@@ -102,9 +101,7 @@ public final class ConfigsWalker {
         @Override public void onEnrichment(String eventName, String moduleName, EnrichmentAspect e) {
             v.onEnrichment(paramKey, eventName, moduleName, e);
         }
-        @Override public void onApiEnrichment(String eventName, String moduleName, ApiEnrichment e) {
-            v.onApiEnrichment(paramKey, eventName, moduleName, e);
-        }
+
 
         // BizLogic
         @Override public void onBizLogic(String eventName, String moduleName, BizLogicAspect b) {

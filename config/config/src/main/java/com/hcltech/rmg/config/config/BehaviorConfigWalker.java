@@ -1,17 +1,11 @@
 package com.hcltech.rmg.config.config;
 
-import com.hcltech.rmg.config.aspect.AspectMap;
-import com.hcltech.rmg.config.bizlogic.BizLogicAspect;
 import com.hcltech.rmg.config.bizlogic.CelFileLogic;
 import com.hcltech.rmg.config.bizlogic.CelInlineLogic;
-import com.hcltech.rmg.config.enrich.ApiEnrichment;
-import com.hcltech.rmg.config.enrich.EnrichmentAspect;
 import com.hcltech.rmg.config.enrich.FixedEnrichment;
-import com.hcltech.rmg.config.transformation.TransformationAspect;
 import com.hcltech.rmg.config.transformation.XmlTransform;
 import com.hcltech.rmg.config.transformation.XsltTransform;
 import com.hcltech.rmg.config.validation.CelValidation;
-import com.hcltech.rmg.config.validation.ValidationAspect;
 
 import java.util.Map;
 import java.util.Objects;
@@ -30,7 +24,8 @@ import java.util.function.BiConsumer;
  */
 public final class BehaviorConfigWalker {
 
-    private BehaviorConfigWalker() {}
+    private BehaviorConfigWalker() {
+    }
 
     public static void walk(BehaviorConfig config, BehaviorConfigVisitor visitor) {
         Objects.requireNonNull(config, "config");
@@ -62,9 +57,7 @@ public final class BehaviorConfigWalker {
             // --- Enrichment ---
             forEachNonNull(aspects.enrichment(), (moduleName, e) -> {
                 visitor.onEnrichment(eventName, moduleName, e);
-                if (e instanceof ApiEnrichment api) {
-                    visitor.onApiEnrichment(eventName, moduleName, api);
-                }else if (e instanceof FixedEnrichment fixed) {   // <-- NEW
+                if (e instanceof FixedEnrichment fixed) {   // <-- NEW
                     visitor.onFixedEnrichment(eventName, moduleName, fixed);
                 }
             });
@@ -83,6 +76,8 @@ public final class BehaviorConfigWalker {
 
     private static <K, V> void forEachNonNull(Map<K, V> map, BiConsumer<K, V> consumer) {
         if (map == null || map.isEmpty()) return;
-        map.forEach((k, v) -> { if (v != null) consumer.accept(k, v); });
+        map.forEach((k, v) -> {
+            if (v != null) consumer.accept(k, v);
+        });
     }
 }
