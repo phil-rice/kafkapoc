@@ -21,12 +21,16 @@ public final class RawMessageDeserialiser implements KafkaRecordDeserializationS
     private transient ITimeService timeService;
     private transient IUuidGenerator uuid;
 
-    /** Prod/IT path: only serialize a tiny string; resolve deps in open(). */
+    /**
+     * Prod/IT path: only serialize a tiny string; resolve deps in open().
+     */
     public RawMessageDeserialiser(String containerId) {
         this.containerId = containerId;
     }
 
-    /** Test-only path: bypass container resolution. */
+    /**
+     * Test-only path: bypass container resolution.
+     */
     public RawMessageDeserialiser(ITimeService timeService, IUuidGenerator uuid) {
         this.containerId = null;
         this.timeService = timeService;
@@ -48,18 +52,21 @@ public final class RawMessageDeserialiser implements KafkaRecordDeserializationS
         String value = new String(rec.value(), StandardCharsets.UTF_8);
 
         String traceparent = headerValue(rec, "traceparent");
-        String tracestate  = headerValue(rec, "tracestate");
-        String baggage     = headerValue(rec, "baggage");
+        String tracestate = headerValue(rec, "tracestate");
+        String baggage = headerValue(rec, "baggage");
 
         // If no traceparent, synthesize a minimal W3C one
         if (traceparent == null || traceparent.isBlank()) {
             traceparent = synthesizeTraceparent(uuid);
         }
 
-
+        var headers = rec.headers();
+        var domainId = headerValue(rec, "domainId");
+        if (domainId == null) domainId = RawMessage.unknownDomainId;
         out.collect(new RawMessage(
                 value,
-                rec.timestamp(),                      // brokerTimestamp
+                domainId,
+                rec.timestamp(),
                 timeService.currentTimeMillis(),      // processingTimestamp
                 rec.partition(),
                 rec.offset(),
@@ -82,10 +89,12 @@ public final class RawMessageDeserialiser implements KafkaRecordDeserializationS
         return new String(v, StandardCharsets.UTF_8);
     }
 
-    /** Build a W3C traceparent: 00-<32 hex traceId>-<16 hex parentId>-01 */
+    /**
+     * Build a W3C traceparent: 00-<32 hex traceId>-<16 hex parentId>-01
+     */
     static String synthesizeTraceparent(IUuidGenerator uuid) {
         String traceId = toHex32(uuid.generate());   // 16-byte (32 hex) trace-id
-        String parent  = toHex16(uuid.generate());   // 8-byte (16 hex) parent-id
+        String parent = toHex16(uuid.generate());   // 8-byte (16 hex) parent-id
         return "00-" + traceId + "-" + parent + "-01";
     }
 

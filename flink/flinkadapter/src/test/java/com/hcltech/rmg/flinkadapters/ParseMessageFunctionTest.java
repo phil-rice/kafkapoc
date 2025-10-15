@@ -16,14 +16,14 @@ import java.util.List;
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.when;
 
-class InitialEnvelopeMapFunctionTest {
+class ParseMessageFunctionTest {
 
     @Test
     @DisplayName("map(): throws if open() not called (factory is null)")
     void map_before_open_throws() {
         // Use raw Object types to keep generics frictionless
-        InitialEnvelopeMapFunction<Object, Object, Object, Object> fn =
-                new InitialEnvelopeMapFunction<>(null, "container-id");
+        ParseMessageFunction<Object, Object, Object, Object> fn =
+                new ParseMessageFunction<>(null, "container-id");
 
         var rec = Tuple2.of("dom-1", new RawMessage("<x/>", 1L, 2L, 3, 4L, null, null, null));
 
@@ -38,11 +38,11 @@ class InitialEnvelopeMapFunctionTest {
         @SuppressWarnings("unchecked")
         InitialEnvelopeFactory<Object, String, Object> mockFactory = Mockito.mock(InitialEnvelopeFactory.class);
 
-        InitialEnvelopeMapFunction<Object, Object, String, Object> fn =
-                new InitialEnvelopeMapFunction<>(null, "container-id");
+        ParseMessageFunction<Object, Object, String, Object> fn =
+                new ParseMessageFunction<>(null, "container-id");
 
         // Reflectively set the private 'factory' field
-        Field f = InitialEnvelopeMapFunction.class.getDeclaredField("factory");
+        Field f = ParseMessageFunction.class.getDeclaredField("factory");
         f.setAccessible(true);
         f.set(fn, mockFactory);
 

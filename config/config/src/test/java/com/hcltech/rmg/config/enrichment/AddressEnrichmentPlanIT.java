@@ -1,7 +1,7 @@
 package com.hcltech.rmg.config.enrichment;
 
 import com.hcltech.rmg.config.enrich.EnrichmentWithDepedenciesNodeTc;
-import com.hcltech.rmg.config.enrich.FixedEnrichment;
+import com.hcltech.rmg.config.enrich.MapLookupEnrichment;
 import com.hcltech.rmg.dag.Edge;
 import com.hcltech.rmg.dag.ListPathTC;
 import com.hcltech.rmg.dag.RequirementGraphBuilder;
@@ -24,19 +24,19 @@ public class AddressEnrichmentPlanIT {
     @Test
     void postcode_then_suffix_then_instructions_generations_and_edges() {
         // 1) Postcode from address lines (all 5 present even if empty)
-        var POSTCODE_FROM_ADDR = new FixedEnrichment(
+        var POSTCODE_FROM_ADDR = new MapLookupEnrichment(
                 of(p("addr", "line1"), p("addr", "line2"), p("addr", "line3"), p("addr", "city"), p("addr", "country")),
                 p("addr", "postcode"),
                 java.util.Map.of()
         );
         // 2) Postcode suffix from (line1, line2, postcode)
-        var SUFFIX_FROM_L12_PC = new FixedEnrichment(
+        var SUFFIX_FROM_L12_PC = new MapLookupEnrichment(
                 of(p("addr", "line1"), p("addr", "line2"), p("addr", "postcode")),
                 p("addr", "postcodeSuffix"),
                 java.util.Map.of()
         );
         // 3) Delivery instructions from (postcode, postcodeSuffix)
-        var INSTR_FROM_PC_SUFF = new FixedEnrichment(
+        var INSTR_FROM_PC_SUFF = new MapLookupEnrichment(
                 of(p("addr", "postcode"), p("addr", "postcodeSuffix")),
                 p("delivery", "instructions"),
                 java.util.Map.of()
@@ -77,12 +77,12 @@ public class AddressEnrichmentPlanIT {
         // - PostcodeSuffix depends on postcode
         // Unique outputs, so validation passes; topo should detect a cycle.
 
-        var POSTCODE_FROM_SUFFIX = new FixedEnrichment(
+        var POSTCODE_FROM_SUFFIX = new MapLookupEnrichment(
                 of(p("addr", "postcodeSuffix")),            // requires suffix
                 p("addr", "postcode"),                      // produces postcode
                 java.util.Map.of()
         );
-        var SUFFIX_FROM_POSTCODE = new FixedEnrichment(
+        var SUFFIX_FROM_POSTCODE = new MapLookupEnrichment(
                 of(p("addr", "postcode")),                  // requires postcode
                 p("addr", "postcodeSuffix"),                // produces suffix
                 java.util.Map.of()

@@ -62,7 +62,13 @@
         </dependency>
         <dependency>
             <groupId>com.hcltech.rmg</groupId>
-            <artifactId>all_execution</artifactId>
+            <artifactId>bizlogic</artifactId>
+            <version>1.0.0-SNAPSHOT</version>
+            <scope>compile</scope>
+        </dependency>
+        <dependency>
+            <groupId>com.hcltech.rmg</groupId>
+            <artifactId>enrichment</artifactId>
             <version>1.0.0-SNAPSHOT</version>
             <scope>compile</scope>
         </dependency>

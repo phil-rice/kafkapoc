@@ -65,7 +65,7 @@ public record CelInlineLogicExecutor<CepState, Msg>(
                                 .<ValueEnvelope<CepState, Msg>, ValueEnvelope<CepState, Msg>>createCelRuleBuilder(source)
                                 .withVar("message", CelVarType.DYN, ValueEnvelope::data)
                                 .withVar("cepState", CelVarType.DYN, v ->
-                                        java.util.Objects.requireNonNull(v.header(), "ValueEnvelope.header() is null").cepState())
+                                        java.util.Objects.requireNonNull(v.cepState(), "ValueEnvelope.cepState() is null"))
                                 .withResultCoercer((ve, out) -> {
                                     if (out == null) {
                                         // Policy: keep original data if rule yields null

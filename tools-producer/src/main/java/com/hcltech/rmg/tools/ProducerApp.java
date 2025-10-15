@@ -17,6 +17,7 @@ import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.io.InputStream;
+import java.nio.charset.StandardCharsets;
 import java.util.List;
 import java.util.Map;
 import java.util.Properties;
@@ -98,7 +99,7 @@ public class ProducerApp {
         int partitions = Integer.parseInt(get("kafka.partitions", applicationProperties, "12"));
         short rf = Short.parseShort(get("kafka.replication.factor", applicationProperties, "1"));
 
-        int count = Integer.parseInt(get("generator.count", applicationProperties, "100000"));
+        int count = Integer.parseInt(get("generator.count", applicationProperties, "1000000"));
         int domainCount = Integer.parseInt(get("generator.domain.count", applicationProperties, "1000"));
         int recordEvery = Integer.parseInt(get("logging.record.every", applicationProperties, "1000"));
         int parallelism = Integer.parseInt(get("generator.parallelism", applicationProperties, "100"));
@@ -130,7 +131,10 @@ public class ProducerApp {
 
                 gate.acquireUninterruptibly(); // cap in-flight sends
 
-                producer.send(new ProducerRecord<>(topic, key, value), (RecordMetadata meta, Exception ex) -> {
+                ProducerRecord<String, String> record = new ProducerRecord<>(topic, key, value);
+                record.headers().add("domainId", key.getBytes(StandardCharsets.UTF_8));
+
+                producer.send(record, (RecordMetadata meta, Exception ex) -> {
                     try {
                         if (ex != null) {
                             if (firstError.compareAndSet(null, ex)) {

@@ -22,12 +22,17 @@
     <dependencies>
         <dependency>
             <groupId>com.hcltech.rmg</groupId>
-            <artifactId>celimpl</artifactId>
+            <artifactId>appcontainer_interfaces</artifactId>
             <version>${project.version}</version>
         </dependency>
         <dependency>
             <groupId>com.hcltech.rmg</groupId>
             <artifactId>bizlogic</artifactId>
+            <version>${project.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>com.hcltech.rmg</groupId>
+            <artifactId>celimpl</artifactId>
             <version>${project.version}</version>
         </dependency>
         <dependency>

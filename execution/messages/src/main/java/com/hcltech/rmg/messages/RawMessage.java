@@ -5,6 +5,7 @@ import java.util.Objects;
 /** A raw message received from a broker, before any deserialization or processing. */
 public record RawMessage(
         String rawValue,
+        String domainId,
         long brokerTimestamp,
         long processingTimestamp,
         int partition,
@@ -13,6 +14,8 @@ public record RawMessage(
         String tracestate,
         String baggage
 ) {
+    public static final String unknownDomainId = "unknown";
+
     public RawMessage {
         Objects.requireNonNull(rawValue, "rawValue must not be null");
     }

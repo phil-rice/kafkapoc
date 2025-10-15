@@ -2,6 +2,8 @@ package com.hcltech.rmg.execution.aspects;
 
 import com.hcltech.rmg.common.errorsor.ErrorsOr;
 
+import java.util.function.Function;
+
 public interface AspectExecutor<Component, Inp, Out> {
     /**
      * Note that this can throw runtime errors as well
@@ -12,4 +14,5 @@ public interface AspectExecutor<Component, Inp, Out> {
      * @return Out - the output of the aspect
      */
     Out execute(String key, Component component, Inp input);
+
 }

@@ -6,7 +6,7 @@ import com.hcltech.rmg.config.bizlogic.CelFileLogic;
 import com.hcltech.rmg.config.bizlogic.CelInlineLogic;
 
 import com.hcltech.rmg.config.enrich.EnrichmentAspect;
-import com.hcltech.rmg.config.enrich.FixedEnrichment;
+import com.hcltech.rmg.config.enrich.MapLookupEnrichment;
 import com.hcltech.rmg.config.transformation.TransformationAspect;
 import com.hcltech.rmg.config.transformation.XmlTransform;
 import com.hcltech.rmg.config.transformation.XsltTransform;
@@ -40,7 +40,7 @@ public interface BehaviorConfigVisitor {
 
     // Enrichment family
     default void onEnrichment(String eventName, String moduleName, EnrichmentAspect e) {}
-    default void onFixedEnrichment(String eventName, String moduleName, FixedEnrichment e) {}
+    default void onFixedEnrichment(String eventName, String moduleName, MapLookupEnrichment e) {}
     // BizLogic family
     default void onBizLogic(String eventName, String moduleName, BizLogicAspect b) {}
     default void onCelFileLogic(String eventName, String moduleName, CelFileLogic b) {}

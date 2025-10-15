@@ -68,7 +68,7 @@ public final class EnvelopeKafkaSinks {
                 .setBootstrapServers(brokers)
                 .setKafkaProducerConfig(producerConfig)
                 .setRecordSerializer(
-                        KafkaRecordSerializationSchema.<RetryEnvelope<CepState,Msg>>builder()
+                        KafkaRecordSerializationSchema.<RetryEnvelope<CepState, Msg>>builder()
                                 .setTopic(topic)
                                 .setKeySerializationSchema(new RetryKeySerializer())
                                 .setValueSerializationSchema(new RetryPayloadSerializer())
@@ -88,7 +88,7 @@ public final class EnvelopeKafkaSinks {
 
         @Override
         public byte[] serialize(ValueEnvelope<CepState, Msg> v) {
-            String k = (v == null || v.header() == null) ? null : v.header().domainId();
+            String k = (v == null || v.header() == null) ? null : v.header().rawMessage().domainId();
             return toBytes(k);
         }
     }
@@ -102,7 +102,7 @@ public final class EnvelopeKafkaSinks {
         @Override
         public byte[] serialize(ErrorEnvelope<CepState, Msg> e) {
             var h = (e == null) ? null : e.valueEnvelope().header();
-            String k = (h == null) ? null : h.domainId();
+            String k = (h == null) ? null : h.rawMessage().domainId();
             return toBytes(k);
         }
     }
@@ -116,7 +116,7 @@ public final class EnvelopeKafkaSinks {
         @Override
         public byte[] serialize(RetryEnvelope<CepState, Msg> r) {
             var h = (r == null) ? null : r.valueEnvelope().header();
-            String k = (h == null) ? null : h.domainId();
+            String k = (h == null) ? null : h.rawMessage().domainId();
             return toBytes(k);
         }
     }
@@ -136,7 +136,7 @@ public final class EnvelopeKafkaSinks {
                 root.put("kind", "value");
                 var h = v.header();
                 root.put("domainType", h.domainType());
-                root.put("domainId", h.domainId());
+                root.put("domainId", h.rawMessage().domainId());
                 root.put("eventType", h.eventType());
                 root.set("payload", MAPPER.valueToTree(v.data()));
                 return MAPPER.writeValueAsBytes(root);
@@ -160,7 +160,7 @@ public final class EnvelopeKafkaSinks {
                 root.put("stage", e.stageName());
                 var h = e.valueEnvelope().header();
                 root.put("domainType", h.domainType());
-                root.put("domainId", h.domainId());
+                root.put("domainId", h.rawMessage().domainId());
                 root.put("eventType", h.eventType());
                 root.set("errors", MAPPER.valueToTree(e.errors()));
                 root.set("payload", MAPPER.valueToTree(e.valueEnvelope().data()));
@@ -184,7 +184,7 @@ public final class EnvelopeKafkaSinks {
                 root.put("kind", "retry");
                 var h = r.valueEnvelope().header();
                 root.put("domainType", h.domainType());
-                root.put("domainId", h.domainId());
+                root.put("domainId", h.rawMessage().domainId());
                 root.put("eventType", h.eventType());
                 root.put("stageName", r.stageName() == null ? "" : r.stageName());
                 root.set("payload", MAPPER.valueToTree(r.valueEnvelope().data()));

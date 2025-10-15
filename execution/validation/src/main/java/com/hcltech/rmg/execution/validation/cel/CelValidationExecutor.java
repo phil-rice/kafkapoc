@@ -46,7 +46,7 @@ public class CelValidationExecutor<CepState, Msg>
                 source -> ruleBuilderFactory
                         .<ValueEnvelope<CepState, Msg>, List<String>>createCelRuleBuilder(source)
                         .withVar("msg", CelVarType.DYN, ValueEnvelope::data)
-                        .withVar("cepState", CelVarType.DYN, v -> v.header().cepState())
+                        .withVar("cepState", CelVarType.DYN, ValueEnvelope::cepState)
                         .compile(),
                 /* overwriteOnPopulate */ false
         );

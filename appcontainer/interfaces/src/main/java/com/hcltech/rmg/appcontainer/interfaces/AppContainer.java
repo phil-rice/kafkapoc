@@ -1,17 +1,14 @@
 package com.hcltech.rmg.appcontainer.interfaces;
 
-import com.hcltech.rmg.all_execution.AllBizLogic;
 import com.hcltech.rmg.cepstate.CepStateTypeClass;
 import com.hcltech.rmg.common.ITimeService;
 import com.hcltech.rmg.common.uuid.IUuidGenerator;
 import com.hcltech.rmg.config.config.Config;
 import com.hcltech.rmg.config.config.RootConfig;
-import com.hcltech.rmg.config.enrich.EnrichmentAspect;
 import com.hcltech.rmg.enrichment.IEnrichmentAspectExecutor;
-import com.hcltech.rmg.execution.aspects.AspectExecutor;
+import com.hcltech.rmg.execution.bizlogic.BizLogicExecutor;
 import com.hcltech.rmg.messages.IDomainTypeExtractor;
 import com.hcltech.rmg.messages.IEventTypeExtractor;
-import com.hcltech.rmg.messages.ValueEnvelope;
 import com.hcltech.rmg.parameters.ParameterExtractor;
 import com.hcltech.rmg.xml.XmlTypeClass;
 
@@ -36,7 +33,7 @@ public record AppContainer<EventSourceConfig, CepState, Msg, Schema>(
         IDomainTypeExtractor<Msg> domainTypeExtractor, IEventTypeExtractor<Msg> eventTypeExtractor,
         //Execution
         IEnrichmentAspectExecutor<CepState, Msg> enrichmentExecutor,
-        AllBizLogic<CepState, Msg> bizLogic,
+        BizLogicExecutor<CepState, Msg> bizLogic,
 
         //The behaviour of the application. The key is the parameters key.
         Map<String, Config> keyToConfigMap) implements InitialEnvelopeServices<CepState, Msg, Schema> {

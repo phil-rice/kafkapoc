@@ -4,9 +4,8 @@ import com.hcltech.rmg.config.aspect.AspectMap;
 import com.hcltech.rmg.config.bizlogic.CelFileLogic;
 import com.hcltech.rmg.config.bizlogic.CelInlineLogic;
 import com.hcltech.rmg.config.config.BehaviorConfig;
-import com.hcltech.rmg.config.enrich.FixedEnrichment;
+import com.hcltech.rmg.config.enrich.MapLookupEnrichment;
 import com.hcltech.rmg.config.transformation.XmlTransform;
-import com.hcltech.rmg.config.transformation.XsltTransform;
 import com.hcltech.rmg.config.validation.CelValidation;
 import org.junit.jupiter.api.Test;
 
@@ -58,7 +57,7 @@ class BehaviorConfigLoaderTest {
                                     v(kv("notification", new CelValidation("a + b > 0"))),
                                     t(kv("notification", new XmlTransform("schemas/ready.xsd"))),
                                     e(
-                                            kv("fixed", new FixedEnrichment(
+                                            kv("fixed", new MapLookupEnrichment(
                                                     // inputs
                                                     List.of(List.of("addr","line1"), List.of("addr","line2")),
                                                     // output

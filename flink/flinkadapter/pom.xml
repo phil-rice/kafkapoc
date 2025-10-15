@@ -22,6 +22,11 @@
     <dependencies>
         <dependency>
             <groupId>com.hcltech.rmg</groupId>
+            <artifactId>all_execution</artifactId>
+            <version>${project.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>com.hcltech.rmg</groupId>
             <artifactId>common</artifactId>
             <version>${project.version}</version>
         </dependency>

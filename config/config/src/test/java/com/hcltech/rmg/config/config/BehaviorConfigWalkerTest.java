@@ -5,7 +5,7 @@ import com.hcltech.rmg.config.bizlogic.BizLogicAspect;
 import com.hcltech.rmg.config.bizlogic.CelFileLogic;
 import com.hcltech.rmg.config.bizlogic.CelInlineLogic;
 import com.hcltech.rmg.config.enrich.EnrichmentAspect;
-import com.hcltech.rmg.config.enrich.FixedEnrichment;
+import com.hcltech.rmg.config.enrich.MapLookupEnrichment;
 import com.hcltech.rmg.config.transformation.TransformationAspect;
 import com.hcltech.rmg.config.transformation.XmlTransform;
 import com.hcltech.rmg.config.transformation.XsltTransform;
@@ -80,7 +80,7 @@ public class BehaviorConfigWalkerTest {
         }
 
         @Override
-        public void onFixedEnrichment(String e, String m, FixedEnrichment a) {
+        public void onFixedEnrichment(String e, String m, MapLookupEnrichment a) {
             hit("onFixedEnrichment(" + e + "," + m + ")");
         }
 
@@ -128,7 +128,7 @@ public class BehaviorConfigWalkerTest {
                         "xslt", new XsltTransform("transform.xslt", "transform.xsd")
                 ),
                 Map.of(
-                        "fixed", new FixedEnrichment(
+                        "fixed", new MapLookupEnrichment(
                                 List.of(List.of("addr", "line1"), List.of("addr", "line2")),
                                 List.of("addr", "postcode"),
                                 Map.of("L1.L2", "PC1")
@@ -213,7 +213,7 @@ public class BehaviorConfigWalkerTest {
 
         java.util.Map<String, com.hcltech.rmg.config.enrich.EnrichmentAspect> enrichments =
                 new java.util.LinkedHashMap<>();
-        enrichments.put("e1", new FixedEnrichment(List.of(List.of("p")), List.of("o"), Map.of()));
+        enrichments.put("e1", new MapLookupEnrichment(List.of(List.of("p")), List.of("o"), Map.of()));
         enrichments.put("eNull", null); // intentional
 
         java.util.Map<String, com.hcltech.rmg.config.bizlogic.BizLogicAspect> bizlogics =
@@ -273,8 +273,8 @@ public class BehaviorConfigWalkerTest {
                         "tXslt", new XsltTransform("a.xslt", "a.xsd")
                 ),
                 Map.of(
-                        "e2", new FixedEnrichment(List.of(List.of("p2")), List.of("o2"), Map.of()),
-                        "e1", new FixedEnrichment(List.of(List.of("p1")), List.of("o1"), Map.of())),
+                        "e2", new MapLookupEnrichment(List.of(List.of("p2")), List.of("o2"), Map.of()),
+                        "e1", new MapLookupEnrichment(List.of(List.of("p1")), List.of("o1"), Map.of())),
                 Map.of(
                         "b2", new CelInlineLogic("x"),
                         "b1", new CelFileLogic("f1")
@@ -321,7 +321,7 @@ public class BehaviorConfigWalkerTest {
         var evt2 = new AspectMap(
                 null,
                 Map.of("xslt", new XsltTransform("t.xslt", "s.xsd")),
-                Map.of("fixed", new FixedEnrichment(List.of(List.of("p")), List.of("o"), Map.of())),
+                Map.of("fixed", new MapLookupEnrichment(List.of(List.of("p")), List.of("o"), Map.of())),
                 Map.of("b", new CelInlineLogic("x"))
         );
         var config = new BehaviorConfig(Map.of(

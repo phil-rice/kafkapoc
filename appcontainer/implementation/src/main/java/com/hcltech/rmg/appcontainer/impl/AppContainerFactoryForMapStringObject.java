@@ -1,9 +1,10 @@
 // com.hcltech.rmg.appcontainer.impl.AppContainerFactory
 package com.hcltech.rmg.appcontainer.impl;
 
-import com.hcltech.rmg.all_execution.AllBizLogic;
+
 import com.hcltech.rmg.appcontainer.interfaces.AppContainer;
 import com.hcltech.rmg.appcontainer.interfaces.IAppContainerFactory;
+import com.hcltech.rmg.celimpl.CelRuleBuilders;
 import com.hcltech.rmg.cepstate.CepEvent;
 import com.hcltech.rmg.cepstate.CepStateTypeClass;
 import com.hcltech.rmg.cepstate.MapStringObjectCepStateTypeClass;
@@ -11,13 +12,13 @@ import com.hcltech.rmg.common.ITimeService;
 import com.hcltech.rmg.common.errorsor.ErrorsOr;
 import com.hcltech.rmg.common.uuid.IUuidGenerator;
 import com.hcltech.rmg.config.config.RootConfig;
-import com.hcltech.rmg.config.enrich.EnrichmentAspect;
 import com.hcltech.rmg.config.enrich.EnrichmentWithDependencies;
 import com.hcltech.rmg.config.loader.ConfigsBuilder;
 import com.hcltech.rmg.config.loader.RootConfigLoader;
 import com.hcltech.rmg.enrichment.EnrichmentExecutor;
 import com.hcltech.rmg.enrichment.IEnrichmentAspectExecutor;
 import com.hcltech.rmg.execution.aspects.AspectExecutor;
+import com.hcltech.rmg.execution.bizlogic.BizLogicExecutor;
 import com.hcltech.rmg.kafkaconfig.KafkaConfig;
 import com.hcltech.rmg.messages.IDomainTypeExtractor;
 import com.hcltech.rmg.messages.IEventTypeExtractor;
@@ -126,10 +127,12 @@ public final class AppContainerFactoryForMapStringObject implements IAppContaine
                         XmlTypeClass.loadOptionalSchema(xml, root.xmlSchemaPath()).flatMap(schemaMap -> {
                             Class<Map<String, Object>> msgClass = (Class) Map.class;
                             AspectExecutor<EnrichmentWithDependencies, ValueEnvelope<Map<String, Object>, Map<String, Object>>, CepEvent> oneEnrichmentExecutor = new EnrichmentExecutor<>(msgTypeClass);
+                            var bizLogicExecutor = new BizLogicExecutor<Map<String,Object>, Map<String,Object>>(configs, CelRuleBuilders.newRuleBuilder, msgClass);
+
                             return IEnrichmentAspectExecutor.<Map<String, Object>, Map<String, Object>>create(cepStateTypeClass, configs, oneEnrichmentExecutor).map(
                                     enricher ->
 
-                                            new AppContainer<>(
+                                            new AppContainer<KafkaConfig, Map<String, Object>, Map<String, Object>, XMLValidationSchema>(
                                                     time,
                                                     uuid,
                                                     xml,
@@ -142,7 +145,7 @@ public final class AppContainerFactoryForMapStringObject implements IAppContaine
                                                     domainTypeExtractor,
                                                     eventTypeExtractor,
                                                     enricher,
-                                                    AllBizLogic.create(configs, msgClass),
+                                                    bizLogicExecutor,
                                                     configs.keyToConfigMap()
                                             ));
                         })

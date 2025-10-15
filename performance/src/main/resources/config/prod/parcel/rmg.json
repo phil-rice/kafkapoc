@@ -14,7 +14,7 @@
           "type": "composite",
           "enrichers": [
             {
-              "type": "fixed",
+              "type": "lookup",
               "inputs": [["inp","line1"], ["inp","line2"], ["postcode"]],
               "output": ["destination"],
               "lookup": {
@@ -26,7 +26,7 @@
               }
             },
             {
-              "type": "fixed",
+              "type": "lookup",
               "inputs": [["postcode"]],
               "output": ["postcodeSuffix"],
               "lookup": {

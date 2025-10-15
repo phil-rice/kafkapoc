@@ -8,7 +8,7 @@ import static com.hcltech.rmg.config.enrichment.FixedEnrichmentFixture.*;
 import static com.hcltech.rmg.dag.ProducerValidation.validate;
 import static org.junit.jupiter.api.Assertions.*;
 
-public class FixedEnrichmentValidationIT {
+public class MapLookupEnrichmentValidationIT {
 
     @Test
     void distinctOutputs_areValid() {

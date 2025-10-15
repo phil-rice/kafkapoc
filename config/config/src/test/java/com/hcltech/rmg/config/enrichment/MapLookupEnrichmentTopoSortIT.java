@@ -12,7 +12,7 @@ import static org.junit.jupiter.api.Assertions.*;
 /**
  * Integration tests: nodes -> RequirementGraph (builder & validator) -> Kahn generations.
  */
-public class FixedEnrichmentTopoSortIT {
+public class MapLookupEnrichmentTopoSortIT {
 
     @Test
     void chain_A_to_B_to_C() {

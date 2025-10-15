@@ -2,7 +2,7 @@ package com.hcltech.rmg.config.config;
 
 import com.hcltech.rmg.config.bizlogic.CelFileLogic;
 import com.hcltech.rmg.config.bizlogic.CelInlineLogic;
-import com.hcltech.rmg.config.enrich.FixedEnrichment;
+import com.hcltech.rmg.config.enrich.MapLookupEnrichment;
 import com.hcltech.rmg.config.transformation.XmlTransform;
 import com.hcltech.rmg.config.transformation.XsltTransform;
 import com.hcltech.rmg.config.validation.CelValidation;
@@ -57,7 +57,7 @@ public final class BehaviorConfigWalker {
             // --- Enrichment ---
             forEachNonNull(aspects.enrichment(), (moduleName, e) -> {
                 visitor.onEnrichment(eventName, moduleName, e);
-                if (e instanceof FixedEnrichment fixed) {   // <-- NEW
+                if (e instanceof MapLookupEnrichment fixed) {   // <-- NEW
                     visitor.onFixedEnrichment(eventName, moduleName, fixed);
                 }
             });

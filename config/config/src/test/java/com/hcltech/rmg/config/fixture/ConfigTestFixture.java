@@ -7,7 +7,7 @@ import com.hcltech.rmg.config.bizlogic.CelInlineLogic;
 import com.hcltech.rmg.config.config.BehaviorConfig;
 import com.hcltech.rmg.config.config.BehaviorConfigVisitor;
 import com.hcltech.rmg.config.enrich.EnrichmentAspect;
-import com.hcltech.rmg.config.enrich.FixedEnrichment;
+import com.hcltech.rmg.config.enrich.MapLookupEnrichment;
 import com.hcltech.rmg.config.transformation.TransformationAspect;
 import com.hcltech.rmg.config.transformation.XsltTransform;
 import com.hcltech.rmg.config.validation.CelValidation;
@@ -108,7 +108,7 @@ public final class ConfigTestFixture {
         AspectMap expectedAspectMap = new AspectMap(
                 v(kv("notification", new CelValidation("somecel"))),
                 t(kv("notification", new XsltTransform("xforms/ready.xslt", "schemas/ready.xml"))),
-                e(kv("notification", new FixedEnrichment(List.of(List.of("order", "customer", "id")), List.of("output"), Map.of("lookupTable", "customer-ids")))),
+                e(kv("notification", new MapLookupEnrichment(List.of(List.of("order", "customer", "id")), List.of("output"), Map.of("lookupTable", "customer-ids")))),
                 b(kv("notification", new CelFileLogic("cel/ready.cel")))
         );
         return new BehaviorConfig(Map.ofEntries(entry("readyForDelivery", expectedAspectMap)));
@@ -120,7 +120,7 @@ public final class ConfigTestFixture {
                         kv("xml", new CelValidation("somecel"))
                 ),
                 t(kv("xslt", new XsltTransform("transform.xslt", "transform.xsd"))),
-                e(kv("api", new FixedEnrichment(List.of(List.of("path", "to", "id")), List.of("output"), Map.of("url", "http://my.api.com/data")))),
+                e(kv("api", new MapLookupEnrichment(List.of(List.of("path", "to", "id")), List.of("output"), Map.of("url", "http://my.api.com/data")))),
                 b(
                         kv("notification", new CelFileLogic("logic.cel")),
                         kv("rules", new CelInlineLogic("a + b"))
@@ -180,7 +180,7 @@ public final class ConfigTestFixture {
         }
 
         @Override
-        public void onFixedEnrichment(String e, String n, FixedEnrichment f) {
+        public void onFixedEnrichment(String e, String n, MapLookupEnrichment f) {
             hit("onFixedEnrichment(" + e + "," + n + ")");
         }
 

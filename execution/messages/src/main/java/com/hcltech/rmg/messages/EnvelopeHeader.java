@@ -15,35 +15,20 @@ import com.hcltech.rmg.parameters.Parameters;
  */
 public record EnvelopeHeader<CepState>(
         String domainType,
-        String domainId,
         String eventType, //wil lbe null at start until we have parsed the message and found it
         RawMessage rawMessage,
         Parameters parameters,
 //This will be null at start until we have parsed the message and found them. The actual parameters are defined in the config. Includes event type and domain type
-        BehaviorConfig config, // the specific combination for this set of parameters
-        CepState cepState
+        BehaviorConfig config // the specific combination for this set of parameters
 ) {
     <Msg> EnvelopeHeader<CepState> withMessage(ParameterExtractor<Msg> parameterExtractor, Msg message, String eventType) {
         return new EnvelopeHeader<>(
                 domainType,
-                domainId,
                 eventType,
                 rawMessage,
-                parameterExtractor.parameters(message, eventType, domainType, domainId).valueOrThrow(),
-                config,
-                cepState
-        );
+                parameterExtractor.parameters(message, eventType, domainType, rawMessage().domainId()).valueOrThrow(),
+                config);
     }
-    public EnvelopeHeader<CepState> withCepState(CepState newCepState) {
-        return new EnvelopeHeader<>(
-                domainType,
-                domainId,
-                eventType,
-                rawMessage,
-                parameters,
-                config,
-                newCepState
-        );
-    }
+
 
 }

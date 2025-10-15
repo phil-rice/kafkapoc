@@ -9,7 +9,7 @@ import java.util.Map;
  * <p>
  * For example {"a": "a1", "b": "b2"} will enrich with 2 giving {"a": "a1", "b": "b2", "X": 2}
  */
-public record FixedEnrichment(
+public record MapLookupEnrichment(
         List<List<String>> inputs,
         List<String> output,
         Map<String, Object> lookup

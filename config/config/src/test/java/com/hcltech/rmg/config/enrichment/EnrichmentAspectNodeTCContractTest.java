@@ -2,7 +2,7 @@ package com.hcltech.rmg.config.enrichment;
 
 import com.hcltech.rmg.config.enrich.EnrichmentAspect;
 import com.hcltech.rmg.config.enrich.EnrichmentWithDepedenciesNodeTc;
-import com.hcltech.rmg.config.enrich.FixedEnrichment;
+import com.hcltech.rmg.config.enrich.MapLookupEnrichment;
 import com.hcltech.rmg.dag.NodeTC;
 import com.hcltech.rmg.dag.NodeTCContractTest;
 
@@ -30,11 +30,11 @@ public final class EnrichmentAspectNodeTCContractTest
     }
 
     @Override
-    protected FixedEnrichment makeNode(String label, String[] producesDot, String[] requiresDot) {
+    protected MapLookupEnrichment makeNode(String label, String[] producesDot, String[] requiresDot) {
         // Force single output (use first if provided, else a default)
         List<List<String>> inputs = new ArrayList<>();
         for (String r : requiresDot) inputs.add(p(r));
         List<String> output = (producesDot.length == 0) ? List.of("out") : p(producesDot[0]);
-        return new FixedEnrichment(inputs, output, Map.of());
+        return new MapLookupEnrichment(inputs, output, Map.of());
     }
 }
