@@ -1,8 +1,8 @@
 package com.hcltech.rmg.config.enrichment;
 
 
-import com.hcltech.rmg.config.enrich.EnrichmentWithDepedencies;
-import com.hcltech.rmg.config.enrich.EnrichmentWithDepedenciesNodeTc;
+import com.hcltech.rmg.config.enrich.EnrichmentWithDependencies;
+import com.hcltech.rmg.config.enrich.EnrichmentWithDependenciesNodeTc;
 import com.hcltech.rmg.config.enrich.MapLookupEnrichment;
 import com.hcltech.rmg.dag.ListPathTC;
 import com.hcltech.rmg.dag.NodeTC;
@@ -19,11 +19,11 @@ public final class FixedEnrichmentFixture {
 
     // ---------- Typeclasses ----------
     public static PathTC<List<String>> ptc() {
-        return new ListPathTC();
+        return  ListPathTC.INSTANCE;
     }
 
-    public static NodeTC<EnrichmentWithDepedencies, List<String>> ntc() {
-        return EnrichmentWithDepedenciesNodeTc.INSTANCE;
+    public static NodeTC<EnrichmentWithDependencies, List<String>> ntc() {
+        return EnrichmentWithDependenciesNodeTc.INSTANCE;
     }
 
     // ---------- Path / set helpers ----------

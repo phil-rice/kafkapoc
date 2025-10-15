@@ -22,13 +22,15 @@ import static org.junit.jupiter.api.Assertions.*;
 /**
  * Hexagonal, abstract contract tests for {@link CelValidationExecutor}.
  * Subclasses must supply the production {@link CelRuleBuilderFactory} via {@link #realFactory()}.
- *
+ * <p>
  * These tests ONLY call {@link CelValidationExecutor#create(CelRuleBuilderFactory, BehaviorConfig)}
  * and execute rules via {@link CelValidationExecutor#execute(String, CelValidation, ValueEnvelope)}.
  */
 public abstract class AbstractCelValidationExecutorTest {
 
-    /** Provide your production factory here (e.g., CelRuleBuilders.newRuleBuilderFactory()). */
+    /**
+     * Provide your production factory here (e.g., CelRuleBuilders.newRuleBuilderFactory()).
+     */
     protected abstract CelRuleBuilderFactory realFactory();
 
     /**
@@ -43,7 +45,9 @@ public abstract class AbstractCelValidationExecutorTest {
             this.delegate = Objects.requireNonNull(delegate);
         }
 
-        public int totalCompiles() { return compiles.get(); }
+        public int totalCompiles() {
+            return compiles.get();
+        }
 
         @Override
         public <I, O> CelRuleBuilder<I, O> createCelRuleBuilder(String source) {
@@ -54,16 +58,19 @@ public abstract class AbstractCelValidationExecutorTest {
                     inner.withVar(name, type, getter);
                     return this;
                 }
+
                 @Override
                 public CelRuleBuilder<I, O> withResultCoercer(java.util.function.BiFunction<I, Object, O> coercer) {
                     inner.withResultCoercer(coercer);
                     return this;
                 }
+
                 @Override
                 public CelRuleBuilder<I, O> withActivationFiller(java.util.function.BiConsumer<I, Map<String, Object>> filler) {
                     inner.withActivationFiller(filler);
                     return this;
                 }
+
                 @Override
                 public ErrorsOr<CompiledCelRuleWithDetails<I, O>> compile() {
                     compiles.incrementAndGet();
@@ -73,18 +80,18 @@ public abstract class AbstractCelValidationExecutorTest {
         }
     }
 
-    /** Build a real ValueEnvelope with a real EnvelopeHeader (unused fields kept null deliberately). */
+    /**
+     * Build a real ValueEnvelope with a real EnvelopeHeader (unused fields kept null deliberately).
+     */
     protected static <S, M> ValueEnvelope<S, M> env(S cepState, M msg) {
-        var header = new EnvelopeHeader<>(
+        var header = new EnvelopeHeader<S>(
                 "domType",
-                "domId",
                 "evt",          // eventType (executor exposes only msg + cepState vars)
                 null,           // rawMessage
                 null,           // parameters
-                null,           // config
-                cepState        // cepState variable bound in executor
+                null          // config
         );
-        return new ValueEnvelope<>(header, msg, List.of());
+        return new ValueEnvelope<>(header, msg, cepState, List.of());
     }
 
     // ---------------------------------------------------------------------

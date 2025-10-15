@@ -15,8 +15,8 @@
         }
       },
       "enrichment": {
-        "fixed": {
-          "type": "fixed",
+        "lookup": {
+          "type": "lookup",
           "inputs": [
             [
               "addr",

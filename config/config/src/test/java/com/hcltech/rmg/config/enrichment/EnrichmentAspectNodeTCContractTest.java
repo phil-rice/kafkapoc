@@ -1,7 +1,8 @@
 package com.hcltech.rmg.config.enrichment;
 
 import com.hcltech.rmg.config.enrich.EnrichmentAspect;
-import com.hcltech.rmg.config.enrich.EnrichmentWithDepedenciesNodeTc;
+import com.hcltech.rmg.config.enrich.EnrichmentWithDependencies;
+import com.hcltech.rmg.config.enrich.EnrichmentWithDependenciesNodeTc;
 import com.hcltech.rmg.config.enrich.MapLookupEnrichment;
 import com.hcltech.rmg.dag.NodeTC;
 import com.hcltech.rmg.dag.NodeTCContractTest;
@@ -12,7 +13,7 @@ import java.util.List;
 import java.util.Map;
 
 public final class EnrichmentAspectNodeTCContractTest
-        extends NodeTCContractTest<EnrichmentAspect, List<String>> {
+        extends NodeTCContractTest<EnrichmentWithDependencies, List<String>> {
 
     @Override
     protected boolean allowsMultipleProducedRoots() {
@@ -20,8 +21,8 @@ public final class EnrichmentAspectNodeTCContractTest
     }
 
     @Override
-    protected NodeTC<EnrichmentAspect, List<String>> ntc() {
-        return EnrichmentWithDepedenciesNodeTc.INSTANCE;
+    protected NodeTC<EnrichmentWithDependencies, List<String>> ntc() {
+        return EnrichmentWithDependenciesNodeTc.INSTANCE;
     }
 
     @Override

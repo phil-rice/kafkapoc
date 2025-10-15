@@ -57,7 +57,7 @@ class BehaviorConfigLoaderTest {
                                     v(kv("notification", new CelValidation("a + b > 0"))),
                                     t(kv("notification", new XmlTransform("schemas/ready.xsd"))),
                                     e(
-                                            kv("fixed", new MapLookupEnrichment(
+                                            kv("lookup", new MapLookupEnrichment(
                                                     // inputs
                                                     List.of(List.of("addr","line1"), List.of("addr","line2")),
                                                     // output

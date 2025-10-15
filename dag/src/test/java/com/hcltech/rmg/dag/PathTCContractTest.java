@@ -40,7 +40,7 @@ public abstract class PathTCContractTest<P> {
 }
 
  final class ListPathTCContractTest extends PathTCContractTest<List<String>> {
-    @Override protected PathTC<List<String>> ptc() { return new ListPathTC(); }
+    @Override protected PathTC<List<String>> ptc() { return  ListPathTC.INSTANCE; }
     @Override protected List<String> p(String path) {
         return path.isEmpty() ? List.of() : Arrays.asList(path.split("\\.", -1));
     }

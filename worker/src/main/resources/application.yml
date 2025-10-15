@@ -1,0 +1,12 @@
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info
+      base-path: /              # serve under root instead of /actuator
+      path-mapping:
+        health: healthz         # map health -> /healthz
+  endpoint:
+    health:
+      probes:
+        enabled: true           # adds /liveness and /readiness too

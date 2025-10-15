@@ -34,6 +34,10 @@
         <module>flink/interfaces</module>
         <module>flink/flinkadapter</module>
 
+        <module>metrics/metrics</module>
+        <module>metrics/envelope</module>
+        <module>metrics/opentelemetry</module>
+
         <module>optics</module>
         <module>performance</module>
         <module>kafka/kafkaconfig</module>
@@ -41,6 +45,7 @@
         <module>tools-producer</module>
         <module>xml/xml</module>
         <module>xml/woodstox</module>
+        <module>worker</module>
 
         <!-- Aggregator module for the single combined coverage report -->
         <module>coverage-report</module>
@@ -52,6 +57,7 @@
         <maven.compiler.source>${java.version}</maven.compiler.source>
         <maven.compiler.target>${java.version}</maven.compiler.target>
 
+        <!-- Lib versions -->
         <kafka.clients.version>3.7.1</kafka.clients.version>
         <slf4j.version>2.0.12</slf4j.version>
         <cel.version>0.11.0</cel.version>
@@ -66,28 +72,44 @@
         <woodstoxcore.version>7.1.1</woodstoxcore.version>
         <woodstoxstax2.version>4.2.2</woodstoxstax2.version>
 
-        <!-- Coverage bits -->
+        <!-- OpenTelemetry (for metrics modules/tests) -->
+        <opentelemetry.version>1.43.0</opentelemetry.version>
+
+        <!-- Spring Boot BOM version (used by modules that opt into Boot) -->
+        <spring-boot.version>3.3.4</spring-boot.version>
+
+        <!-- Coverage -->
         <jacoco.version>0.8.12</jacoco.version>
         <!-- Keep IDE calm; JaCoCo injects into this at build time -->
         <argLine/>
     </properties>
 
+    <!-- Centralized versions only; modules import these by artifactId without versions -->
     <dependencyManagement>
         <dependencies>
+            <!-- Spring Boot BOM (unchanged) -->
+            <dependency>
+                <groupId>org.springframework.boot</groupId>
+                <artifactId>spring-boot-dependencies</artifactId>
+                <version>${spring-boot.version}</version>
+                <type>pom</type>
+                <scope>import</scope>
+            </dependency>
+
+            <!-- ✨ OpenTelemetry BOM: version-align all OTel artifacts to ${opentelemetry.version} -->
+            <dependency>
+                <groupId>io.opentelemetry</groupId>
+                <artifactId>opentelemetry-bom</artifactId>
+                <version>${opentelemetry.version}</version>
+                <type>pom</type>
+                <scope>import</scope>
+            </dependency>
+
+            <!-- Kafka / logging / JSON (unchanged) -->
             <dependency>
                 <groupId>org.apache.kafka</groupId>
                 <artifactId>kafka-clients</artifactId>
                 <version>${kafka.clients.version}</version>
-            </dependency>
-            <dependency>
-                <groupId>dev.cel</groupId>
-                <artifactId>cel</artifactId>
-                <version>${cel.version}</version>
-            </dependency>
-            <dependency>
-                <groupId>commons-jxpath</groupId>
-                <artifactId>commons-jxpath</artifactId>
-                <version>${jxpath.version}</version>
             </dependency>
             <dependency>
                 <groupId>org.slf4j</groupId>
@@ -99,7 +121,6 @@
                 <artifactId>logback-classic</artifactId>
                 <version>${logback.version}</version>
             </dependency>
-
             <dependency>
                 <groupId>com.fasterxml.jackson.core</groupId>
                 <artifactId>jackson-databind</artifactId>
@@ -115,24 +136,32 @@
                 <artifactId>jackson-annotations</artifactId>
                 <version>${jackson.version}</version>
             </dependency>
-
             <dependency>
                 <groupId>com.fasterxml.jackson.datatype</groupId>
                 <artifactId>jackson-datatype-jsr310</artifactId>
                 <version>${jackson.version}</version>
             </dependency>
+
+            <!-- CEL / JXPath (unchanged) -->
             <dependency>
-                <groupId>org.junit.jupiter</groupId>
-                <artifactId>junit-jupiter</artifactId>
-                <version>${junit.version}</version>
-                <scope>test</scope>
+                <groupId>dev.cel</groupId>
+                <artifactId>cel</artifactId>
+                <version>${cel.version}</version>
             </dependency>
+            <dependency>
+                <groupId>commons-jxpath</groupId>
+                <artifactId>commons-jxpath</artifactId>
+                <version>${jxpath.version}</version>
+            </dependency>
+
+            <!-- RocksDB (unchanged) -->
             <dependency>
                 <groupId>org.rocksdb</groupId>
                 <artifactId>rocksdbjni</artifactId>
                 <version>${rocksdb.version}</version>
             </dependency>
 
+            <!-- Flink family (unchanged) -->
             <dependency>
                 <groupId>org.apache.flink</groupId>
                 <artifactId>flink-parent</artifactId>
@@ -142,21 +171,8 @@
             </dependency>
             <dependency>
                 <groupId>org.apache.flink</groupId>
-                <artifactId>flink-streaming-java</artifactId>
+                <artifactId>flink-core</artifactId>
                 <version>${flink.version}</version>
-            </dependency>
-            <dependency>
-                <groupId>org.apache.flink</groupId>
-                <artifactId>flink-test-utils</artifactId>
-                <version>${flink.version}</version>
-                <scope>test</scope>
-            </dependency>
-            <dependency>
-                <groupId>org.apache.flink</groupId>
-                <artifactId>flink-streaming-java</artifactId>
-                <version>${flink.version}</version>
-                <scope>test</scope>
-                <classifier>tests</classifier>
             </dependency>
             <dependency>
                 <groupId>org.apache.flink</groupId>
@@ -165,7 +181,13 @@
             </dependency>
             <dependency>
                 <groupId>org.apache.flink</groupId>
-                <artifactId>flink-core</artifactId>
+                <artifactId>flink-streaming-java</artifactId>
+                <version>${flink.version}</version>
+            </dependency>
+
+            <dependency>
+                <groupId>org.apache.flink</groupId>
+                <artifactId>flink-connector-base</artifactId>
                 <version>${flink.version}</version>
             </dependency>
             <dependency>
@@ -175,10 +197,17 @@
             </dependency>
             <dependency>
                 <groupId>org.apache.flink</groupId>
-                <artifactId>flink-connector-base</artifactId>
+                <artifactId>flink-test-utils</artifactId>
                 <version>${flink.version}</version>
             </dependency>
 
+            <!-- Test libs (unchanged) -->
+            <dependency>
+                <groupId>org.junit.jupiter</groupId>
+                <artifactId>junit-jupiter</artifactId>
+                <version>${junit.version}</version>
+                <scope>test</scope>
+            </dependency>
             <dependency>
                 <groupId>org.mockito</groupId>
                 <artifactId>mockito-core</artifactId>
@@ -192,6 +221,7 @@
                 <scope>test</scope>
             </dependency>
 
+            <!-- Woodstox (unchanged) -->
             <dependency>
                 <groupId>com.fasterxml.woodstox</groupId>
                 <artifactId>woodstox-core</artifactId>
@@ -204,6 +234,7 @@
             </dependency>
         </dependencies>
     </dependencyManagement>
+
 
     <dependencies>
         <dependency>
@@ -240,7 +271,7 @@
                     <artifactId>maven-surefire-plugin</artifactId>
                     <version>3.2.5</version>
                     <configuration>
-                        <!-- CRITICAL: preserve JaCoCo’s injected agent options -->
+                        <!-- preserve JaCoCo’s injected agent options -->
                         <argLine>${argLine}</argLine>
                         <useModulePath>false</useModulePath>
                     </configuration>
@@ -269,7 +300,7 @@
         </pluginManagement>
 
         <plugins>
-            <!-- JaCoCo: attach agent for every module; per-module reports at verify -->
+            <!-- JaCoCo for every module -->
             <plugin>
                 <groupId>org.jacoco</groupId>
                 <artifactId>jacoco-maven-plugin</artifactId>

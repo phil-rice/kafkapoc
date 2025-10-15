@@ -1,6 +1,6 @@
 package com.hcltech.rmg.config.enrichment;
 
-import com.hcltech.rmg.config.enrich.EnrichmentWithDepedenciesNodeTc;
+import com.hcltech.rmg.config.enrich.EnrichmentWithDependenciesNodeTc;
 import com.hcltech.rmg.config.enrich.MapLookupEnrichment;
 import com.hcltech.rmg.dag.Edge;
 import com.hcltech.rmg.dag.ListPathTC;
@@ -45,8 +45,8 @@ public class AddressEnrichmentPlanIT {
         // Build graph and sort (builder validates producers internally)
         var graph = RequirementGraphBuilder.build(
                 Set.of(POSTCODE_FROM_ADDR, SUFFIX_FROM_L12_PC, INSTR_FROM_PC_SUFF),
-                new ListPathTC(),
-                EnrichmentWithDepedenciesNodeTc.INSTANCE
+                 ListPathTC.INSTANCE,
+                EnrichmentWithDependenciesNodeTc.INSTANCE
         ).valueOrThrow();
 
         // Assert the whole generations list in one go
@@ -91,8 +91,8 @@ public class AddressEnrichmentPlanIT {
         // Build graph (no producer overlap, so it builds), then expect topo to fail with a cycle
         var graph = RequirementGraphBuilder.build(
                 Set.of(POSTCODE_FROM_SUFFIX, SUFFIX_FROM_POSTCODE),
-                new ListPathTC(),
-                EnrichmentWithDepedenciesNodeTc.INSTANCE
+                ListPathTC.INSTANCE,
+                EnrichmentWithDependenciesNodeTc.INSTANCE
         ).valueOrThrow();
 
         var errs = Topo.topoSort(graph).errorsOrThrow();
