@@ -7,7 +7,7 @@ import java.util.Set;
 
 import static org.junit.jupiter.api.Assertions.*;
 
-public abstract class NodeTCContractTest<N, P> {
+public abstract class AbstractNodeTCContractTest<N, P> {
 
     protected abstract NodeTC<N, P> ntc();
     protected abstract P p(String path);

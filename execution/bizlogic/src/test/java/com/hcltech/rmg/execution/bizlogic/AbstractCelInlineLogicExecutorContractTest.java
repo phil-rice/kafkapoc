@@ -23,6 +23,7 @@ import static org.junit.jupiter.api.Assertions.*;
 
 public abstract class AbstractCelInlineLogicExecutorContractTest {
 
+
     protected abstract CelRuleBuilderFactory realFactory();
 
     static final class CountingFactory implements CelRuleBuilderFactory {

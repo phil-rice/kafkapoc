@@ -4,7 +4,6 @@ import org.junit.jupiter.api.Test;
 
 import java.util.Arrays;
 import java.util.LinkedHashSet;
-import java.util.List;
 import java.util.Set;
 
 import static org.junit.jupiter.api.Assertions.*;
@@ -13,7 +12,7 @@ import static org.junit.jupiter.api.Assertions.*;
  * Concrete NodeTC contract tests for TestRequirementFixture.TestRequirementNode (String paths).
  * Verifies owns/produces, requires, and label via the real NodeTC from the fixture.
  */
-public final class TestRequirementNodeTCContractTest extends NodeTCContractTest<TestRequirementFixture.TestRequirementNode, String> {
+public final class TestRequirementNodeTCContractTest extends AbstractNodeTCContractTest<TestRequirementFixture.TestRequirementNode, String> {
 
   @Override
   protected NodeTC<TestRequirementFixture.TestRequirementNode, String> ntc() {

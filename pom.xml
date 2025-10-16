@@ -51,7 +51,6 @@
         <module>xml/xml</module>
         <module>xml/woodstox</module>
 
-        <!-- Aggregator module for the single combined coverage report -->
         <module>coverage-report</module>
     </modules>
 
@@ -76,22 +75,20 @@
         <woodstoxcore.version>7.1.1</woodstoxcore.version>
         <woodstoxstax2.version>4.2.2</woodstoxstax2.version>
 
-        <!-- OpenTelemetry (for metrics modules/tests) -->
+        <!-- OpenTelemetry -->
         <opentelemetry.version>1.43.0</opentelemetry.version>
 
-        <!-- Spring Boot BOM version (used by modules that opt into Boot) -->
+        <!-- Spring Boot BOM -->
         <spring-boot.version>3.3.4</spring-boot.version>
 
         <!-- Coverage -->
         <jacoco.version>0.8.12</jacoco.version>
-        <!-- Keep IDE calm; JaCoCo injects into this at build time -->
         <argLine/>
     </properties>
 
-    <!-- Centralized versions only; modules import these by artifactId without versions -->
     <dependencyManagement>
         <dependencies>
-            <!-- Spring Boot BOM (unchanged) -->
+            <!-- Spring Boot BOM -->
             <dependency>
                 <groupId>org.springframework.boot</groupId>
                 <artifactId>spring-boot-dependencies</artifactId>
@@ -100,7 +97,7 @@
                 <scope>import</scope>
             </dependency>
 
-            <!-- ✨ OpenTelemetry BOM: version-align all OTel artifacts to ${opentelemetry.version} -->
+            <!-- OpenTelemetry BOM -->
             <dependency>
                 <groupId>io.opentelemetry</groupId>
                 <artifactId>opentelemetry-bom</artifactId>
@@ -109,7 +106,7 @@
                 <scope>import</scope>
             </dependency>
 
-            <!-- Kafka / logging / JSON (unchanged) -->
+            <!-- Kafka / logging / JSON -->
             <dependency>
                 <groupId>org.apache.kafka</groupId>
                 <artifactId>kafka-clients</artifactId>
@@ -146,7 +143,7 @@
                 <version>${jackson.version}</version>
             </dependency>
 
-            <!-- CEL / JXPath (unchanged) -->
+            <!-- CEL / JXPath -->
             <dependency>
                 <groupId>dev.cel</groupId>
                 <artifactId>cel</artifactId>
@@ -158,14 +155,14 @@
                 <version>${jxpath.version}</version>
             </dependency>
 
-            <!-- RocksDB (unchanged) -->
+            <!-- RocksDB -->
             <dependency>
                 <groupId>org.rocksdb</groupId>
                 <artifactId>rocksdbjni</artifactId>
                 <version>${rocksdb.version}</version>
             </dependency>
 
-            <!-- Flink family (unchanged) -->
+            <!-- Flink family -->
             <dependency>
                 <groupId>org.apache.flink</groupId>
                 <artifactId>flink-parent</artifactId>
@@ -188,7 +185,6 @@
                 <artifactId>flink-streaming-java</artifactId>
                 <version>${flink.version}</version>
             </dependency>
-
             <dependency>
                 <groupId>org.apache.flink</groupId>
                 <artifactId>flink-connector-base</artifactId>
@@ -205,7 +201,7 @@
                 <version>${flink.version}</version>
             </dependency>
 
-            <!-- Test libs (unchanged) -->
+            <!-- Test libs -->
             <dependency>
                 <groupId>org.junit.jupiter</groupId>
                 <artifactId>junit-jupiter</artifactId>
@@ -225,7 +221,7 @@
                 <scope>test</scope>
             </dependency>
 
-            <!-- Woodstox (unchanged) -->
+            <!-- Woodstox -->
             <dependency>
                 <groupId>com.fasterxml.woodstox</groupId>
                 <artifactId>woodstox-core</artifactId>
@@ -238,7 +234,6 @@
             </dependency>
         </dependencies>
     </dependencyManagement>
-
 
     <dependencies>
         <dependency>
@@ -259,50 +254,7 @@
     </dependencies>
 
     <build>
-        <pluginManagement>
-            <plugins>
-                <plugin>
-                    <groupId>org.apache.maven.plugins</groupId>
-                    <artifactId>maven-compiler-plugin</artifactId>
-                    <version>3.11.0</version>
-                    <configuration>
-                        <release>${java.version}</release>
-                    </configuration>
-                </plugin>
-
-                <plugin>
-                    <groupId>org.apache.maven.plugins</groupId>
-                    <artifactId>maven-surefire-plugin</artifactId>
-                    <version>3.2.5</version>
-                    <configuration>
-                        <!-- preserve JaCoCo’s injected agent options -->
-                        <argLine>${argLine}</argLine>
-                        <useModulePath>false</useModulePath>
-                    </configuration>
-                </plugin>
-
-                <plugin>
-                    <groupId>org.apache.maven.plugins</groupId>
-                    <artifactId>maven-jar-plugin</artifactId>
-                    <version>3.3.0</version>
-                    <executions>
-                        <execution>
-                            <id>attach-tests</id>
-                            <goals>
-                                <goal>test-jar</goal>
-                            </goals>
-                        </execution>
-                    </executions>
-                </plugin>
-
-                <plugin>
-                    <groupId>org.apache.maven.plugins</groupId>
-                    <artifactId>maven-shade-plugin</artifactId>
-                    <version>3.5.0</version>
-                </plugin>
-            </plugins>
-        </pluginManagement>
-
+        <!-- Executions that should RUN for all children -->
         <plugins>
             <!-- JaCoCo for every module -->
             <plugin>
@@ -327,5 +279,72 @@
                 </executions>
             </plugin>
         </plugins>
+
+        <!-- Versions / default configs (don’t run by themselves) -->
+        <pluginManagement>
+            <plugins>
+                <plugin>
+                    <groupId>org.apache.maven.plugins</groupId>
+                    <artifactId>maven-compiler-plugin</artifactId>
+                    <version>3.11.0</version>
+                    <configuration>
+                        <release>${java.version}</release>
+                    </configuration>
+                </plugin>
+
+                <plugin>
+                    <groupId>org.apache.maven.plugins</groupId>
+                    <artifactId>maven-surefire-plugin</artifactId>
+                    <version>3.2.5</version>
+                    <configuration>
+                        <argLine>${argLine}</argLine>
+                        <useModulePath>false</useModulePath>
+                    </configuration>
+                </plugin>
+
+                <plugin>
+                    <groupId>org.apache.maven.plugins</groupId>
+                    <artifactId>maven-jar-plugin</artifactId>
+                    <version>3.3.0</version>
+                </plugin>
+
+                <plugin>
+                    <groupId>org.apache.maven.plugins</groupId>
+                    <artifactId>maven-shade-plugin</artifactId>
+                    <version>3.5.0</version>
+                </plugin>
+            </plugins>
+        </pluginManagement>
     </build>
+
+    <!-- Opt-in profile: modules set <publish.testjar>true</publish.testjar> to attach tests.jar -->
+    <profiles>
+        <profile>
+            <id>publish-test-jar</id>
+            <activation>
+                <property>
+                    <name>publish.testjar</name>
+                    <value>true</value>
+                </property>
+            </activation>
+            <build>
+                <plugins>
+                    <plugin>
+                        <groupId>org.apache.maven.plugins</groupId>
+                        <artifactId>maven-jar-plugin</artifactId>
+                        <version>3.3.0</version>
+                        <executions>
+                            <execution>
+                                <id>attach-tests</id>
+                                <goals>
+                                    <goal>test-jar</goal>
+                                </goals>
+                                <!-- No filters: ship full test output/resources for this module ONLY -->
+                            </execution>
+                        </executions>
+                    </plugin>
+                </plugins>
+            </build>
+        </profile>
+    </profiles>
 </project>
