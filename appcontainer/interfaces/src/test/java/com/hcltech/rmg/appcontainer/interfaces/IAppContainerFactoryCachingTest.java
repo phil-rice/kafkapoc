@@ -14,11 +14,11 @@ import static org.mockito.Mockito.mock;
 public class IAppContainerFactoryCachingTest {
 
     // --- A tiny test factory class with a public no-arg ctor (required by your resolveFactory) ---
-    public static class TestFactory implements IAppContainerFactory<String,String, String, String> {
+    public static class TestFactory implements IAppContainerFactory<String,String, String, String, String> {
         static final AtomicInteger ctorCount = new AtomicInteger(0);
         static final AtomicInteger createCount = new AtomicInteger(0);
         /** Pluggable behavior for tests: envId -> ErrorsOr<AppContainer> */
-        static Function<String, ErrorsOr<AppContainer<String, String, String, String>>> creator =
+        static Function<String, ErrorsOr<AppContainer<String, String, String, String,String>>> creator =
                 id -> ErrorsOr.error("no creator set for id=" + id);
 
         public TestFactory() {
@@ -26,7 +26,7 @@ public class IAppContainerFactoryCachingTest {
         }
 
         @Override
-        public ErrorsOr<AppContainer<String, String, String, String>> create(String id) {
+        public ErrorsOr<AppContainer<String, String, String, String,String>> create(String id) {
             createCount.incrementAndGet();
             return creator.apply(id);
         }

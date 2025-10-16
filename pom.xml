@@ -34,18 +34,22 @@
         <module>flink/interfaces</module>
         <module>flink/flinkadapter</module>
 
+        <module>kafka/kafkaconfig</module>
+        <module>kafka/kafka</module>
+
         <module>metrics/metrics</module>
         <module>metrics/envelope</module>
+        <module>metrics/flink</module>
         <module>metrics/opentelemetry</module>
 
         <module>optics</module>
-        <module>performance</module>
-        <module>kafka/kafkaconfig</module>
-        <module>kafka/kafka</module>
-        <module>tools-producer</module>
+
+        <module>worker/flink_worker</module>
+        <module>worker/performance</module>
+        <module>worker/producer</module>
+
         <module>xml/xml</module>
         <module>xml/woodstox</module>
-        <module>worker</module>
 
         <!-- Aggregator module for the single combined coverage report -->
         <module>coverage-report</module>

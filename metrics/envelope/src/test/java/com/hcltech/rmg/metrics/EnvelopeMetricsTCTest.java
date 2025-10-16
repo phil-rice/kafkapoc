@@ -20,7 +20,7 @@ class EnvelopeMetricsTCTest {
     ValueEnvelope<String, String> valueEnvelope=new ValueEnvelope<>(header, "data", null, List.of());
     RetryEnvelope<String, String> retryEnvelope=new RetryEnvelope<>(valueEnvelope, "stage", 1);
     ErrorEnvelope<String, String> errorEnvelope=new ErrorEnvelope<>(valueEnvelope, "errorMsg", List.of("some message"));
-    EnvelopeMetricsTC sut = new EnvelopeMetricsTC();
+    EnvelopeMetricsTC sut =  EnvelopeMetricsTC.INSTANCE;
 
     @Test
     void metricName_valueEnvelope_success() {

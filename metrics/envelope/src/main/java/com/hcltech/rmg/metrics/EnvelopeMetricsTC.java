@@ -6,6 +6,9 @@ import com.hcltech.rmg.messages.RetryEnvelope;
 import com.hcltech.rmg.messages.ValueEnvelope;
 
 public class EnvelopeMetricsTC implements IEnvelopeMetricsTC<Envelope<?, ?>> {
+    public static final EnvelopeMetricsTC INSTANCE = new EnvelopeMetricsTC();
+    private EnvelopeMetricsTC() {
+    }
     @Override
     public String metricName(Envelope<?, ?> envelope) {
         if (envelope instanceof ValueEnvelope<?, ?>) {

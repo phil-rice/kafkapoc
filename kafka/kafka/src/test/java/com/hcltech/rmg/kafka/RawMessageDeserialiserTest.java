@@ -26,7 +26,7 @@ final class RawMessageDeserialiserTest {
     private static final int PARTITION = 7;
     private static final long OFFSET = 4242L;
     private static final long BROKER_TS = 1_725_000_000_000L; // fixed millis
-    private static final long FIXED_NOW = 1_726_000_000_000L;  // fake processing time
+    private static final long FIXED_NOW = 1_726_000_000_000L;  // fake processing timeService
 
     private RawMessageDeserialiser newDeser() {
         ITimeService clock = () -> FIXED_NOW;

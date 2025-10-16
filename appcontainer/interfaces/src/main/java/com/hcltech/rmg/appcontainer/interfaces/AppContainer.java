@@ -9,15 +9,16 @@ import com.hcltech.rmg.enrichment.IEnrichmentAspectExecutor;
 import com.hcltech.rmg.execution.bizlogic.BizLogicExecutor;
 import com.hcltech.rmg.messages.IDomainTypeExtractor;
 import com.hcltech.rmg.messages.IEventTypeExtractor;
+import com.hcltech.rmg.metrics.MetricsFactory;
 import com.hcltech.rmg.parameters.ParameterExtractor;
 import com.hcltech.rmg.xml.XmlTypeClass;
 
 import java.util.List;
 import java.util.Map;
 
-public record AppContainer<EventSourceConfig, CepState, Msg, Schema>(
+public record AppContainer<EventSourceConfig, CepState, Msg, Schema, MetricParam>(
         // infra
-        ITimeService time, IUuidGenerator uuid,
+        ITimeService timeService, IUuidGenerator uuid,
 
         // XML services
         XmlTypeClass<Msg, Schema> xml,                // keyExtraction + parse + validate
@@ -34,6 +35,9 @@ public record AppContainer<EventSourceConfig, CepState, Msg, Schema>(
         //Execution
         IEnrichmentAspectExecutor<CepState, Msg> enrichmentExecutor,
         BizLogicExecutor<CepState, Msg> bizLogic,
+
+        //metrics
+        MetricsFactory<MetricParam> metricsFactory,
 
         //The behaviour of the application. The key is the parameters key.
         Map<String, Config> keyToConfigMap) implements InitialEnvelopeServices<CepState, Msg, Schema> {

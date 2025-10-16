@@ -16,7 +16,7 @@ import java.util.Objects;
  * <p>
  * All error paths are wrapped as ErrorEnvelope by the factory (via recover()).
  */
-public class ParseMessagePipelineStep<MSC, CepState, Msg, Schema> {
+public class ParseMessagePipelineStep<MSC, CepState, Msg, Schema,MetricParam> {
 
     private final XmlTypeClass<Msg, Schema> xmlTypeClass;
     private final IDomainTypeExtractor<Msg> domainTypeExtractor;
@@ -25,7 +25,7 @@ public class ParseMessagePipelineStep<MSC, CepState, Msg, Schema> {
     private final ParameterExtractor<Msg> parameterExtractor;
     private final Map<String, Config> keyToConfigMap;
 
-    public ParseMessagePipelineStep(AppContainer<MSC, CepState, Msg, Schema> container) {
+    public ParseMessagePipelineStep(AppContainer<MSC, CepState, Msg, Schema,MetricParam> container) {
         this.xmlTypeClass = container.xml();
         this.domainTypeExtractor = container.domainTypeExtractor();
         this.eventTypeExtractor = container.eventTypeExtractor();

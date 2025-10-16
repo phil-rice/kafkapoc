@@ -18,7 +18,7 @@ import java.util.Map;
  */
 public interface InitialEnvelopeServices<CepState, Msg, Schema> {
     // infra
-    ITimeService time();
+    ITimeService timeService();
 
     IUuidGenerator uuid();
 

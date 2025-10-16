@@ -16,7 +16,7 @@ public interface WatermarkStrategyProvider<T> extends Supplier<WatermarkStrategy
     return WatermarkStrategy::noWatermarks;
   }
 
-  /** Event-time with bounded out-of-order and a timestamp extractor. */
+  /** Event-timeService with bounded out-of-order and a timestamp extractor. */
   static <T> WatermarkStrategyProvider<T> boundedOutOfOrder(
       Duration maxOutOfOrder, ToLongFunction<T> timestampExtractor) {
     Objects.requireNonNull(maxOutOfOrder, "maxOutOfOrder");

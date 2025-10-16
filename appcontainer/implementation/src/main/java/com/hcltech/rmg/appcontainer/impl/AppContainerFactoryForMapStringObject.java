@@ -19,6 +19,8 @@ import com.hcltech.rmg.enrichment.EnrichmentExecutor;
 import com.hcltech.rmg.enrichment.IEnrichmentAspectExecutor;
 import com.hcltech.rmg.execution.aspects.AspectExecutor;
 import com.hcltech.rmg.execution.bizlogic.BizLogicExecutor;
+import com.hcltech.rmg.flink_metrics.FlinkMetricsFactory;
+import com.hcltech.rmg.flink_metrics.FlinkMetricsParams;
 import com.hcltech.rmg.kafkaconfig.KafkaConfig;
 import com.hcltech.rmg.messages.IDomainTypeExtractor;
 import com.hcltech.rmg.messages.IEventTypeExtractor;
@@ -37,13 +39,13 @@ import java.util.concurrent.ConcurrentHashMap;
 
 import static java.util.Objects.requireNonNull;
 
-public final class AppContainerFactoryForMapStringObject implements IAppContainerFactory<KafkaConfig, Map<String, Object>, Map<String, Object>, XMLValidationSchema> {
+public final class AppContainerFactoryForMapStringObject implements IAppContainerFactory<KafkaConfig, Map<String, Object>, Map<String, Object>, XMLValidationSchema, FlinkMetricsParams> {
 
-    private static final Map<String, ErrorsOr<AppContainer<KafkaConfig, Map<String, Object>, Map<String, Object>, XMLValidationSchema>>> CACHE =
+    private static final Map<String, ErrorsOr<AppContainer<KafkaConfig, Map<String, Object>, Map<String, Object>, XMLValidationSchema, FlinkMetricsParams>>> CACHE =
             new ConcurrentHashMap<>();
 
 
-    public static ErrorsOr<AppContainer<KafkaConfig, Map<String, Object>, Map<String, Object>, XMLValidationSchema>> resolve(String id) {
+    public static ErrorsOr<AppContainer<KafkaConfig, Map<String, Object>, Map<String, Object>, XMLValidationSchema, FlinkMetricsParams>> resolve(String id) {
         requireNonNull(id, "container id must not be null");
         final String norm = id.trim().toLowerCase();
         return CACHE.computeIfAbsent(norm, AppContainerFactoryForMapStringObject::build);
@@ -54,7 +56,7 @@ public final class AppContainerFactoryForMapStringObject implements IAppContaine
     }
 
     @Override
-    public ErrorsOr<AppContainer<KafkaConfig, Map<String, Object>, Map<String, Object>, XMLValidationSchema>> create(String id) {
+    public ErrorsOr<AppContainer<KafkaConfig, Map<String, Object>, Map<String, Object>, XMLValidationSchema, FlinkMetricsParams>> create(String id) {
         return resolve(id);
     }
 
@@ -62,10 +64,11 @@ public final class AppContainerFactoryForMapStringObject implements IAppContaine
 
     public static final List<String> defaultParameters = List.of("productType", "company");
 
-    private static ErrorsOr<AppContainer<KafkaConfig, Map<String, Object>, Map<String, Object>, XMLValidationSchema>> build(String id) {
+    private static ErrorsOr<AppContainer<KafkaConfig, Map<String, Object>, Map<String, Object>, XMLValidationSchema, FlinkMetricsParams>> build(String id) {
         return switch (id) {
             case "prod" -> basic(
-                    System::currentTimeMillis,
+                    id,
+                    ITimeService.real,
                     IUuidGenerator.defaultGenerator(),
                     "config/root-prod.json",
                     ParameterExtractor.defaultParameterExtractor(defaultParameters, Map.of(), Map.of(
@@ -76,6 +79,7 @@ public final class AppContainerFactoryForMapStringObject implements IAppContaine
                     "config/prod/"
             );
             case "test" -> basic(
+                    id,
                     () -> 1_726_000_000_000L,
                     () -> "11111111-2222-3333-4444-555555555555",
                     "config/root-test.json",
@@ -90,7 +94,8 @@ public final class AppContainerFactoryForMapStringObject implements IAppContaine
 
     // ---------- monadic composition (inlined) ----------
 
-    private static ErrorsOr<AppContainer<KafkaConfig, Map<String, Object>, Map<String, Object>, XMLValidationSchema>> basic(
+    private static ErrorsOr<AppContainer<KafkaConfig, Map<String, Object>, Map<String, Object>, XMLValidationSchema, FlinkMetricsParams>> basic(
+            String env,
             ITimeService time,
             IUuidGenerator uuid,
             String rootConfigPath,
@@ -99,10 +104,11 @@ public final class AppContainerFactoryForMapStringObject implements IAppContaine
             IDomainTypeExtractor<Map<String, Object>> domainTypeExtractor,
             String configResourcePrefix
     ) {
-        Objects.requireNonNull(time, "time service must not be null");
+        Objects.requireNonNull(time, "timeService service must not be null");
         Objects.requireNonNull(uuid, "uuid generator must not be null");
         Objects.requireNonNull(rootConfigPath, "root config path must not be null");
 
+        final FlinkMetricsFactory metricsFactory = new FlinkMetricsFactory(env, "EventProcessor", 100, true);
         final CepStateTypeClass<Map<String, Object>> cepStateTypeClass = new MapStringObjectCepStateTypeClass();
         final XmlTypeClass<Map<String, Object>, XMLValidationSchema> xml = new WoodstoxXmlForMapStringObjectTypeClass();
         final List<String> keyPath = List.of("domainId");
@@ -127,12 +133,12 @@ public final class AppContainerFactoryForMapStringObject implements IAppContaine
                         XmlTypeClass.loadOptionalSchema(xml, root.xmlSchemaPath()).flatMap(schemaMap -> {
                             Class<Map<String, Object>> msgClass = (Class) Map.class;
                             AspectExecutor<EnrichmentWithDependencies, ValueEnvelope<Map<String, Object>, Map<String, Object>>, CepEvent> oneEnrichmentExecutor = new EnrichmentExecutor<>(msgTypeClass);
-                            var bizLogicExecutor = new BizLogicExecutor<Map<String,Object>, Map<String,Object>>(configs, CelRuleBuilders.newRuleBuilder, msgClass);
+                            var bizLogicExecutor = new BizLogicExecutor<Map<String, Object>, Map<String, Object>>(configs, CelRuleBuilders.newRuleBuilder, msgClass);
 
                             return IEnrichmentAspectExecutor.<Map<String, Object>, Map<String, Object>>create(cepStateTypeClass, configs, oneEnrichmentExecutor).map(
                                     enricher ->
 
-                                            new AppContainer<KafkaConfig, Map<String, Object>, Map<String, Object>, XMLValidationSchema>(
+                                            new AppContainer<KafkaConfig, Map<String, Object>, Map<String, Object>, XMLValidationSchema, FlinkMetricsParams>(
                                                     time,
                                                     uuid,
                                                     xml,
@@ -146,6 +152,7 @@ public final class AppContainerFactoryForMapStringObject implements IAppContaine
                                                     eventTypeExtractor,
                                                     enricher,
                                                     bizLogicExecutor,
+                                                    metricsFactory,
                                                     configs.keyToConfigMap()
                                             ));
                         })

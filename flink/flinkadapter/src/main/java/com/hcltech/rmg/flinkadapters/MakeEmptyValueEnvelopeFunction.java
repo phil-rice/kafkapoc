@@ -18,14 +18,14 @@ import java.util.function.Supplier;
  * <p>
  * All error paths are wrapped as ErrorEnvelope by the factory (via recover()).
  */
-public class MakeEmptyValueEnvelopeFunction<MSC, CepState, Msg, Schema> extends RichMapFunction<RawMessage, Envelope<CepState, Msg>> {
+public class MakeEmptyValueEnvelopeFunction<MSC, CepState, Msg, Schema,MetricParam> extends RichMapFunction<RawMessage, Envelope<CepState, Msg>> {
 
-    private final Class<IAppContainerFactory<MSC, CepState, Msg, Schema>> factoryClass;
+    private final Class<IAppContainerFactory<MSC, CepState, Msg, Schema,MetricParam>> factoryClass;
     private final String containerId;
     private Supplier<FlinkCepEventForMapStringObjectLog> cepStateSupplier;
     private CepStateTypeClass<CepState> cepStateTypeClass;
 
-    public MakeEmptyValueEnvelopeFunction(Class<IAppContainerFactory<MSC, CepState, Msg, Schema>> factoryClass, String containerId) {
+    public MakeEmptyValueEnvelopeFunction(Class<IAppContainerFactory<MSC, CepState, Msg, Schema,MetricParam>> factoryClass, String containerId) {
         this.factoryClass = factoryClass;
         this.containerId = containerId;
     }

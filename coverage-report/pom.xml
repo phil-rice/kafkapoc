@@ -48,7 +48,7 @@
         <dependency><groupId>com.hcltech.rmg</groupId><artifactId>kafkaconfig</artifactId><version>${project.version}</version></dependency>
         <dependency><groupId>com.hcltech.rmg</groupId><artifactId>kafka</artifactId><version>${project.version}</version></dependency>
 
-        <dependency><groupId>com.hcltech.rmg</groupId><artifactId>tools-producer</artifactId><version>${project.version}</version></dependency>
+        <dependency><groupId>com.hcltech.rmg</groupId><artifactId>producer</artifactId><version>${project.version}</version></dependency>
 
         <dependency><groupId>com.hcltech.rmg</groupId><artifactId>xml</artifactId><version>${project.version}</version></dependency>
         <dependency><groupId>com.hcltech.rmg</groupId><artifactId>woodstox</artifactId><version>${project.version}</version></dependency>

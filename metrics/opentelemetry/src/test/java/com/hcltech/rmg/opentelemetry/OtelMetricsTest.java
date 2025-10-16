@@ -17,7 +17,7 @@ import java.util.Collection;
 
 import static org.junit.jupiter.api.Assertions.*;
 
-class OtelMetricsTest {
+public class OtelMetricsTest {
 
     private InMemoryMetricReader reader;
     private OpenTelemetrySdk otel;

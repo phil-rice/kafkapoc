@@ -41,7 +41,7 @@ public final class RawMessageDeserialiser implements KafkaRecordDeserializationS
     public void open(DeserializationSchema.InitializationContext context) {
         if (timeService != null && uuid != null) return; // test-only ctor already set them
         var container = AppContainerFactoryForMapStringObject.resolve(containerId).valueOrThrow();
-        this.timeService = container.time();
+        this.timeService = container.timeService();
         this.uuid = container.uuid();
     }
 
@@ -67,7 +67,7 @@ public final class RawMessageDeserialiser implements KafkaRecordDeserializationS
                 value,
                 domainId,
                 rec.timestamp(),
-                timeService.currentTimeMillis(),      // processingTimestamp
+                timeService.currentTimeNanos(),      // processingTimestamp
                 rec.partition(),
                 rec.offset(),
                 traceparent,

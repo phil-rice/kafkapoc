@@ -22,7 +22,7 @@ record EnvelopeMetricsImpl<E>(ITimeService time, Metrics metrics,
         metrics.increment("message.processed.total");
         var name = "message.processed." + tc.metricName(e);
         metrics.increment(name);
-        long durationMs = Math.max(0L, time.currentTimeMillis() - tc.startProcessingTime(e));
-        metrics.histogram("message.processed.latency", durationMs);
+        long durationNanos = Math.max(0L, time.currentTimeNanos() - tc.startProcessingTime(e));
+        metrics.histogram("message.processed.latency", durationNanos);
     }
 }
