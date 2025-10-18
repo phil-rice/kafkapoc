@@ -13,14 +13,20 @@ import static org.mockito.Mockito.mock;
 
 public class IAppContainerFactoryCachingTest {
 
-    // --- A tiny test factory class with a public no-arg ctor (required by your resolveFactory) ---
-    public static class TestFactory implements IAppContainerFactory<String, String, String, String, String> {
+    // --- Tiny test factory with a public no-arg ctor (required by resolveFactory) ---
+    // Updated to the 6-generic signature: <ESC, C, M, S, RT, MP>
+    public static class TestFactory implements IAppContainerFactory<
+            String, String, String, String, String, String> {
+
         static final AtomicInteger ctorCount = new AtomicInteger(0);
         static final AtomicInteger createCount = new AtomicInteger(0);
+
         /**
          * Pluggable behavior for tests: envId -> ErrorsOr<AppContainer>
+         * Updated to AppContainer with 6 type params.
          */
-        static Function<String, ErrorsOr<AppContainer<String, String, String, String, String>>> creator =
+        static Function<String, ErrorsOr<AppContainer<
+                String, String, String, String, String, String>>> creator =
                 id -> ErrorsOr.error("no creator set for id=" + id);
 
         public TestFactory() {
@@ -28,7 +34,7 @@ public class IAppContainerFactoryCachingTest {
         }
 
         @Override
-        public ErrorsOr<AppContainer<String, String, String, String, String>> create(String id) {
+        public ErrorsOr<AppContainer<String, String, String, String, String, String>> create(String id) {
             createCount.incrementAndGet();
             return creator.apply(id);
         }
@@ -68,10 +74,11 @@ public class IAppContainerFactoryCachingTest {
     }
 
     @Test
+    @SuppressWarnings("unchecked")
     void container_cached_per_env_success() {
         // Two distinct mocks for different envs; same env returns same instance
-        var devContainer = mock(AppContainer.class);
-        var prodContainer = mock(AppContainer.class);
+        var devContainer = (AppContainer<String, String, String, String, String, String>) mock(AppContainer.class);
+        var prodContainer = (AppContainer<String, String, String, String, String, String>) mock(AppContainer.class);
 
         TestFactory.creator = id -> switch (id) {
             case "dev" -> ErrorsOr.lift(devContainer);
@@ -114,9 +121,11 @@ public class IAppContainerFactoryCachingTest {
     }
 
     @Test
+    @SuppressWarnings("unchecked")
     void different_envs_cache_independently() {
-        var c1 = mock(AppContainer.class);
-        var c2 = mock(AppContainer.class);
+        var c1 = (AppContainer<String, String, String, String, String, String>) mock(AppContainer.class);
+        var c2 = (AppContainer<String, String, String, String, String, String>) mock(AppContainer.class);
+
         TestFactory.creator = id -> switch (id) {
             case "e1" -> ErrorsOr.lift(c1);
             case "e2" -> ErrorsOr.lift(c2);

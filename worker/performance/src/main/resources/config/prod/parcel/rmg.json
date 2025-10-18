@@ -6,7 +6,7 @@
       "bizlogic": {
         "notification": {
           "type": "cel",
-          "cel": "{'out': []}"
+          "cel": "{'out': [message]}"
         }
       },
       "enrichment": {

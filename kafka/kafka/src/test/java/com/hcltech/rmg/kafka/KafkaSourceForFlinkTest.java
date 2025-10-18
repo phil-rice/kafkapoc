@@ -1,5 +1,7 @@
 package com.hcltech.rmg.kafka;
 
+import com.hcltech.rmg.appcontainer.impl.AppContainerFactoryForMapStringObject;
+import com.hcltech.rmg.appcontainer.interfaces.AppContainerDefn;
 import com.hcltech.rmg.messages.RawMessage;
 import org.apache.flink.api.common.eventtime.WatermarkStrategy;
 import org.apache.flink.api.common.typeinfo.TypeInformation;
@@ -23,13 +25,15 @@ final class KafkaSourceForFlinkWiringTest {
         int parallelism = 12;
 
         // simple WM provider
-        WatermarkStrategyProvider<RawMessage> wmProvider = () -> WatermarkStrategy.noWatermarks();
+        WatermarkStrategyProvider<RawMessage> wmProvider = WatermarkStrategy::noWatermarks;
 
-        // NOTE: new signature: first arg is containerId ("prod" or "test")
+        // NEW: build an AppContainerDefn with your factory and env id
+        var defn = AppContainerDefn.of(AppContainerFactoryForMapStringObject.class, "test");
+
         DataStreamSource<RawMessage> stream = KafkaSourceForFlink.rawKafkaStream(
-                "test",                        // containerId (resolved in deserializer.open())
+                defn,                      // container defn (resolved in deserializer.open())
                 env,
-                "dummy:9092",                  // won't connect; we don't execute in this test
+                "dummy:9092",              // won't connect; we don't execute in this test
                 "t",
                 "g",
                 parallelism,

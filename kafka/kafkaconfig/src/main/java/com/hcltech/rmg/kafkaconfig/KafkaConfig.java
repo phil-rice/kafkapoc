@@ -7,10 +7,10 @@ import java.time.Duration;
 import java.util.Properties;
 
 public record KafkaConfig(
-        String bootstrapServers,
+        String bootstrapServer,
         String topic,            // usually 1, but allow many
-        String groupId,
-        int sourceParallelism,   // desired source operator parallelism
+      String groupId,
+        int sourceParallelism,   // source parallelism (usually = #partitions)
         String startingOffsets,  // "earliest" or "latest"
         Duration partitionDiscovery, // null => disabled
         Properties extra          // any additional Kafka props (client tuning, auth, etc.)
@@ -27,8 +27,9 @@ public record KafkaConfig(
         String bootstrap = p.getProperty("kafka.bootstrap", "localhost:9092");
         String topic = p.getProperty("kafka.topic", "test-topic");
         String groupId = p.getProperty("kafka.group.id", "g-" + System.currentTimeMillis());
-        int parallelism = getInt(p, "kafka.source.parallelism",
+        int sourceParallelism = getInt(p, "kafka.source.parallelism",
                 Integer.getInteger("kafka.partitions", 12));
+        int targetParallelism = getInt(p, "kafka.target.partitions", sourceParallelism);
 
         String offsets = p.getProperty("kafka.starting.offsets", "earliest").trim().toLowerCase();
         if (!offsets.equals("earliest") && !offsets.equals("latest")) {
@@ -47,14 +48,16 @@ public record KafkaConfig(
                 bootstrap,
                 topic,
                 groupId,
-                parallelism,
+                sourceParallelism,
                 offsets,
                 discovery,
                 extra
         );
     }
 
-    /** Convert the string representation back to a Flink OffsetsInitializer. */
+    /**
+     * Convert the string representation back to a Flink OffsetsInitializer.
+     */
     public OffsetsInitializer toOffsetsInitializer() {
         return switch (startingOffsets) {
             case "latest" -> OffsetsInitializer.latest();

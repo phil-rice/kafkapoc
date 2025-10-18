@@ -45,8 +45,6 @@ public class NormalPipelineFunction<MSC, CepState, Msg, RT,Schema> extends RichA
         this.metrics = metricsFactory.create(params);
         this.envelopeMetrics = EnvelopeMetrics.create(container.timeService(), metrics, EnvelopeMetricsTC.INSTANCE);
         this.timeService = container.timeService();
-
-
     }
 
     @Override

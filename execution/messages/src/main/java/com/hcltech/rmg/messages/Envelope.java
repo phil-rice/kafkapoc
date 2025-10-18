@@ -8,6 +8,10 @@ import java.util.function.Function;
 public interface Envelope<CepState, Msg> {
     ValueEnvelope<CepState, Msg> valueEnvelope();
 
+    default String domainId() {
+        return valueEnvelope().header().rawMessage().domainId();
+    }
+
     default EnvelopeHeader<CepState> header() {
         return valueEnvelope().header();
     }

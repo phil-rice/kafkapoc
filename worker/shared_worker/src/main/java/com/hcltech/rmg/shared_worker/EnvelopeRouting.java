@@ -5,19 +5,25 @@ import com.hcltech.rmg.messages.RetryEnvelope;
 import com.hcltech.rmg.messages.ValueEnvelope;
 import org.apache.flink.streaming.api.datastream.DataStream;
 
+import java.util.List;
 import java.util.Properties;
 
 public final class EnvelopeRouting {
+    public static final String processedTopic = "processed";
+    public static final String errorsTopic = "errors";
+    public static final String retryTopic = "retries";
+    public static final List<String> allTopics = List.of(processedTopic, errorsTopic, retryTopic);
+
     private EnvelopeRouting() {
     }
 
     /**
      * Preferred: pass producer config (e.g., SASL, linger.ms, acks).
      */
-    public static <CepState,Msg> void routeToKafka(
-            DataStream<ValueEnvelope<CepState,Msg>> values,
-            DataStream<ErrorEnvelope<CepState,Msg>> errors,
-            DataStream<RetryEnvelope<CepState,Msg>> retries,
+    public static <CepState, Msg> void routeToKafka(
+            DataStream<ValueEnvelope<CepState, Msg>> values,
+            DataStream<ErrorEnvelope<CepState, Msg>> errors,
+            DataStream<RetryEnvelope<CepState, Msg>> retries,
             String brokers,
             String processedTopic,
             String errorsTopic,
@@ -42,10 +48,10 @@ public final class EnvelopeRouting {
     /**
      * Convenience overload: no producer config.
      */
-    public static  <CepState,Msg> void routeToKafka(
-            DataStream<ValueEnvelope <CepState,Msg>> values,
-            DataStream<ErrorEnvelope <CepState,Msg>> errors,
-            DataStream<RetryEnvelope <CepState,Msg>> retries,
+    public static <CepState, Msg> void routeToKafka(
+            DataStream<ValueEnvelope<CepState, Msg>> values,
+            DataStream<ErrorEnvelope<CepState, Msg>> errors,
+            DataStream<RetryEnvelope<CepState, Msg>> retries,
             String brokers,
             String processedTopic,
             String errorsTopic,

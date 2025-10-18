@@ -80,7 +80,7 @@
         </dependency>
         <dependency>
             <groupId>com.hcltech.rmg</groupId>
-            <artifactId>appcontainer_implementation</artifactId>
+            <artifactId>appcontainer_interfaces</artifactId>
             <version>${project.version}</version>
             <type>test-jar</type>
             <scope>test</scope>

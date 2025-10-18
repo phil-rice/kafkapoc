@@ -99,7 +99,7 @@ public class ProducerApp {
         int partitions = Integer.parseInt(get("kafka.partitions", applicationProperties, "12"));
         short rf = Short.parseShort(get("kafka.replication.factor", applicationProperties, "1"));
 
-        int count = Integer.parseInt(get("generator.count", applicationProperties, "1000000"));
+        int count = Integer.parseInt(get("generator.count", applicationProperties, "1_000_000"));
         int domainCount = Integer.parseInt(get("generator.domain.count", applicationProperties, "1000"));
         int recordEvery = Integer.parseInt(get("logging.record.every", applicationProperties, "1000"));
         int parallelism = Integer.parseInt(get("generator.parallelism", applicationProperties, "100"));

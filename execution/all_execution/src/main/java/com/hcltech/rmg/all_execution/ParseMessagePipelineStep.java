@@ -53,6 +53,7 @@ public class ParseMessagePipelineStep<MSC, CepState, Msg, Schema,FlinkRT,MetricP
             var behaviorConfig = keyToConfigMap.get(parameters.key()).behaviorConfig();
             var header = new EnvelopeHeader<CepState>(domainType, eventType, rawMessage, parameters, behaviorConfig);
             valueEnvelope.setHeader(header);
+            valueEnvelope.setData(message);
             return valueEnvelope;
 
         }

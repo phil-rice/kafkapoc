@@ -6,7 +6,7 @@ import java.util.Collection;
 import java.util.List;
 
 public interface CepEventLog {
-    void append(Collection<CepEvent> batch) throws Exception;
+    void append(Collection<CepEvent> batch) throws CepEventException;
 
     List<CepEvent> getAll() throws CepEventException;
 

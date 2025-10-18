@@ -31,7 +31,11 @@ public final class ValueEnvelope<CepState, Msg> implements Envelope<CepState, Ms
 
     @Override
     public Envelope<CepState, Msg> map(Function<ValueEnvelope<CepState, Msg>, Envelope<CepState, Msg>> mapper) {
-        return mapper.apply(this);
+        try {
+            return mapper.apply(this);
+        } catch (Exception e) {
+            return new ErrorEnvelope<CepState, Msg>(this, "ValueEnvelope.map", List.of("Exception in map: " + getClass().getSimpleName() + "/" + e.getMessage()));
+        }
     }
 
 

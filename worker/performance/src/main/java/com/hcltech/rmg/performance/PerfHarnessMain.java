@@ -8,7 +8,9 @@ import com.hcltech.rmg.flink_metrics.FlinkMetricsParams;
 import com.hcltech.rmg.flinkadapters.FlinkHelper;
 import com.hcltech.rmg.flinkadapters.MakeEmptyValueEnvelopeWithCepStateFunction;
 import com.hcltech.rmg.flinkadapters.NormalPipelineFunction;
+import com.hcltech.rmg.flinkadapters.UpdateCepStateAtEndFunction;
 import com.hcltech.rmg.kafka.KafkaHelpers;
+import com.hcltech.rmg.kafka.KafkaTopics;
 import com.hcltech.rmg.kafka.SplitEnvelopes;
 import com.hcltech.rmg.kafka.ValueErrorRetryStreams;
 import com.hcltech.rmg.kafkaconfig.KafkaConfig;
@@ -23,7 +25,6 @@ import org.apache.flink.streaming.api.datastream.DataStream;
 import org.apache.flink.streaming.api.datastream.SingleOutputStreamOperator;
 import org.apache.flink.streaming.api.environment.StreamExecutionEnvironment;
 import org.apache.flink.streaming.api.functions.async.RichAsyncFunction;
-import org.codehaus.stax2.validation.XMLValidationSchema;
 
 import java.util.Map;
 
@@ -44,8 +45,9 @@ public final class PerfHarnessMain {
         var raw = KafkaFlinkHelper.createRawMessageStreamFromKafka(appContainerDefn, env, kafka, app.checkPointIntervalMillis());
         DataStream<RawMessage> keyedStream = raw.keyBy(RawMessage::domainId);
         var withCepState = keyedStream.map(new MakeEmptyValueEnvelopeWithCepStateFunction<>(appContainerDefn));
-        var outputStream = KafkaHelpers.liftFunctionToOrderedAsync(withCepState, "main-async", func, kafka.sourceParallelism(), lanes, asyncTimeoutMillis);
-        SingleOutputStreamOperator<ValueEnvelope<CepState, Msg>> values = outputStream.process(new SplitEnvelopes<>()).name("splitter");
+        var processedStream = KafkaHelpers.liftFunctionToOrderedAsync(withCepState, "main-async", func, kafka.sourceParallelism(), lanes, asyncTimeoutMillis).keyBy(Envelope::domainId);
+        var withUpdatedCepState = processedStream.map(new UpdateCepStateAtEndFunction<>(appContainerDefn));
+        SingleOutputStreamOperator<ValueEnvelope<CepState, Msg>> values = withUpdatedCepState.process(new SplitEnvelopes<>()).name("splitter");
         return ValueErrorRetryStreams.from(env, values);
     }
 
@@ -55,6 +57,9 @@ public final class PerfHarnessMain {
         StreamExecutionEnvironment env = StreamExecutionEnvironment.createLocalEnvironmentWithWebUI(conf);
         var appContainerDefn = AppContainerDefn.of(AppContainerFactoryForMapStringObject.class, "prod");
         var appContainer = IAppContainerFactory.resolve(appContainerDefn).valueOrThrow();
+        if (KafkaTopics.ensureTopics(appContainer.eventSourceConfig(), EnvelopeRouting.allTopics, 12, (short) 1).valueOrThrow()) {//just sticking 12/3 in for tests
+            System.out.println("Created output topics");
+        }
         final int lanes = 300;
         int asyncTimeoutMillis = 2_000;
         var func = new NormalPipelineFunction<>(appContainerDefn, "notification");
@@ -72,7 +77,7 @@ public final class PerfHarnessMain {
         pipe.retries().addSink(new MetricsCountingSink<>("envelopes", MetricsCountingSink.Kind.RETRIES)).name("retries-metrics");
 
         // route to Kafka
-        String brokers = appContainer.eventSourceConfig().bootstrapServers();
+        String brokers = appContainer.eventSourceConfig().bootstrapServer();
         EnvelopeRouting.routeToKafka(pipe.values(), pipe.errors(), pipe.retries(), brokers, "processed", "errors", "retry");
 
         pipe.env().execute("rmg-perf-harness");

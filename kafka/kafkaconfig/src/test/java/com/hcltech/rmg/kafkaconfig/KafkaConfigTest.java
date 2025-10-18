@@ -52,7 +52,7 @@ class KafkaConfigTest {
         Properties p = new Properties();
         KafkaConfig cfg = KafkaConfig.fromProperties(p);
 
-        assertEquals("localhost:9092", cfg.bootstrapServers());
+        assertEquals("localhost:9092", cfg.bootstrapServer());
         assertEquals("test-topic", cfg.topic());
 
         assertNotNull(cfg.groupId());
@@ -83,7 +83,7 @@ class KafkaConfigTest {
 
         KafkaConfig cfg = KafkaConfig.fromProperties(p);
 
-        assertEquals("broker1:9092", cfg.bootstrapServers());
+        assertEquals("broker1:9092", cfg.bootstrapServer());
         assertEquals("orders", cfg.topic());
         assertEquals("my-group", cfg.groupId());
         assertEquals(5, cfg.sourceParallelism());
@@ -152,7 +152,7 @@ class KafkaConfigTest {
 
         KafkaConfig cfg = KafkaConfig.fromSystemProps();
 
-        assertEquals("sys:9092", cfg.bootstrapServers());
+        assertEquals("sys:9092", cfg.bootstrapServer());
         assertEquals("sys-topic", cfg.topic());
         assertEquals("sys-group", cfg.groupId());
         assertEquals(3, cfg.sourceParallelism());
