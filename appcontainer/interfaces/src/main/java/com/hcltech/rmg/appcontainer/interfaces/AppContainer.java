@@ -1,5 +1,6 @@
 package com.hcltech.rmg.appcontainer.interfaces;
 
+import com.hcltech.rmg.cepstate.CepEventLog;
 import com.hcltech.rmg.cepstate.CepStateTypeClass;
 import com.hcltech.rmg.common.ITimeService;
 import com.hcltech.rmg.common.uuid.IUuidGenerator;
@@ -15,8 +16,9 @@ import com.hcltech.rmg.xml.XmlTypeClass;
 
 import java.util.List;
 import java.util.Map;
+import java.util.function.Function;
 
-public record AppContainer<EventSourceConfig, CepState, Msg, Schema, MetricParam>(
+public record AppContainer<EventSourceConfig, CepState, Msg, Schema, FlinkRT, MetricParam>(
         // infra
         ITimeService timeService, IUuidGenerator uuid,
 
@@ -26,6 +28,7 @@ public record AppContainer<EventSourceConfig, CepState, Msg, Schema, MetricParam
         //Flink
         CepStateTypeClass<CepState> cepStateTypeClass,
         int checkPointIntervalMillis,
+        Function<FlinkRT, CepEventLog> eventLogFromRuntimeContext,
 
         // shared config
         List<String> keyPath, EventSourceConfig eventSourceConfig, RootConfig rootConfig,
@@ -41,5 +44,5 @@ public record AppContainer<EventSourceConfig, CepState, Msg, Schema, MetricParam
         MetricsFactory<MetricParam> metricsFactory,
 
         //The behaviour of the application. The key is the parameters key.
-        Map<String, Config> keyToConfigMap) implements InitialEnvelopeServices<CepState, Msg, Schema> {
+        Map<String, Config> keyToConfigMap){
 }

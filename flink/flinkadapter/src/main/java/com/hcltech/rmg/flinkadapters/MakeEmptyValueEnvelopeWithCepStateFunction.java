@@ -2,11 +2,12 @@ package com.hcltech.rmg.flinkadapters;
 
 import com.hcltech.rmg.appcontainer.interfaces.AppContainerDefn;
 import com.hcltech.rmg.appcontainer.interfaces.IAppContainerFactory;
-import com.hcltech.rmg.appcontainer.interfaces.InitialEnvelopeServices;
+import com.hcltech.rmg.cepstate.CepEventLog;
 import com.hcltech.rmg.cepstate.CepStateTypeClass;
 import com.hcltech.rmg.messages.*;
 import org.apache.flink.api.common.functions.OpenContext;
 import org.apache.flink.api.common.functions.RichMapFunction;
+import org.apache.flink.api.common.functions.RuntimeContext;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -21,19 +22,19 @@ import java.util.function.Supplier;
  */
 public class MakeEmptyValueEnvelopeWithCepStateFunction<MSC, CepState, Msg, Schema, MetricParam> extends RichMapFunction<RawMessage, Envelope<CepState, Msg>> {
 
-    private final AppContainerDefn<MSC, CepState, Msg, Schema, MetricParam> appContainerDefn;
-    private Supplier<FlinkCepEventForMapStringObjectLog> cepStateSupplier;
+    private final AppContainerDefn<MSC, CepState, Msg, Schema, RuntimeContext, MetricParam> appContainerDefn;
+    private Supplier<CepEventLog> cepStateSupplier;
     private CepStateTypeClass<CepState> cepStateTypeClass;
 
-    public MakeEmptyValueEnvelopeWithCepStateFunction(AppContainerDefn<MSC, CepState, Msg, Schema, MetricParam> appContainerDefn) {
+    public MakeEmptyValueEnvelopeWithCepStateFunction(AppContainerDefn<MSC, CepState, Msg, Schema, RuntimeContext, MetricParam> appContainerDefn) {
         this.appContainerDefn = appContainerDefn;
     }
 
     @Override
     public void open(OpenContext parameters) {
-        InitialEnvelopeServices<CepState, Msg, Schema> container = IAppContainerFactory.resolve(appContainerDefn).valueOrThrow();
+        var container = IAppContainerFactory.resolve(appContainerDefn).valueOrThrow();
         this.cepStateTypeClass = container.cepStateTypeClass();
-        this.cepStateSupplier = () -> FlinkCepEventForMapStringObjectLog.from(getRuntimeContext(), "cepState");
+        this.cepStateSupplier = () -> container.eventLogFromRuntimeContext().apply(getRuntimeContext());
 
     }
 

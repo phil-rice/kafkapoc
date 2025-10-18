@@ -17,6 +17,7 @@ import com.hcltech.rmg.messages.RawMessage;
 import com.hcltech.rmg.messages.ValueEnvelope;
 import com.hcltech.rmg.shared_worker.EnvelopeRouting;
 import com.hcltech.rmg.shared_worker.KafkaFlinkHelper;
+import org.apache.flink.api.common.functions.RuntimeContext;
 import org.apache.flink.configuration.Configuration;
 import org.apache.flink.streaming.api.datastream.DataStream;
 import org.apache.flink.streaming.api.datastream.SingleOutputStreamOperator;
@@ -34,10 +35,10 @@ public final class PerfHarnessMain {
      */
     public static <CepState, Msg, Schema> ValueErrorRetryStreams<CepState, Msg> buildPipeline(
             StreamExecutionEnvironment env,
-            AppContainerDefn<KafkaConfig, CepState, Msg, Schema, FlinkMetricsParams> appContainerDefn,
+            AppContainerDefn<KafkaConfig, CepState, Msg, Schema, RuntimeContext, FlinkMetricsParams> appContainerDefn,
             RichAsyncFunction<Envelope<CepState, Msg>, Envelope<CepState, Msg>> func,
             int lanes, long asyncTimeoutMillis) {
-        AppContainer<KafkaConfig, CepState, Msg, Schema, FlinkMetricsParams> app = IAppContainerFactory.resolve(appContainerDefn).valueOrThrow();
+        AppContainer<KafkaConfig, CepState, Msg, Schema, RuntimeContext, FlinkMetricsParams> app = IAppContainerFactory.resolve(appContainerDefn).valueOrThrow();
         KafkaConfig kafka = app.eventSourceConfig();
 
         var raw = KafkaFlinkHelper.createRawMessageStreamFromKafka(appContainerDefn, env, kafka, app.checkPointIntervalMillis());

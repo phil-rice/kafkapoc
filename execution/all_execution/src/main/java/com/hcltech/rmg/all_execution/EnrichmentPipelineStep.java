@@ -12,7 +12,7 @@ import com.hcltech.rmg.xml.XmlTypeClass;
 import java.util.Map;
 import java.util.function.Supplier;
 
-public class EnrichmentPipelineStep<ESC, CepState, Msg, Schema,MetricParam> {
+public class EnrichmentPipelineStep<ESC, CepState, Msg, Schema,FlinkRT,MetricParam> {
 
     private final IEnrichmentAspectExecutor<CepState, Msg> enrichmentExecutor;
     private final BizLogicExecutor<CepState, Msg> bizLogic;
@@ -23,7 +23,7 @@ public class EnrichmentPipelineStep<ESC, CepState, Msg, Schema,MetricParam> {
     private final IEventTypeExtractor<Msg> eventTypeExtractor;
     private final Schema schema;
 
-    public EnrichmentPipelineStep(AppContainer<ESC, CepState, Msg, Schema,MetricParam> container, String module) {
+    public EnrichmentPipelineStep(AppContainer<ESC, CepState, Msg, Schema,FlinkRT,MetricParam> container, String module) {
         this.module = module;
         this.keyToConfigMap = container.keyToConfigMap();
         this.enrichmentExecutor = container.enrichmentExecutor();

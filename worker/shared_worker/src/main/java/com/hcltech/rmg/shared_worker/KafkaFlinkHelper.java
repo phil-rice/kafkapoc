@@ -13,7 +13,7 @@ import org.apache.flink.streaming.api.environment.StreamExecutionEnvironment;
 import java.time.Duration;
 
 public class KafkaFlinkHelper {
-    static public <ESC, CepState, Msg, Schema, MetricsParam> DataStreamSource<RawMessage> createRawMessageStreamFromKafka(AppContainerDefn<ESC, CepState, Msg, Schema, MetricsParam> appContainerDefn, StreamExecutionEnvironment env, KafkaConfig kafka, int checkpointingInterval) {
+    static public <ESC, CepState, Msg, Schema,RT, MetricsParam> DataStreamSource<RawMessage> createRawMessageStreamFromKafka(AppContainerDefn<ESC, CepState, Msg, Schema,RT, MetricsParam> appContainerDefn, StreamExecutionEnvironment env, KafkaConfig kafka, int checkpointingInterval) {
         final int totalPartitions = kafka.sourceParallelism();
         env.setParallelism(totalPartitions > 0 ? totalPartitions : env.getParallelism());
         env.getConfig().setAutoWatermarkInterval(0);

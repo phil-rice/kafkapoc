@@ -6,6 +6,7 @@ import com.hcltech.rmg.appcontainer.interfaces.AppContainer;
 import com.hcltech.rmg.appcontainer.interfaces.IAppContainerFactory;
 import com.hcltech.rmg.celimpl.CelRuleBuilders;
 import com.hcltech.rmg.cepstate.CepEvent;
+import com.hcltech.rmg.cepstate.CepEventLog;
 import com.hcltech.rmg.cepstate.CepStateTypeClass;
 import com.hcltech.rmg.cepstate.MapStringObjectCepStateTypeClass;
 import com.hcltech.rmg.common.ITimeService;
@@ -21,6 +22,7 @@ import com.hcltech.rmg.execution.aspects.AspectExecutor;
 import com.hcltech.rmg.execution.bizlogic.BizLogicExecutor;
 import com.hcltech.rmg.flink_metrics.FlinkMetricsFactory;
 import com.hcltech.rmg.flink_metrics.FlinkMetricsParams;
+import com.hcltech.rmg.flinkadapters.FlinkCepEventForMapStringObjectLog;
 import com.hcltech.rmg.kafkaconfig.KafkaConfig;
 import com.hcltech.rmg.messages.IDomainTypeExtractor;
 import com.hcltech.rmg.messages.IEventTypeExtractor;
@@ -30,22 +32,25 @@ import com.hcltech.rmg.parameters.ParameterExtractor;
 import com.hcltech.rmg.parameters.Parameters;
 import com.hcltech.rmg.woodstox.WoodstoxXmlForMapStringObjectTypeClass;
 import com.hcltech.rmg.xml.XmlTypeClass;
+import org.apache.flink.api.common.functions.RuntimeContext;
+
 import org.codehaus.stax2.validation.XMLValidationSchema;
 
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.function.Function;
 
 import static java.util.Objects.requireNonNull;
 
-public final class AppContainerFactoryForMapStringObject implements IAppContainerFactory<KafkaConfig, Map<String, Object>, Map<String, Object>, XMLValidationSchema, FlinkMetricsParams> {
+public final class AppContainerFactoryForMapStringObject implements IAppContainerFactory<KafkaConfig, Map<String, Object>, Map<String, Object>, XMLValidationSchema, RuntimeContext, FlinkMetricsParams> {
 
-    private static final Map<String, ErrorsOr<AppContainer<KafkaConfig, Map<String, Object>, Map<String, Object>, XMLValidationSchema, FlinkMetricsParams>>> CACHE =
+    private static final Map<String, ErrorsOr<AppContainer<KafkaConfig, Map<String, Object>, Map<String, Object>, XMLValidationSchema, RuntimeContext, FlinkMetricsParams>>> CACHE =
             new ConcurrentHashMap<>();
 
 
-    public static ErrorsOr<AppContainer<KafkaConfig, Map<String, Object>, Map<String, Object>, XMLValidationSchema, FlinkMetricsParams>> resolve(String id) {
+    public static ErrorsOr<AppContainer<KafkaConfig, Map<String, Object>, Map<String, Object>, XMLValidationSchema, RuntimeContext, FlinkMetricsParams>> resolve(String id) {
         requireNonNull(id, "container id must not be null");
         final String norm = id.trim().toLowerCase();
         return CACHE.computeIfAbsent(norm, AppContainerFactoryForMapStringObject::build);
@@ -56,7 +61,7 @@ public final class AppContainerFactoryForMapStringObject implements IAppContaine
     }
 
     @Override
-    public ErrorsOr<AppContainer<KafkaConfig, Map<String, Object>, Map<String, Object>, XMLValidationSchema, FlinkMetricsParams>> create(String id) {
+    public ErrorsOr<AppContainer<KafkaConfig, Map<String, Object>, Map<String, Object>, XMLValidationSchema, RuntimeContext, FlinkMetricsParams>> create(String id) {
         return resolve(id);
     }
 
@@ -64,7 +69,7 @@ public final class AppContainerFactoryForMapStringObject implements IAppContaine
 
     public static final List<String> defaultParameters = List.of("productType", "company");
 
-    private static ErrorsOr<AppContainer<KafkaConfig, Map<String, Object>, Map<String, Object>, XMLValidationSchema, FlinkMetricsParams>> build(String id) {
+    private static ErrorsOr<AppContainer<KafkaConfig, Map<String, Object>, Map<String, Object>, XMLValidationSchema, RuntimeContext, FlinkMetricsParams>> build(String id) {
         return switch (id) {
             case "prod" -> basic(
                     id,
@@ -96,7 +101,7 @@ public final class AppContainerFactoryForMapStringObject implements IAppContaine
 
     // ---------- monadic composition (inlined) ----------
 
-    private static ErrorsOr<AppContainer<KafkaConfig, Map<String, Object>, Map<String, Object>, XMLValidationSchema, FlinkMetricsParams>> basic(
+    private static ErrorsOr<AppContainer<KafkaConfig, Map<String, Object>, Map<String, Object>, XMLValidationSchema, RuntimeContext, FlinkMetricsParams>> basic(
             String env,
             ITimeService time,
             IUuidGenerator uuid,
@@ -124,7 +129,7 @@ public final class AppContainerFactoryForMapStringObject implements IAppContaine
         );
 
         var msgTypeClass = new MapStringObjectAndListStringMsgTypeClass();
-
+        Function<RuntimeContext, CepEventLog> cepEventLogFunction = rt -> FlinkCepEventForMapStringObjectLog.from(rt, "CepState");
         // RootConfig -> Configs -> SchemaMap -> Container
         return RootConfigLoader.fromClasspath(rootConfigPath).flatMap((RootConfig root) ->
                 ConfigsBuilder.buildFromClasspath(
@@ -141,12 +146,13 @@ public final class AppContainerFactoryForMapStringObject implements IAppContaine
                             return IEnrichmentAspectExecutor.<Map<String, Object>, Map<String, Object>>create(cepStateTypeClass, configs, oneEnrichmentExecutor).map(
                                     enricher ->
 
-                                            new AppContainer<KafkaConfig, Map<String, Object>, Map<String, Object>, XMLValidationSchema, FlinkMetricsParams>(
+                                            new AppContainer<KafkaConfig, Map<String, Object>, Map<String, Object>, XMLValidationSchema, RuntimeContext, FlinkMetricsParams>(
                                                     time,
                                                     uuid,
                                                     xml,
                                                     cepStateTypeClass,
                                                     checkpointIntervalMillis,
+                                                    cepEventLogFunction,
                                                     keyPath,
                                                     eventSourceConfig,
                                                     root,
