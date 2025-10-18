@@ -16,6 +16,9 @@ public record KafkaConfig(
         Properties extra          // any additional Kafka props (client tuning, auth, etc.)
 ) {
 
+
+
+
     public static KafkaConfig fromSystemProps() {
         return fromProperties(System.getProperties());
     }

@@ -1,11 +1,10 @@
-package com.hcltech.rmg.performance;
+package com.hcltech.rmg.shared_worker;
 
 import com.hcltech.rmg.messages.ErrorEnvelope;
 import com.hcltech.rmg.messages.RetryEnvelope;
 import com.hcltech.rmg.messages.ValueEnvelope;
 import org.apache.flink.streaming.api.datastream.DataStream;
 
-import java.util.Map;
 import java.util.Properties;
 
 public final class EnvelopeRouting {
@@ -15,7 +14,7 @@ public final class EnvelopeRouting {
     /**
      * Preferred: pass producer config (e.g., SASL, linger.ms, acks).
      */
-    public static <CepState,Msg> void routeToKafkaWithMetrics(
+    public static <CepState,Msg> void routeToKafka(
             DataStream<ValueEnvelope<CepState,Msg>> values,
             DataStream<ErrorEnvelope<CepState,Msg>> errors,
             DataStream<RetryEnvelope<CepState,Msg>> retries,
@@ -43,7 +42,7 @@ public final class EnvelopeRouting {
     /**
      * Convenience overload: no producer config.
      */
-    public static  <CepState,Msg> void routeToKafkaWithMetrics(
+    public static  <CepState,Msg> void routeToKafka(
             DataStream<ValueEnvelope <CepState,Msg>> values,
             DataStream<ErrorEnvelope <CepState,Msg>> errors,
             DataStream<RetryEnvelope <CepState,Msg>> retries,
@@ -52,6 +51,6 @@ public final class EnvelopeRouting {
             String errorsTopic,
             String retryTopic
     ) {
-        routeToKafkaWithMetrics(values, errors, retries, brokers, processedTopic, errorsTopic, retryTopic, new Properties());
+        routeToKafka(values, errors, retries, brokers, processedTopic, errorsTopic, retryTopic, new Properties());
     }
 }

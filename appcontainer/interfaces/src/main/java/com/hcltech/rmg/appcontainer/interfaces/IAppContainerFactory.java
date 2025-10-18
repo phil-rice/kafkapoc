@@ -26,11 +26,12 @@ public interface IAppContainerFactory<EventSourceConfig, CepState, Msg, Schema, 
         return castFactory(eo);
     }
 
-    public static <ESC, C, M, S, MP> ErrorsOr<AppContainer<ESC, C, M, S, MP>> resolve(Class<? extends IAppContainerFactory<ESC, C, M, S, MP>> clazz, String envId) {
-        ErrorsOr<IAppContainerFactory<ESC, C, M, S, MP>> errorsOrFactory = resolveFactory((Class) clazz);
+    public static <ESC, C, M, S, MP> ErrorsOr<AppContainer<ESC, C, M, S, MP>> resolve(AppContainerDefn<ESC, C, M, S, MP> defn) {
+        Class<IAppContainerFactory<ESC, C, M, S, MP>> clazz = defn.factoryClass();
+        ErrorsOr<IAppContainerFactory<ESC, C, M, S, MP>> errorsOrFactory = resolveFactory(clazz);
         return errorsOrFactory.flatMap(factory -> {
             var byEnv = CONTAINERS.computeIfAbsent(clazz, _k -> new ConcurrentHashMap<>());
-            var eo = byEnv.computeIfAbsent(envId, factory::create);
+            var eo = byEnv.computeIfAbsent(defn.containerId(), factory::create);
             return castContainer(eo);
         });
     }

@@ -4,7 +4,7 @@
     <module name="performance" />
     <extension name="coverage">
       <pattern>
-        <option name="PATTERN" value="com.hcltech.rmg.performance.*" />
+        <option name="PATTERN" value="com.hcltech.rmg.kafka.*" />
         <option name="ENABLED" value="true" />
       </pattern>
     </extension>

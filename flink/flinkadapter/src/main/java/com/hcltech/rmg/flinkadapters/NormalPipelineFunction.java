@@ -3,6 +3,7 @@ package com.hcltech.rmg.flinkadapters;
 import com.hcltech.rmg.all_execution.BizLogicPipelineStep;
 import com.hcltech.rmg.all_execution.EnrichmentPipelineStep;
 import com.hcltech.rmg.all_execution.ParseMessagePipelineStep;
+import com.hcltech.rmg.appcontainer.interfaces.AppContainerDefn;
 import com.hcltech.rmg.appcontainer.interfaces.IAppContainerFactory;
 import com.hcltech.rmg.common.ITimeService;
 import com.hcltech.rmg.flink_metrics.FlinkMetricsParams;
@@ -19,8 +20,7 @@ import java.util.concurrent.atomic.AtomicLong;
 
 
 public class NormalPipelineFunction<MSC, CepState, Msg, Schema> extends RichAsyncFunction<Envelope<CepState, Msg>, Envelope<CepState, Msg>> {
-    private final Class<IAppContainerFactory<MSC, CepState, Msg, Schema, FlinkMetricsParams>> factoryClass;
-    private final String containerId;
+    private final AppContainerDefn<MSC, CepState, Msg, Schema, FlinkMetricsParams> appContainerDefn;
     private final String module;
     transient private EnrichmentPipelineStep<MSC, CepState, Msg, Schema, FlinkMetricsParams> enrichmentPipelineStep;
     transient private BizLogicPipelineStep<MSC, CepState, Msg, Schema, FlinkMetricsParams> bizLogic;
@@ -29,15 +29,14 @@ public class NormalPipelineFunction<MSC, CepState, Msg, Schema> extends RichAsyn
     transient private Metrics metrics;
     transient private ITimeService timeService;
 
-    public NormalPipelineFunction(Class<IAppContainerFactory<MSC, CepState, Msg, Schema, FlinkMetricsParams>> factoryClass, String containerId, String module) {
-        this.factoryClass = factoryClass;
-        this.containerId = containerId;
+    public NormalPipelineFunction(AppContainerDefn<MSC, CepState, Msg, Schema, FlinkMetricsParams> appContainerDefn, String module) {
+        this.appContainerDefn = appContainerDefn;
         this.module = module;
     }
 
     @Override
     public void open(OpenContext openContext) throws Exception {
-        var container = IAppContainerFactory.resolve(factoryClass, containerId).valueOrThrow();
+        var container = IAppContainerFactory.resolve(appContainerDefn).valueOrThrow();
         this.parser = new ParseMessagePipelineStep<>(container);
         this.enrichmentPipelineStep = new EnrichmentPipelineStep<>(container, module);
         this.bizLogic = new BizLogicPipelineStep<>(container, null, module);
@@ -46,6 +45,7 @@ public class NormalPipelineFunction<MSC, CepState, Msg, Schema> extends RichAsyn
         this.metrics = metricsFactory.create(params);
         this.envelopeMetrics = EnvelopeMetrics.create(container.timeService(), metrics, EnvelopeMetricsTC.INSTANCE);
         this.timeService = container.timeService();
+        container.cepStateTypeClass()
 
     }
 

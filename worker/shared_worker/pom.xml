@@ -11,8 +11,8 @@
         <relativePath>../../pom.xml</relativePath>
     </parent>
 
-    <artifactId>performance</artifactId>
-    <name>performance</name>
+    <artifactId>shared_worker</artifactId>
+    <name>shared_worker</name>
     <packaging>jar</packaging>
 
     <dependencies>
@@ -20,11 +20,6 @@
         <dependency>
             <groupId>com.hcltech.rmg</groupId>
             <artifactId>all_execution</artifactId>
-            <version>${project.version}</version>
-        </dependency>
-        <dependency>
-            <groupId>com.hcltech.rmg</groupId>
-            <artifactId>shared_worker</artifactId>
             <version>${project.version}</version>
         </dependency>
         <dependency>

@@ -14,11 +14,13 @@ import static org.mockito.Mockito.mock;
 public class IAppContainerFactoryCachingTest {
 
     // --- A tiny test factory class with a public no-arg ctor (required by your resolveFactory) ---
-    public static class TestFactory implements IAppContainerFactory<String,String, String, String, String> {
+    public static class TestFactory implements IAppContainerFactory<String, String, String, String, String> {
         static final AtomicInteger ctorCount = new AtomicInteger(0);
         static final AtomicInteger createCount = new AtomicInteger(0);
-        /** Pluggable behavior for tests: envId -> ErrorsOr<AppContainer> */
-        static Function<String, ErrorsOr<AppContainer<String, String, String, String,String>>> creator =
+        /**
+         * Pluggable behavior for tests: envId -> ErrorsOr<AppContainer>
+         */
+        static Function<String, ErrorsOr<AppContainer<String, String, String, String, String>>> creator =
                 id -> ErrorsOr.error("no creator set for id=" + id);
 
         public TestFactory() {
@@ -26,7 +28,7 @@ public class IAppContainerFactoryCachingTest {
         }
 
         @Override
-        public ErrorsOr<AppContainer<String, String, String, String,String>> create(String id) {
+        public ErrorsOr<AppContainer<String, String, String, String, String>> create(String id) {
             createCount.incrementAndGet();
             return creator.apply(id);
         }
@@ -77,9 +79,9 @@ public class IAppContainerFactoryCachingTest {
             default -> ErrorsOr.error("unknown env: " + id);
         };
 
-        var dev1 = IAppContainerFactory.resolve(TestFactory.class, "dev");
-        var dev2 = IAppContainerFactory.resolve(TestFactory.class, "dev");
-        var prod1 = IAppContainerFactory.resolve(TestFactory.class, "prod");
+        var dev1 = IAppContainerFactory.resolve(AppContainerDefn.of(TestFactory.class, "dev"));
+        var dev2 = IAppContainerFactory.resolve(AppContainerDefn.of(TestFactory.class, "dev"));
+        var prod1 = IAppContainerFactory.resolve(AppContainerDefn.of(TestFactory.class, "prod"));
 
         assertTrue(dev1.isValue());
         assertTrue(dev2.isValue());
@@ -100,8 +102,8 @@ public class IAppContainerFactoryCachingTest {
     void container_error_is_cached() {
         TestFactory.creator = id -> ErrorsOr.error("boom for env " + id);
 
-        var first = IAppContainerFactory.resolve(TestFactory.class, "dev");
-        var second = IAppContainerFactory.resolve(TestFactory.class, "dev");
+        var first = IAppContainerFactory.resolve(AppContainerDefn.of(TestFactory.class, "dev"));
+        var second = IAppContainerFactory.resolve(AppContainerDefn.of(TestFactory.class, "dev"));
 
         assertTrue(first.isError());
         assertTrue(second.isError());
@@ -121,9 +123,9 @@ public class IAppContainerFactoryCachingTest {
             default -> ErrorsOr.error("unknown " + id);
         };
 
-        var e1a = IAppContainerFactory.resolve(TestFactory.class, "e1");
-        var e2a = IAppContainerFactory.resolve(TestFactory.class, "e2");
-        var e1b = IAppContainerFactory.resolve(TestFactory.class, "e1");
+        var e1a = IAppContainerFactory.resolve(AppContainerDefn.of(TestFactory.class, "e1"));
+        var e2a = IAppContainerFactory.resolve(AppContainerDefn.of(TestFactory.class, "e2"));
+        var e1b = IAppContainerFactory.resolve(AppContainerDefn.of(TestFactory.class, "e1"));
 
         assertTrue(e1a.isValue());
         assertTrue(e2a.isValue());

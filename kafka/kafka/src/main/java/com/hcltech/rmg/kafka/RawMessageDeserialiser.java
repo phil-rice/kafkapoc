@@ -1,6 +1,7 @@
 package com.hcltech.rmg.kafka;
 
-import com.hcltech.rmg.appcontainer.impl.AppContainerFactoryForMapStringObject;
+import com.hcltech.rmg.appcontainer.interfaces.AppContainerDefn;
+import com.hcltech.rmg.appcontainer.interfaces.IAppContainerFactory;
 import com.hcltech.rmg.common.ITimeService;
 import com.hcltech.rmg.common.uuid.IUuidGenerator;
 import com.hcltech.rmg.messages.RawMessage;
@@ -12,27 +13,24 @@ import org.apache.kafka.clients.consumer.ConsumerRecord;
 
 import java.nio.charset.StandardCharsets;
 
-public final class RawMessageDeserialiser implements KafkaRecordDeserializationSchema<RawMessage> {
+public final class RawMessageDeserialiser<ESC, CepState, Msg, Schema, MetricsParam> implements KafkaRecordDeserializationSchema<RawMessage> {
 
     // --- serialized ---
-    private final String containerId;
+    private AppContainerDefn<ESC, CepState, Msg, Schema, MetricsParam> appContainerDefn;
 
     // --- resolved in open() (not serialized) ---
     private transient ITimeService timeService;
     private transient IUuidGenerator uuid;
 
-    /**
-     * Prod/IT path: only serialize a tiny string; resolve deps in open().
-     */
-    public RawMessageDeserialiser(String containerId) {
-        this.containerId = containerId;
+    public RawMessageDeserialiser(AppContainerDefn<ESC, CepState, Msg, Schema, MetricsParam> appContainerDefn) {
+        this.appContainerDefn = appContainerDefn;
     }
 
     /**
      * Test-only path: bypass container resolution.
      */
     public RawMessageDeserialiser(ITimeService timeService, IUuidGenerator uuid) {
-        this.containerId = null;
+        this.appContainerDefn = null;
         this.timeService = timeService;
         this.uuid = uuid;
     }
@@ -40,7 +38,7 @@ public final class RawMessageDeserialiser implements KafkaRecordDeserializationS
     @Override
     public void open(DeserializationSchema.InitializationContext context) {
         if (timeService != null && uuid != null) return; // test-only ctor already set them
-        var container = AppContainerFactoryForMapStringObject.resolve(containerId).valueOrThrow();
+        var container = IAppContainerFactory.resolve(appContainerDefn).valueOrThrow();
         this.timeService = container.timeService();
         this.uuid = container.uuid();
     }

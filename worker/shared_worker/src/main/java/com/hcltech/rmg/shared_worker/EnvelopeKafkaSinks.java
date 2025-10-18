@@ -1,4 +1,4 @@
-package com.hcltech.rmg.performance;
+package com.hcltech.rmg.shared_worker;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ObjectNode;
@@ -11,7 +11,6 @@ import org.apache.flink.connector.kafka.sink.KafkaRecordSerializationSchema;
 import org.apache.flink.connector.kafka.sink.KafkaSink;
 
 import java.nio.charset.StandardCharsets;
-import java.util.Map;
 import java.util.Properties;
 
 /**

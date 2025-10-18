@@ -23,8 +23,9 @@ public record AppContainer<EventSourceConfig, CepState, Msg, Schema, MetricParam
         // XML services
         XmlTypeClass<Msg, Schema> xml,                // keyExtraction + parse + validate
 
-        //CepState
+        //Flink
         CepStateTypeClass<CepState> cepStateTypeClass,
+        int checkPointIntervalMillis,
 
         // shared config
         List<String> keyPath, EventSourceConfig eventSourceConfig, RootConfig rootConfig,

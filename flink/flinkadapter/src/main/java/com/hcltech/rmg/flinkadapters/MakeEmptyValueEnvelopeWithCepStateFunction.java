@@ -1,5 +1,6 @@
 package com.hcltech.rmg.flinkadapters;
 
+import com.hcltech.rmg.appcontainer.interfaces.AppContainerDefn;
 import com.hcltech.rmg.appcontainer.interfaces.IAppContainerFactory;
 import com.hcltech.rmg.appcontainer.interfaces.InitialEnvelopeServices;
 import com.hcltech.rmg.cepstate.CepStateTypeClass;
@@ -18,21 +19,19 @@ import java.util.function.Supplier;
  * <p>
  * All error paths are wrapped as ErrorEnvelope by the factory (via recover()).
  */
-public class MakeEmptyValueEnvelopeFunction<MSC, CepState, Msg, Schema,MetricParam> extends RichMapFunction<RawMessage, Envelope<CepState, Msg>> {
+public class MakeEmptyValueEnvelopeWithCepStateFunction<MSC, CepState, Msg, Schema, MetricParam> extends RichMapFunction<RawMessage, Envelope<CepState, Msg>> {
 
-    private final Class<IAppContainerFactory<MSC, CepState, Msg, Schema,MetricParam>> factoryClass;
-    private final String containerId;
+    private final AppContainerDefn<MSC, CepState, Msg, Schema, MetricParam> appContainerDefn;
     private Supplier<FlinkCepEventForMapStringObjectLog> cepStateSupplier;
     private CepStateTypeClass<CepState> cepStateTypeClass;
 
-    public MakeEmptyValueEnvelopeFunction(Class<IAppContainerFactory<MSC, CepState, Msg, Schema,MetricParam>> factoryClass, String containerId) {
-        this.factoryClass = factoryClass;
-        this.containerId = containerId;
+    public MakeEmptyValueEnvelopeWithCepStateFunction(AppContainerDefn<MSC, CepState, Msg, Schema, MetricParam> appContainerDefn) {
+        this.appContainerDefn = appContainerDefn;
     }
 
     @Override
     public void open(OpenContext parameters) {
-        InitialEnvelopeServices<CepState, Msg, Schema> container = IAppContainerFactory.resolve(factoryClass, containerId).valueOrThrow();
+        InitialEnvelopeServices<CepState, Msg, Schema> container = IAppContainerFactory.resolve(appContainerDefn).valueOrThrow();
         this.cepStateTypeClass = container.cepStateTypeClass();
         this.cepStateSupplier = () -> FlinkCepEventForMapStringObjectLog.from(getRuntimeContext(), "cepState");
 
