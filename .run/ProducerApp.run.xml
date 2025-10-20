@@ -1,10 +1,10 @@
 <component name="ProjectRunConfigurationManager">
   <configuration default="false" name="ProducerApp" type="Application" factoryName="Application" nameIsGenerated="true">
-    <option name="MAIN_CLASS_NAME" value="com.hcltech.rmg.tools.ProducerApp" />
+    <option name="MAIN_CLASS_NAME" value="com.hcltech.rmg.producer_same_id.ProducerSameIdApp" />
     <module name="producer" />
     <extension name="coverage">
       <pattern>
-        <option name="PATTERN" value="com.hcltech.rmg.tools.*" />
+        <option name="PATTERN" value="com.hcltech.rmg.producer_same_id.*" />
         <option name="ENABLED" value="true" />
       </pattern>
     </extension>

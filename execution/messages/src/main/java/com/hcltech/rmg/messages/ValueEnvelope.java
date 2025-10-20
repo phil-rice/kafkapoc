@@ -13,7 +13,10 @@ public final class ValueEnvelope<CepState, Msg> implements Envelope<CepState, Ms
     private EnvelopeHeader<CepState> header;
     private Msg data;
     private CepState cepState;
+    private int cepStateSizeAsStart;
+    private long durationNanos;
     private final List<CepEvent> cepStateModifications;
+    private long seq; //mutable sequence for per-key ordering
 
     public ValueEnvelope(EnvelopeHeader<CepState> header,
                          Msg data,
@@ -80,6 +83,30 @@ public final class ValueEnvelope<CepState, Msg> implements Envelope<CepState, Ms
     public List<CepEvent> cepStateModifications() {
         return cepStateModifications;
     }
+
+    public int getCepStateSizeAsStart() {
+        return cepStateSizeAsStart;
+    }
+
+    public int getFullCepStateSize() {
+        return cepStateSizeAsStart + cepStateModifications.size();
+    }
+    public void setCepStateSizeAsStart(int cepStateSizeAsStart) {
+        this.cepStateSizeAsStart = cepStateSizeAsStart;
+    }
+
+    public long getDurationNanos() {
+        return durationNanos;
+    }
+
+    public void setDurationNanos(long durationNanos) {
+        this.durationNanos = durationNanos;
+    }
+
+
+    public long getSeq() { return seq; }
+
+    public void setSeq(long seq) { this.seq = seq; }
 
     @Override
     public boolean equals(Object obj) {

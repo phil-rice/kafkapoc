@@ -45,7 +45,7 @@ public class EnrichmentPipelineStep<ESC, CepState, Msg, Schema,FlinkRT,MetricPar
             AspectMap aspectMap = config.behaviorConfig().events().get(valueEnvelope.header().eventType());
             if (aspectMap == null) return valueEnvelope;
             var bizLogicConfig = aspectMap.bizlogic().get(module);
-            return valueEnvelope.map(enrichmentExecutor::execute).map(ve -> bizLogic.execute(fullKey, bizLogicConfig, ve));
+            return valueEnvelope.map(enrichmentExecutor::execute);
         }
         return envelope;
     }

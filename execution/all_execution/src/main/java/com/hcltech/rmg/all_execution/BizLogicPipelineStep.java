@@ -15,7 +15,7 @@ import com.hcltech.rmg.xml.XmlTypeClass;
 import java.util.Map;
 import java.util.function.Supplier;
 
-public class BizLogicPipelineStep<ESC, CepState, Msg, Schema,FlinkRT,MetricParam> {
+public class BizLogicPipelineStep<ESC, CepState, Msg, Schema, FlinkRT, MetricParam> {
 
     private final IEnrichmentAspectExecutor<CepState, Msg> enrichmentExecutor;
     private final BizLogicExecutor<CepState, Msg> bizLogic;
@@ -26,7 +26,7 @@ public class BizLogicPipelineStep<ESC, CepState, Msg, Schema,FlinkRT,MetricParam
     private final IEventTypeExtractor<Msg> eventTypeExtractor;
     private final Schema schema;
 
-    public BizLogicPipelineStep(AppContainer<ESC, CepState, Msg, Schema, FlinkRT,MetricParam> container, Supplier<CepEventLog> cepStateSupplier, String module) {
+    public BizLogicPipelineStep(AppContainer<ESC, CepState, Msg, Schema, FlinkRT, MetricParam> container, Supplier<CepEventLog> cepStateSupplier, String module) {
         this.module = module;
         this.keyToConfigMap = container.keyToConfigMap();
         this.enrichmentExecutor = container.enrichmentExecutor();
@@ -48,7 +48,8 @@ public class BizLogicPipelineStep<ESC, CepState, Msg, Schema,FlinkRT,MetricParam
             AspectMap aspectMap = config.behaviorConfig().events().get(valueEnvelope.header().eventType());
             if (aspectMap == null) return valueEnvelope;
             var bizLogicConfig = aspectMap.bizlogic().get(module);
-            return valueEnvelope.map(enrichmentExecutor::execute).map(ve -> bizLogic.execute(fullKey, bizLogicConfig, ve));
+            Envelope<CepState, Msg> result = valueEnvelope.map(ve -> bizLogic.execute(fullKey, bizLogicConfig, ve));
+            return result;
         }
         return envelope;
     }

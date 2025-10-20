@@ -1,13 +1,17 @@
 package com.hcltech.rmg.shared_worker;
 
+import com.fasterxml.jackson.core.JsonGenerator;
+import com.fasterxml.jackson.core.util.ByteArrayBuilder;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.hcltech.rmg.messages.ErrorEnvelope;
 import com.hcltech.rmg.messages.RetryEnvelope;
 import com.hcltech.rmg.messages.ValueEnvelope;
+import com.hcltech.rmg.shared_worker.serialisation.ErrorRecordSerializer;
+import com.hcltech.rmg.shared_worker.serialisation.RetryRecordSerializer;
+import com.hcltech.rmg.shared_worker.serialisation.ValueRecordSerializer;
 import org.apache.flink.api.common.serialization.SerializationSchema;
 import org.apache.flink.connector.base.DeliveryGuarantee;
-import org.apache.flink.connector.kafka.sink.KafkaRecordSerializationSchema;
 import org.apache.flink.connector.kafka.sink.KafkaSink;
 
 import java.nio.charset.StandardCharsets;
@@ -15,12 +19,11 @@ import java.util.Properties;
 
 /**
  * Kafka sinks for Value / Error / Retry envelopes.
- * NOTE: Uses named SerializationSchema classes (no lambdas) so Flink's type extractor is happy.
+ * Uses record-level serializers (in serialisation package) to add Kafka headers.
  */
 public final class EnvelopeKafkaSinks {
 
-    private EnvelopeKafkaSinks() {
-    }
+    private EnvelopeKafkaSinks() {}
 
     private static final ObjectMapper MAPPER = new ObjectMapper();
 
@@ -32,13 +35,11 @@ public final class EnvelopeKafkaSinks {
         return KafkaSink.<ValueEnvelope<CepState, Msg>>builder()
                 .setBootstrapServers(brokers)
                 .setKafkaProducerConfig(producerConfig)
-                .setRecordSerializer(
-                        KafkaRecordSerializationSchema.<ValueEnvelope<CepState, Msg>>builder()
-                                .setTopic(topic)
-                                .setKeySerializationSchema(new ValueKeySerializer())
-                                .setValueSerializationSchema(new ValuePayloadSerializer())
-                                .build()
-                )
+                .setRecordSerializer(new ValueRecordSerializer<>(
+                        topic,
+                        new ValueKeySerializer<>(),
+                        new ValuePayloadSerializer<>()
+                ))
                 .setDeliveryGuarantee(DeliveryGuarantee.AT_LEAST_ONCE)
                 .build();
     }
@@ -49,13 +50,11 @@ public final class EnvelopeKafkaSinks {
         return KafkaSink.<ErrorEnvelope<CepState, Msg>>builder()
                 .setBootstrapServers(brokers)
                 .setKafkaProducerConfig(producerConfig)
-                .setRecordSerializer(
-                        KafkaRecordSerializationSchema.<ErrorEnvelope<CepState, Msg>>builder()
-                                .setTopic(topic)
-                                .setKeySerializationSchema(new ErrorKeySerializer())
-                                .setValueSerializationSchema(new ErrorPayloadSerializer())
-                                .build()
-                )
+                .setRecordSerializer(new ErrorRecordSerializer<>(
+                        topic,
+                        new ErrorKeySerializer<>(),
+                        new ErrorPayloadSerializer<>()
+                ))
                 .setDeliveryGuarantee(DeliveryGuarantee.AT_LEAST_ONCE)
                 .build();
     }
@@ -66,13 +65,11 @@ public final class EnvelopeKafkaSinks {
         return KafkaSink.<RetryEnvelope<CepState, Msg>>builder()
                 .setBootstrapServers(brokers)
                 .setKafkaProducerConfig(producerConfig)
-                .setRecordSerializer(
-                        KafkaRecordSerializationSchema.<RetryEnvelope<CepState, Msg>>builder()
-                                .setTopic(topic)
-                                .setKeySerializationSchema(new RetryKeySerializer())
-                                .setValueSerializationSchema(new RetryPayloadSerializer())
-                                .build()
-                )
+                .setRecordSerializer(new RetryRecordSerializer<>(
+                        topic,
+                        new RetryKeySerializer<>(),
+                        new RetryPayloadSerializer<>()
+                ))
                 .setDeliveryGuarantee(DeliveryGuarantee.AT_LEAST_ONCE)
                 .build();
     }
@@ -81,12 +78,8 @@ public final class EnvelopeKafkaSinks {
 
     public static final class ValueKeySerializer<CepState, Msg>
             implements SerializationSchema<ValueEnvelope<CepState, Msg>> {
-        @Override
-        public void open(InitializationContext ctx) {
-        }
-
-        @Override
-        public byte[] serialize(ValueEnvelope<CepState, Msg> v) {
+        @Override public void open(InitializationContext ctx) {}
+        @Override public byte[] serialize(ValueEnvelope<CepState, Msg> v) {
             String k = (v == null || v.header() == null) ? null : v.header().rawMessage().domainId();
             return toBytes(k);
         }
@@ -94,12 +87,8 @@ public final class EnvelopeKafkaSinks {
 
     public static final class ErrorKeySerializer<CepState, Msg>
             implements SerializationSchema<ErrorEnvelope<CepState, Msg>> {
-        @Override
-        public void open(InitializationContext ctx) {
-        }
-
-        @Override
-        public byte[] serialize(ErrorEnvelope<CepState, Msg> e) {
+        @Override public void open(InitializationContext ctx) {}
+        @Override public byte[] serialize(ErrorEnvelope<CepState, Msg> e) {
             var h = (e == null) ? null : e.valueEnvelope().header();
             String k = (h == null) ? null : h.rawMessage().domainId();
             return toBytes(k);
@@ -108,12 +97,8 @@ public final class EnvelopeKafkaSinks {
 
     public static final class RetryKeySerializer<CepState, Msg>
             implements SerializationSchema<RetryEnvelope<CepState, Msg>> {
-        @Override
-        public void open(InitializationContext ctx) {
-        }
-
-        @Override
-        public byte[] serialize(RetryEnvelope<CepState, Msg> r) {
+        @Override public void open(InitializationContext ctx) {}
+        @Override public byte[] serialize(RetryEnvelope<CepState, Msg> r) {
             var h = (r == null) ? null : r.valueEnvelope().header();
             String k = (h == null) ? null : h.rawMessage().domainId();
             return toBytes(k);
@@ -124,21 +109,26 @@ public final class EnvelopeKafkaSinks {
 
     public static final class ValuePayloadSerializer<CepState, Msg>
             implements SerializationSchema<ValueEnvelope<CepState, Msg>> {
-        @Override
-        public void open(InitializationContext ctx) {
-        }
+        @Override public void open(InitializationContext ctx) {}
 
-        @Override
-        public byte[] serialize(ValueEnvelope<CepState, Msg> v) {
-            try {
-                ObjectNode root = MAPPER.createObjectNode();
-                root.put("kind", "value");
+        @Override public byte[] serialize(ValueEnvelope<CepState, Msg> v) {
+            try (ByteArrayBuilder buf = new ByteArrayBuilder()) {
+                JsonGenerator gen = MAPPER.getFactory().createGenerator(buf);
+                gen.writeStartObject();
+                gen.writeStringField("kind", "value");
+
                 var h = v.header();
-                root.put("domainType", h.domainType());
-                root.put("domainId", h.rawMessage().domainId());
-                root.put("eventType", h.eventType());
-                root.set("payload", MAPPER.valueToTree(v.data()));
-                return MAPPER.writeValueAsBytes(root);
+                gen.writeStringField("domainType", h.domainType());
+                gen.writeStringField("domainId",   h.rawMessage().domainId());
+                gen.writeStringField("eventType",  h.eventType());
+
+                gen.writeFieldName("payload");
+                // Stream the payload directly; avoids building an intermediate JsonNode
+                MAPPER.writeValue(gen, v.data());
+
+                gen.writeEndObject();
+                gen.close();
+                return buf.toByteArray();
             } catch (Exception ex) {
                 return fallback("value");
             }
@@ -147,52 +137,64 @@ public final class EnvelopeKafkaSinks {
 
     public static final class ErrorPayloadSerializer<CepState, Msg>
             implements SerializationSchema<ErrorEnvelope<CepState, Msg>> {
-        @Override
-        public void open(InitializationContext ctx) {
-        }
+        @Override public void open(InitializationContext ctx) {}
 
-        @Override
-        public byte[] serialize(ErrorEnvelope<CepState, Msg> e) {
-            try {
-                ObjectNode root = MAPPER.createObjectNode();
-                root.put("kind", "error");
-                root.put("stage", e.stageName());
+        @Override public byte[] serialize(ErrorEnvelope<CepState, Msg> e) {
+            try (ByteArrayBuilder buf = new ByteArrayBuilder()) {
+                JsonGenerator gen = MAPPER.getFactory().createGenerator(buf);
+                gen.writeStartObject();
+                gen.writeStringField("kind", "error");
+                gen.writeStringField("stage", e.stageName());
+
                 var h = e.valueEnvelope().header();
-                root.put("domainType", h.domainType());
-                root.put("domainId", h.rawMessage().domainId());
-                root.put("eventType", h.eventType());
-                root.set("errors", MAPPER.valueToTree(e.errors()));
-                root.set("payload", MAPPER.valueToTree(e.valueEnvelope().data()));
-                return MAPPER.writeValueAsBytes(root);
+                gen.writeStringField("domainType", h.domainType());
+                gen.writeStringField("domainId",   h.rawMessage().domainId());
+                gen.writeStringField("eventType",  h.eventType());
+
+                gen.writeFieldName("errors");
+                MAPPER.writeValue(gen, e.errors());
+
+                gen.writeFieldName("payload");
+                MAPPER.writeValue(gen, e.valueEnvelope().data());
+
+                gen.writeEndObject();
+                gen.close();
+                return buf.toByteArray();
             } catch (Exception ex) {
                 return fallback("error");
             }
         }
     }
 
+
     public static final class RetryPayloadSerializer<CepState, Msg>
             implements SerializationSchema<RetryEnvelope<CepState, Msg>> {
-        @Override
-        public void open(InitializationContext ctx) {
-        }
+        @Override public void open(InitializationContext ctx) {}
 
-        @Override
-        public byte[] serialize(RetryEnvelope<CepState, Msg> r) {
-            try {
-                ObjectNode root = MAPPER.createObjectNode();
-                root.put("kind", "retry");
+        @Override public byte[] serialize(RetryEnvelope<CepState, Msg> r) {
+            try (ByteArrayBuilder buf = new ByteArrayBuilder()) {
+                JsonGenerator gen = MAPPER.getFactory().createGenerator(buf);
+                gen.writeStartObject();
+                gen.writeStringField("kind", "retry");
+
                 var h = r.valueEnvelope().header();
-                root.put("domainType", h.domainType());
-                root.put("domainId", h.rawMessage().domainId());
-                root.put("eventType", h.eventType());
-                root.put("stageName", r.stageName() == null ? "" : r.stageName());
-                root.set("payload", MAPPER.valueToTree(r.valueEnvelope().data()));
-                return MAPPER.writeValueAsBytes(root);
+                gen.writeStringField("domainType", h.domainType());
+                gen.writeStringField("domainId",   h.rawMessage().domainId());
+                gen.writeStringField("eventType",  h.eventType());
+                gen.writeStringField("stageName",  r.stageName() == null ? "" : r.stageName());
+
+                gen.writeFieldName("payload");
+                MAPPER.writeValue(gen, r.valueEnvelope().data());
+
+                gen.writeEndObject();
+                gen.close();
+                return buf.toByteArray();
             } catch (Exception ex) {
                 return fallback("retry");
             }
         }
     }
+
 
     // ------------------ helpers ------------------
 

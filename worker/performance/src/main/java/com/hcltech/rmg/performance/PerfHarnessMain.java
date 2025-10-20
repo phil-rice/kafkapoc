@@ -5,10 +5,7 @@ import com.hcltech.rmg.appcontainer.interfaces.AppContainer;
 import com.hcltech.rmg.appcontainer.interfaces.AppContainerDefn;
 import com.hcltech.rmg.appcontainer.interfaces.IAppContainerFactory;
 import com.hcltech.rmg.flink_metrics.FlinkMetricsParams;
-import com.hcltech.rmg.flinkadapters.FlinkHelper;
-import com.hcltech.rmg.flinkadapters.MakeEmptyValueEnvelopeWithCepStateFunction;
-import com.hcltech.rmg.flinkadapters.NormalPipelineFunction;
-import com.hcltech.rmg.flinkadapters.UpdateCepStateAtEndFunction;
+import com.hcltech.rmg.flinkadapters.*;
 import com.hcltech.rmg.kafka.KafkaHelpers;
 import com.hcltech.rmg.kafka.KafkaTopics;
 import com.hcltech.rmg.kafka.SplitEnvelopes;
@@ -45,9 +42,13 @@ public final class PerfHarnessMain {
         var raw = KafkaFlinkHelper.createRawMessageStreamFromKafka(appContainerDefn, env, kafka, app.checkPointIntervalMillis());
         DataStream<RawMessage> keyedStream = raw.keyBy(RawMessage::domainId);
         var withCepState = keyedStream.map(new MakeEmptyValueEnvelopeWithCepStateFunction<>(appContainerDefn));
-        var processedStream = KafkaHelpers.liftFunctionToOrderedAsync(withCepState, "main-async", func, kafka.sourceParallelism(), lanes, asyncTimeoutMillis).keyBy(Envelope::domainId);
+        var processedStream = KafkaHelpers.liftFunctionToOrderedAsync(withCepState, "main-async", func, kafka.sourceParallelism(), lanes, asyncTimeoutMillis);
+//                .keyBy(Envelope::domainId);
+
         var withUpdatedCepState = processedStream.map(new UpdateCepStateAtEndFunction<>(appContainerDefn));
+
         SingleOutputStreamOperator<ValueEnvelope<CepState, Msg>> values = withUpdatedCepState.process(new SplitEnvelopes<>()).name("splitter");
+
         return ValueErrorRetryStreams.from(env, values);
     }
 
