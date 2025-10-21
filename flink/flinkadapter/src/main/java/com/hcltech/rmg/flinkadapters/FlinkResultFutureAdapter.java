@@ -5,59 +5,67 @@ import com.hcltech.rmg.common.async.FutureRecordTypeClass;
 import org.apache.flink.streaming.api.functions.async.ResultFuture;
 
 import java.io.Serializable;
-import java.util.List;
+import java.util.Collections;
 import java.util.Objects;
 import java.util.concurrent.TimeoutException;
+import java.util.function.BiConsumer;
 
-/** Completes Flink ResultFuture with domain results or exceptions. */
+/**
+ * FutureRecordTypeClass that completes a Flink ResultFuture with a single result.
+ * Hooks (onComplete/onFailed/onTimedOut) run on the operator thread before completing.
+ */
 public final class FlinkResultFutureAdapter<In, Out>
         implements FutureRecordTypeClass<ResultFuture<Out>, In, Out>, Serializable {
 
+    private static final long serialVersionUID = 1L;
+
     private final FailureAdapter<In, Out> failureAdapter;
-    private final boolean completeExceptionallyOnFailure;
-    private final boolean completeExceptionallyOnTimeout;
 
     public FlinkResultFutureAdapter(FailureAdapter<In, Out> failureAdapter) {
-        this(failureAdapter, false, false);
-    }
-
-    public FlinkResultFutureAdapter(FailureAdapter<In, Out> failureAdapter,
-                                    boolean completeExceptionallyOnFailure,
-                                    boolean completeExceptionallyOnTimeout) {
         this.failureAdapter = Objects.requireNonNull(failureAdapter, "failureAdapter");
-        this.completeExceptionallyOnFailure = completeExceptionallyOnFailure;
-        this.completeExceptionallyOnTimeout = completeExceptionallyOnTimeout;
     }
 
     @Override
-    public void completed(ResultFuture<Out> fr, Out out) {
+    public void completed(ResultFuture<Out> fr,
+                          BiConsumer<In, Out> onComplete,
+                          In in,
+                          Out out) {
         Objects.requireNonNull(fr, "fr");
         Objects.requireNonNull(out, "out");
-        fr.complete(List.of(out));
+        if (onComplete != null) onComplete.accept(in, out);
+        fr.complete(Collections.singletonList(out));
     }
 
     @Override
-    public void timedOut(ResultFuture<Out> fr, In in, long elapsedNanos) {
+    public void timedOut(ResultFuture<Out> fr,
+                         BiConsumer<In, Out> onTimedOut,
+                         In in,
+                         long elapsedNanos) {
         Objects.requireNonNull(fr, "fr");
-        if (completeExceptionallyOnTimeout) {
-            fr.completeExceptionally(new TimeoutException("elapsedNanos=" + elapsedNanos));
-            return;
+        Out mapped = failureAdapter.onTimeout(in, elapsedNanos);
+        if (mapped != null) {
+            if (onTimedOut != null) onTimedOut.accept(in, mapped);
+            fr.complete(Collections.singletonList(mapped));
+        } else {
+            // Fallback: signal an actual timeout if no mapped value
+            fr.completeExceptionally(new TimeoutException("Async timed out after " + elapsedNanos + " ns"));
         }
-        Out out = Objects.requireNonNull(failureAdapter.onTimeout(in, elapsedNanos),
-                                         "FailureAdapter.onTimeout returned null");
-        fr.complete(List.of(out));
     }
 
     @Override
-    public void failed(ResultFuture<Out> fr, In in, Throwable error) {
+    public void failed(ResultFuture<Out> fr,
+                       BiConsumer<In, Out> onFailed,
+                       In in,
+                       Throwable error) {
         Objects.requireNonNull(fr, "fr");
         Objects.requireNonNull(error, "error");
-        if (completeExceptionallyOnFailure) {
+        Out mapped = failureAdapter.onFailure(in, error);
+        if (mapped != null) {
+            if (onFailed != null) onFailed.accept(in, mapped);
+            fr.complete(Collections.singletonList(mapped));
+        } else {
+            // Fallback: propagate the failure if there is no mapping
             fr.completeExceptionally(error);
-            return;
         }
-        Out out = Objects.requireNonNull(failureAdapter.onFailure(in, error),
-                                         "FailureAdapter.onFailure returned null");
-        fr.complete(List.of(out));
     }
 }

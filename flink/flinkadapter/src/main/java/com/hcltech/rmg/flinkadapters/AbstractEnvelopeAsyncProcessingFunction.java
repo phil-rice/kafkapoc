@@ -6,93 +6,113 @@ import com.hcltech.rmg.appcontainer.interfaces.IAppContainerFactory;
 import com.hcltech.rmg.common.async.*;
 import com.hcltech.rmg.messages.Envelope;
 import com.hcltech.rmg.messages.EnvelopeFailureAdapter;
-import org.apache.flink.api.common.functions.OpenContext;
-import org.apache.flink.streaming.api.functions.KeyedProcessFunction;
-import org.apache.flink.util.Collector;
+import org.apache.flink.streaming.api.operators.AbstractStreamOperator;
+import org.apache.flink.streaming.api.operators.KeyContext;
+import org.apache.flink.streaming.api.operators.OneInputStreamOperator;
+import org.apache.flink.streaming.api.operators.Output;
+import org.apache.flink.streaming.runtime.streamrecord.StreamRecord;
 
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.function.BiConsumer;
 
 /**
- * Keyed operator that keeps CEP state and runs the OrderPreservingAsyncExecutor
- * in the same operator (no AsyncFunction). Completions are drained on the operator
- * thread and emitted directly to the Collector (no retention).
+ * Custom keyed operator that runs the OrderPreservingAsyncExecutor inside the operator
+ * (no AsyncFunction). Completions are drained on the operator thread.
  * <p>
- * K   : Flink key type (String)
+ * K   : String key
  * In  : Envelope<CepState, Msg>
  * Out : Envelope<CepState, Msg>
  */
 public abstract class AbstractEnvelopeAsyncProcessingFunction<ESC, CepState, Msg, Schema, FlinkRt, Metrics>
-        extends KeyedProcessFunction<String, Envelope<CepState, Msg>, Envelope<CepState, Msg>> {
+        extends AbstractStreamOperator<Envelope<CepState, Msg>>
+        implements OneInputStreamOperator<Envelope<CepState, Msg>, Envelope<CepState, Msg>>,
+        KeyContext {
 
-    private final AppContainerDefn<ESC, CepState, Msg, Schema, FlinkRt, Collector<Envelope<CepState, Msg>>, Metrics> appContainerDefn;
+    private final AppContainerDefn<ESC, CepState, Msg, Schema, FlinkRt, Output<StreamRecord<Envelope<CepState, Msg>>>, Metrics> appContainerDefn;
 
-    // NOTE: UserFnPort now carries FR explicitly.
-    private transient OrderPreservingAsyncExecutor.UserFnPort<Envelope<CepState, Msg>, Envelope<CepState, Msg>, Collector<Envelope<CepState, Msg>>> userFn;
+    protected transient OrderPreservingAsyncExecutor.UserFnPort<
+            Envelope<CepState, Msg>, Envelope<CepState, Msg>, Output<StreamRecord<Envelope<CepState, Msg>>>> userFn;
 
-    private transient ILanes<Envelope<CepState, Msg>> lanes;
-    private transient IMpscRing<Collector<Envelope<CepState, Msg>>, Envelope<CepState, Msg>, Envelope<CepState, Msg>> ring;
-    private transient PermitManager permits;
-    private transient ExecutorService ioPool;
-    private transient OrderPreservingAsyncExecutor<
-            Envelope<CepState, Msg>, Envelope<CepState, Msg>, Collector<Envelope<CepState, Msg>>> exec;
+    protected transient ILanes<Envelope<CepState, Msg>> lanes;
+    protected transient IMpscRing<Output<StreamRecord<Envelope<CepState, Msg>>>, Envelope<CepState, Msg>, Envelope<CepState, Msg>> ring;
+    protected transient PermitManager permits;
+    protected transient ExecutorService ioPool;
+    protected transient OrderPreservingAsyncExecutor<
+            Envelope<CepState, Msg>, Envelope<CepState, Msg>, Output<StreamRecord<Envelope<CepState, Msg>>>> exec;
 
-    // FR typeclass emits directly to the provided Collector (FR)
-    private transient FutureRecordTypeClass<Collector<Envelope<CepState, Msg>>, Envelope<CepState, Msg>, Envelope<CepState, Msg>> frType;
+    protected transient FutureRecordTypeClass<
+            Output<StreamRecord<Envelope<CepState, Msg>>>,
+            Envelope<CepState, Msg>,
+            Envelope<CepState, Msg>> frType;
 
-    public AbstractEnvelopeAsyncProcessingFunction(AppContainerDefn<ESC, CepState, Msg, Schema, FlinkRt, Collector<Envelope<CepState, Msg>>, Metrics> appContainerDefn) {
+    public AbstractEnvelopeAsyncProcessingFunction(
+            AppContainerDefn<ESC, CepState, Msg, Schema, FlinkRt, Output<StreamRecord<Envelope<CepState, Msg>>>, Metrics> appContainerDefn) {
         this.appContainerDefn = appContainerDefn;
     }
 
-    abstract protected OrderPreservingAsyncExecutor.UserFnPort<Envelope<CepState, Msg>, Envelope<CepState, Msg>, Collector<Envelope<CepState, Msg>>> createUserFnPort(
-            AppContainer<ESC, CepState, Msg, Schema, FlinkRt, Collector<Envelope<CepState, Msg>>, Metrics> appContainer);
+    protected abstract OrderPreservingAsyncExecutor.UserFnPort<Envelope<CepState, Msg>, Envelope<CepState, Msg>, Output<StreamRecord<Envelope<CepState, Msg>>>>
+    createUserFnPort(AppContainer<ESC, CepState, Msg, Schema, FlinkRt, Output<StreamRecord<Envelope<CepState, Msg>>>, Metrics> appContainer);
 
-    abstract void protectedSetupInOpen(AppContainer<ESC, CepState, Msg, Schema, FlinkRt, Collector<Envelope<CepState, Msg>>, Metrics> appContainer);
+    protected abstract void protectedSetupInOpen(
+            AppContainer<ESC, CepState, Msg, Schema, FlinkRt, Output<StreamRecord<Envelope<CepState, Msg>>>, Metrics> appContainer);
 
     @Override
-    public void open(OpenContext parameters) {
-        this.frType = new FlinkCollectorFutureRecordAdapter<>(new EnvelopeFailureAdapter<>("someOperation"));
+    public void open() throws Exception { // <-- operator-style open (no OpenContext)
+        super.open();
+
+        // typeclass that emits to this operator's output (FR = Collector)
+        this.frType = new FlinkOutputFutureRecordAdapter<>(new EnvelopeFailureAdapter<>("someOperation"));
+
         var container = IAppContainerFactory.resolve(appContainerDefn).valueOrThrow();
         protectedSetupInOpen(container);
+
         var cfg = container.asyncCfg();
         this.userFn = createUserFnPort(container);
+
         lanes = new Lanes<>(cfg.laneCount(), cfg.laneDepth(), cfg.correlator());
         ring = new MpscRing<>(Math.max(1024, cfg.maxInFlight() * 2));
         permits = new AtomicPermitManager(cfg.maxInFlight());
         ioPool = Executors.newFixedThreadPool(Math.max(4, cfg.executorThreads()));
 
-        // Use the FR typeclass that knows how to emit to the Collector (FR)
+
+        // Build executor config
         var localCfg = new OrderPreservingAsyncExecutorConfig<>(
                 cfg.laneCount(), cfg.laneDepth(), cfg.maxInFlight(),
                 cfg.executorThreads(), cfg.timeoutMillis(),
                 cfg.correlator(), cfg.failureAdapter(), frType, cfg.timeService()
         );
 
+        // Executor (pass setKeyFor if your ctor accepts it; else thread it via config)
         exec = new OrderPreservingAsyncExecutor<>(
-                localCfg, lanes, permits, ring, ioPool, frType, cfg.laneCount(), userFn
+                localCfg, lanes, permits, ring, ioPool, frType, cfg.laneCount(), userFn /*, setKeyFor */
         );
     }
 
+    protected BiConsumer<Envelope<CepState, Msg>, Envelope<CepState, Msg>> createSetKey() {
+        BiConsumer<Envelope<CepState, Msg>, Envelope<CepState, Msg>> setKeyFor = (in, out) -> {
+            String key = in.domainId();
+            this.setCurrentKey(key);
+        };
+        return setKeyFor;
+    }
+
+    abstract protected void setKey(Envelope<CepState, Msg> in, Envelope<CepState, Msg> out);
+
     @Override
-    public void processElement(Envelope<CepState, Msg> value,
-                               Context ctx,
-                               Collector<Envelope<CepState, Msg>> out) throws Exception {
-        // Pass the Collector as FR for this item; executor will cooperatively drain.
-        exec.add(value, out);
+    public void processElement(StreamRecord<Envelope<CepState, Msg>> element) throws Exception {
+        final Envelope<CepState, Msg> env = element.getValue();
+
+        exec.add(env, output, this::setKey);
     }
 
     @Override
-    public void onTimer(long timestamp, OnTimerContext ctx, Collector<Envelope<CepState, Msg>> out) throws Exception {
-        // Periodic drain to flush completions; FR is carried per event in the ring.
-        exec.drain(null);
-    }
-
-    @Override
-    public void close() {
+    public void close() throws Exception {
         try {
             if (exec != null) exec.close();
         } finally {
             if (ioPool != null) ioPool.shutdownNow();
+            super.close();
         }
     }
 }

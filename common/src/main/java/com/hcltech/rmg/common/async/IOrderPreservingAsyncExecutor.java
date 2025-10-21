@@ -1,5 +1,6 @@
 package com.hcltech.rmg.common.async;
 
+import java.util.function.BiConsumer;
 import java.util.function.Consumer;
 
 /**
@@ -13,7 +14,7 @@ import java.util.function.Consumer;
  */
 public interface IOrderPreservingAsyncExecutor<In, Out, FR> {
 
-   void add(In input, FR futureRecord);
+   void add(In input, FR futureRecord, BiConsumer<In, Out> onCompleteOrFailed);
 
     /**
      * Finish/close the executor. After calling this, new adds are ignored and late completions are dropped safely.

@@ -22,19 +22,19 @@ final class LaneTest {
         ILane<String> lane = new Lane<>(4);
 
         assertTrue(lane.isEmpty());
-        lane.enqueue("A", 101L, 1_000L);
-        lane.enqueue("B", 202L, 2_000L);
+        lane.enqueue("A", "101", 1_000L);
+        lane.enqueue("B", "202", 2_000L);
 
         assertFalse(lane.isEmpty());
         assertFalse(lane.isFull());
 
         assertEquals("A", lane.headT());
-        assertEquals(101L, lane.headCorrId());
+        assertEquals("101", lane.headCorrId());
         assertEquals(1_000L, lane.headStartedAtNanos());
         assertTrue(lane.popHead((String t) -> assertEquals("A", t)));
 
         assertEquals("B", lane.headT());
-        assertEquals(202L, lane.headCorrId());
+        assertEquals("202", lane.headCorrId());
         assertEquals(2_000L, lane.headStartedAtNanos());
         assertTrue(lane.popHead((String t) -> assertEquals("B", t)));
 
@@ -45,8 +45,8 @@ final class LaneTest {
     @Test
     void biConsumer_popHead_passesContextCorrectly() {
         ILane<String> lane = new Lane<>(2);
-        lane.enqueue("A", 11L, 100L);
-        lane.enqueue("B", 22L, 200L);
+        lane.enqueue("A", "11", 100L);
+        lane.enqueue("B", "22", 200L);
 
         String context = "CTX-1";
         BiConsumer<String,String> consumer = (t, ctx) -> {
@@ -71,12 +71,12 @@ final class LaneTest {
         ILane<Integer> lane = new Lane<>(2);
 
         assertTrue(lane.isEmpty());
-        lane.enqueue(1, 11L, 111L);
-        lane.enqueue(2, 22L, 222L);
+        lane.enqueue(1, "11", 111L);
+        lane.enqueue(2, "22", 222L);
         assertTrue(lane.isFull());
 
         // Enqueuing when full should throw (logic bug)
-        assertThrows(IllegalStateException.class, () -> lane.enqueue(3, 33L, 333L));
+        assertThrows(IllegalStateException.class, () -> lane.enqueue(3, "33", 333L));
 
         assertTrue(lane.popHead((Integer t) -> {}));
         assertTrue(lane.popHead((Integer t) -> {}));
@@ -91,10 +91,10 @@ final class LaneTest {
         assertEquals(3, hooks._maskForTest());
 
         // Fill ring
-        lane.enqueue(10, 10L, 100L);
-        lane.enqueue(11, 11L, 110L);
-        lane.enqueue(12, 12L, 120L);
-        lane.enqueue(13, 13L, 130L);
+        lane.enqueue(10, "10", 100L);
+        lane.enqueue(11, "11", 110L);
+        lane.enqueue(12, "12", 120L);
+        lane.enqueue(13, "13", 130L);
         assertTrue(lane.isFull());
 
         // Pop two (headIdx moves forward)
@@ -102,8 +102,8 @@ final class LaneTest {
         assertTrue(lane.popHead((Integer t) -> {}));
 
         // Enqueue two more -> should wrap to slots 0 and 1
-        lane.enqueue(14, 14L, 140L);
-        lane.enqueue(15, 15L, 150L);
+        lane.enqueue(14, "14", 140L);
+        lane.enqueue(15, "15", 150L);
         assertTrue(lane.isFull());
 
         // Verify order still correct
@@ -125,16 +125,16 @@ final class LaneTest {
         for (int i = 0; i < rounds; i++) {
             if (lane.isFull()) assertTrue(lane.popHead((Long t) -> {}));
             long id = nextId.getAndIncrement();
-            lane.enqueue(id, id * 10, id * 100);
+            lane.enqueue(id, String.valueOf(id * 10), id * 100);
             if ((i & 3) == 0) {
                 while (!lane.isEmpty() && (hooks._countForTest() > depth / 2)) {
-                    assertEquals(lane.headCorrId() / 10, lane.headT());
+                    assertEquals(Long.parseLong(lane.headCorrId()) / 10, lane.headT());
                     assertTrue(lane.popHead((Long t) -> {}));
                 }
             }
         }
         while (!lane.isEmpty()) {
-            assertEquals(lane.headCorrId() / 10, lane.headT());
+            assertEquals(Long.parseLong(lane.headCorrId()) / 10, lane.headT());
             assertTrue(lane.popHead((Long t) -> {}));
         }
         assertEquals(0, hooks._countForTest());
@@ -145,7 +145,7 @@ final class LaneTest {
     void depthOne_ring_full_empty_cycle() {
         ILane<Integer> lane = new Lane<>(1);
         assertTrue(lane.isEmpty());
-        lane.enqueue(42, 420L, 4200L);
+        lane.enqueue(42, "420", 4200L);
         assertTrue(lane.isFull());
         assertEquals(42, lane.headT());
         assertTrue(lane.popHead((Integer t) -> {}));
@@ -156,13 +156,13 @@ final class LaneTest {
     @Test
     void enqueue_null_throws() {
         ILane<Object> lane = new Lane<>(2);
-        assertThrows(NullPointerException.class, () -> lane.enqueue(null, 1L, 1L));
+        assertThrows(NullPointerException.class, () -> lane.enqueue(null, "1", 1L));
     }
 
     @Test
     void popHead_with_context_handlesNullContextGracefully() {
         ILane<String> lane = new Lane<>(2);
-        lane.enqueue("A", 1L, 1L);
+        lane.enqueue("A", "1", 1L);
         assertTrue(lane.popHead(null, (String t, String ctx) -> {
             assertNull(ctx);
             assertEquals("A", t);

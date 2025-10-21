@@ -7,6 +7,8 @@ import org.junit.jupiter.api.Test;
 import java.util.*;
 import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicLong;
+import java.util.function.BiConsumer;
 
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -40,7 +42,7 @@ public class OrderPreservingAsyncExecutorStressTest {
     }
 
     static final class DummyCorrelator implements Correlator<String> {
-        @Override public String correlationId(String env) { return env.hashCode(); }
+        @Override public String correlationId(String env) { return env; }           // String corrId
         @Override public int laneHash(String env) { return env.hashCode(); }
     }
 
@@ -58,16 +60,22 @@ public class OrderPreservingAsyncExecutorStressTest {
 
         RecordingFutureRecord(int expectedTotal) { this.latch = new CountDownLatch(expectedTotal); }
 
-        @Override public void completed(String fr, String out) {
+        @Override
+        public void completed(String fr, BiConsumer<String,String> hook, String in, String out) {
             completedFr.add(fr);
             completedOut.add(out);
+            if (hook != null) hook.accept(in, out); // benign for tests
             latch.countDown();
         }
-        @Override public void failed(String fr, String in, Throwable error) {
+
+        @Override
+        public void failed(String fr, BiConsumer<String,String> hook, String in, Throwable error) {
             failedFr.add(fr);
             latch.countDown();
         }
-        @Override public void timedOut(String fr, String in, long elapsedNanos) {
+
+        @Override
+        public void timedOut(String fr, BiConsumer<String,String> hook, String in, long elapsedNanos) {
             timedOutFr.add(fr);
             latch.countDown();
         }
@@ -85,6 +93,8 @@ public class OrderPreservingAsyncExecutorStressTest {
 
     private ExecutorService threadPool;
     private IMpscRing<String,String,String> ring;
+
+    private static final BiConsumer<String,String> NOOP_HOOK = (in, out) -> {};
 
     @BeforeEach
     void setup() {
@@ -113,11 +123,11 @@ public class OrderPreservingAsyncExecutorStressTest {
         RecordingFutureRecord futureRec = new RecordingFutureRecord(TOTAL);
         ILanes<String> lanes = new Lanes<>(LANE_COUNT, LANE_DEPTH, new DummyCorrelator());
 
-        OrderPreservingAsyncExecutor.UserFnPort<String,String,String> userFn = (fr, in, corr, c) ->
+        OrderPreservingAsyncExecutor.UserFnPort<String,String,String> userFn = (tc, in, corrId, c) ->
                 threadPool.submit(() -> {
                     try { Thread.sleep(1 + ThreadLocalRandom.current().nextInt(10)); }
                     catch (InterruptedException ignored) {}
-                    c.success(fr, in, corr, "OUT:" + in);
+                    c.success(in, corrId, "OUT:" + in);
                 });
 
         var exec = new OrderPreservingAsyncExecutor<>(cfg(failure,futureRec,
@@ -126,11 +136,11 @@ public class OrderPreservingAsyncExecutorStressTest {
 
         for (int i = 0; i < TOTAL; i++) {
             String key = "K" + (i % KEYS);
-            exec.add(key, "FR-" + i);
+            exec.add(key, "FR-" + i, NOOP_HOOK);
         }
 
         while (futureRec.latch.getCount() > 0) {
-            exec.drain(null); // FR rides on ring events
+            exec.drain("FR-IGNORED", NOOP_HOOK); // FR not on ring; value not asserted in this test
             Thread.sleep(1);
         }
 
@@ -154,14 +164,14 @@ public class OrderPreservingAsyncExecutorStressTest {
         RecordingFutureRecord futureRec = new RecordingFutureRecord(TOTAL);
         ILanes<String> lanes = new Lanes<>(LANE_COUNT, LANE_DEPTH, new DummyCorrelator());
 
-        OrderPreservingAsyncExecutor.UserFnPort<String,String,String> userFn = (fr, in, corr, c) ->
+        OrderPreservingAsyncExecutor.UserFnPort<String,String,String> userFn = (tc, in, corrId, c) ->
                 threadPool.submit(() -> {
                     try { Thread.sleep(1 + ThreadLocalRandom.current().nextInt(10)); }
                     catch (InterruptedException ignored) {}
                     if (ThreadLocalRandom.current().nextInt(100) < 30)
-                        c.failure(fr, in, corr, new RuntimeException("boom"));
+                        c.failure(in, corrId, new RuntimeException("boom"));
                     else
-                        c.success(fr, in, corr, "OUT:" + in);
+                        c.success(in, corrId, "OUT:" + in);
                 });
 
         var exec = new OrderPreservingAsyncExecutor<>(cfg(failure,futureRec,
@@ -170,11 +180,11 @@ public class OrderPreservingAsyncExecutorStressTest {
 
         for (int i = 0; i < TOTAL; i++) {
             String key = "K" + (i % KEYS);
-            exec.add(key, "FR-" + i);
+            exec.add(key, "FR-" + i, NOOP_HOOK);
         }
 
         while (futureRec.latch.getCount() > 0) {
-            exec.drain(null);
+            exec.drain("FR-IGNORED", NOOP_HOOK);
             Thread.sleep(1);
         }
 
@@ -201,22 +211,22 @@ public class OrderPreservingAsyncExecutorStressTest {
 
         // never completes -> the only way to keep making space is eviction when full
         OrderPreservingAsyncExecutor.UserFnPort<String,String,String> userFn =
-                (fr, in, corr, c) -> { /* no-op */ };
+                (tc, in, corrId, c) -> { /* no-op */ };
 
         var exec = new OrderPreservingAsyncExecutor<>(cfg(failure,futureRec,
                 1,1,1,1,8, TIMEOUT_MS),
                 lanes, permits, ring, threadPool, futureRec, 1, userFn);
 
         // Seed a head
-        exec.add("K", "FR-H");
+        exec.add("K", "FR-H", NOOP_HOOK);
 
         // Repeatedly try to add after sleeping past the timeout. We don't assert that
         // every cycle produces a timeout; we only care that the executor remains unblocked.
         long start = System.nanoTime();
         for (int i = 0; i < N; i++) {
             Thread.sleep(TIMEOUT_MS + 20); // cushion over timer granularity
-            exec.add("K", "FR-" + i);      // if lane full & head expired, this unblocks by evicting
-            exec.drain(null);
+            exec.add("K", "FR-" + i, NOOP_HOOK); // if lane full & head expired, this unblocks by evicting
+            exec.drain("FR-IGNORED", NOOP_HOOK);
         }
         long elapsedMs = TimeUnit.NANOSECONDS.toMillis(System.nanoTime() - start);
 
@@ -228,6 +238,4 @@ public class OrderPreservingAsyncExecutorStressTest {
         assertTrue(permits.released.get() <= permits.acquired.get(), "permits must not leak");
         assertTrue(permits.acquired.get() - permits.released.get() <= 1, "at most one in-flight head");
     }
-
-
 }

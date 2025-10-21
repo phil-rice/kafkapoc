@@ -73,9 +73,6 @@ public final class AppContainerFactoryForMapStringObject implements IAppContaine
 
     private static ErrorsOr<AppContainer<KafkaConfig, Map<String, Object>, Map<String, Object>, XMLValidationSchema, RuntimeContext, Collector<Envelope<Map<String, Object>, Map<String, Object>>>, FlinkMetricsParams>> build(String id) {
 
-        OrderPreservingAsyncExecutor.UserFnPort<Envelope<Map<String, Object>, Map<String, Object>>, Envelope<Map<String, Object>, Map<String, Object>>, Collector<Envelope<Map<String, Object>, Map<String, Object>>>> asyncFn =
-                (frTc, fr, in, corrId) ->
-                        frTc.completed(fr, in); // No-op async function
         return switch (id) {
             case "prod" -> basic(
                     id,
@@ -88,8 +85,7 @@ public final class AppContainerFactoryForMapStringObject implements IAppContaine
                             "company", List.of("msg", "company"))),
                     IEventTypeExtractor.fromPathForMapStringObject(List.of("msg", "eventType")),
                     IDomainTypeExtractor.fixed("parcel"),
-                    "config/prod/",
-                    asyncFn
+                    "config/prod/"
             );
             case "test" -> basic(
                     id,
@@ -100,8 +96,7 @@ public final class AppContainerFactoryForMapStringObject implements IAppContaine
                     ParameterExtractor.defaultParameterExtractor(defaultParameters, Map.of(), Map.of()),
                     IEventTypeExtractor.fromPathForMapStringObject(List.of("eventType")),
                     IDomainTypeExtractor.fixed("parcel"),
-                    "config/test/",
-                    asyncFn
+                    "config/test/"
             );
             default -> ErrorsOr.error("Unknown container id: " + id);
         };
@@ -118,8 +113,7 @@ public final class AppContainerFactoryForMapStringObject implements IAppContaine
             ParameterExtractor<Map<String, Object>> parameterExtractor,
             IEventTypeExtractor<Map<String, Object>> eventTypeExtractor,
             IDomainTypeExtractor<Map<String, Object>> domainTypeExtractor,
-            String configResourcePrefix,
-            OrderPreservingAsyncExecutor.UserFnPort<Envelope<Map<String, Object>, Map<String, Object>>, Envelope<Map<String, Object>, Map<String, Object>>, Collector<Envelope<Map<String, Object>, Map<String, Object>>>> asyncFn
+            String configResourcePrefix
     ) {
         Objects.requireNonNull(time, "timeService service must not be null");
         Objects.requireNonNull(uuid, "uuid generator must not be null");
@@ -179,7 +173,6 @@ public final class AppContainerFactoryForMapStringObject implements IAppContaine
                                                     checkpointIntervalMillis,
                                                     cepEventLogFunction,
                                                     opaeConfig,
-                                                    asyncFn,
                                                     keyPath,
                                                     eventSourceConfig,
                                                     root,

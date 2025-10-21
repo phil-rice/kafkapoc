@@ -34,7 +34,6 @@ public record AppContainer<EventSourceConfig, CepState, Msg, Schema, FlinkRT, Fl
         Function<FlinkRT, CepEventLog> eventLogFromRuntimeContext,
         OrderPreservingAsyncExecutorConfig<
                 Envelope<CepState, Msg>, Envelope<CepState, Msg>, FlinkFR> asyncCfg,
-        OrderPreservingAsyncExecutor.UserFnPort<Envelope<CepState, Msg>, Envelope<CepState, Msg>, FlinkFR> asyncFn,
 
         // shared config
         List<String> keyPath, EventSourceConfig eventSourceConfig, RootConfig rootConfig,

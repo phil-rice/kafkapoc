@@ -6,6 +6,7 @@ import org.junit.jupiter.api.Test;
 import java.util.*;
 import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicLong;
+import java.util.function.BiConsumer;
 
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -26,18 +27,15 @@ public class MpscRingStressTest {
     /** Simple capture record. */
     static final class Rec {
         final String kind; // "ok" or "err"
-        final String fr;
         final String in;
-        final long corr;
-        final String out;       // when ok
+        final String corr;     // corrId is String now
+        final String out;      // when ok
         final String errorType; // when err
 
-        Rec(String kind, String fr, String in, long corr, String out, String errorType) {
-            this.kind = kind; this.fr = fr; this.in = in; this.corr = corr; this.out = out; this.errorType = errorType;
+        Rec(String kind, String in, String corr, String out, String errorType) {
+            this.kind = kind; this.in = in; this.corr = corr; this.out = out; this.errorType = errorType;
         }
     }
-
-    private static final String FR = "FR";
 
     // --- 1) Single consumer, many producers, random delays (success only) ---
 
@@ -64,13 +62,13 @@ public class MpscRingStressTest {
                 try { started.await(); } catch (InterruptedException e) { Thread.currentThread().interrupt(); }
 
                 for (int i = 0; i < PER_PRODUCER; i++) {
-                    long corr = corrGen.getAndIncrement();
+                    String corrId = Long.toString(corrGen.getAndIncrement());
                     int delayMs = 1 + rnd.nextInt(4 + (i & 7)); // small jitter
                     try { Thread.sleep(delayMs); } catch (InterruptedException ignored) {}
 
                     // Offer with spin if the slot isn't ready yet
                     for (;;) {
-                        if (ring.offerSuccess(FR, "in-"+corr, corr, "out-"+corr)) break;
+                        if (ring.offerSuccess("in-"+corrId, corrId, "out-"+corrId)) break;
                         Thread.onSpinWait();
                     }
                 }
@@ -81,13 +79,14 @@ public class MpscRingStressTest {
         // Single consumer loop
         List<Rec> got = Collections.synchronizedList(new ArrayList<>(TOTAL));
         long deadline = System.nanoTime() + TimeUnit.SECONDS.toNanos(TIMEOUT_SEC);
+        BiConsumer<String,String> noop = (in, out) -> {};
         while ((done.getCount() > 0 || got.size() < TOTAL) && System.nanoTime() < deadline) {
-            int drained = ring.drain(new IMpscRing.Handler<>() {
-                @Override public void onSuccess(String fr, String in, long corr, String out) {
-                    got.add(new Rec("ok", fr, in, corr, out, null));
+            int drained = ring.drain(noop, new IMpscRing.Handler<>() {
+                @Override public void onSuccess(String fr, BiConsumer<String,String> h, String in, String corrId, String out) {
+                    got.add(new Rec("ok", in, corrId, out, null));
                 }
-                @Override public void onFailure(String fr, String in, long corr, Throwable err) {
-                    got.add(new Rec("err", fr, in, corr, null, err.getClass().getSimpleName()));
+                @Override public void onFailure(String fr, BiConsumer<String,String> h, String in, String corrId, Throwable err) {
+                    got.add(new Rec("err", in, corrId, null, err.getClass().getSimpleName()));
                 }
             });
             if (drained == 0) {
@@ -98,16 +97,13 @@ public class MpscRingStressTest {
 
         assertEquals(TOTAL, got.size(), "missing records");
 
-        // Integrity: all success, no duplicates, FR carried through
-        BitSet seen = new BitSet(TOTAL + 10);
+        // Integrity: all success, no duplicates
+        Set<String> seen = new HashSet<>(TOTAL + 10);
         for (Rec r : got) {
             assertEquals("ok", r.kind);
-            assertEquals(FR, r.fr);
             assertEquals("in-"+r.corr, r.in);
             assertEquals("out-"+r.corr, r.out);
-            int idx = Math.toIntExact(r.corr); // safe for this test range
-            assertFalse(seen.get(idx), "duplicate corr id " + r.corr);
-            seen.set(idx);
+            assertTrue(seen.add(r.corr), "duplicate corr id " + r.corr);
         }
     }
 
@@ -135,15 +131,15 @@ public class MpscRingStressTest {
                 try { started.await(); } catch (InterruptedException e) { Thread.currentThread().interrupt(); }
 
                 for (int i = 0; i < PER_PRODUCER; i++) {
-                    long corr = corrGen.getAndIncrement();
+                    String corrId = Long.toString(corrGen.getAndIncrement());
                     try { Thread.sleep(1 + rnd.nextInt(5)); } catch (InterruptedException ignored) {}
 
                     boolean ok = rnd.nextInt(5) != 0; // 80% success, 20% failure
                     for (;;) {
                         if (ok) {
-                            if (ring.offerSuccess(FR, "in-"+corr, corr, "out-"+corr)) break;
+                            if (ring.offerSuccess("in-"+corrId, corrId, "out-"+corrId)) break;
                         } else {
-                            if (ring.offerFailure(FR, "in-"+corr, corr, new TimeoutX("tmo"))) break;
+                            if (ring.offerFailure("in-"+corrId, corrId, new TimeoutX("tmo"))) break;
                         }
                         Thread.onSpinWait();
                     }
@@ -154,13 +150,14 @@ public class MpscRingStressTest {
 
         List<Rec> got = Collections.synchronizedList(new ArrayList<>(TOTAL));
         long deadline = System.nanoTime() + TimeUnit.SECONDS.toNanos(TIMEOUT_SEC);
+        BiConsumer<String,String> noop = (in, out) -> {};
         while ((done.getCount() > 0 || got.size() < TOTAL) && System.nanoTime() < deadline) {
-            int drained = ring.drain(new IMpscRing.Handler<>() {
-                @Override public void onSuccess(String fr, String in, long corr, String out) {
-                    got.add(new Rec("ok", fr, in, corr, out, null));
+            int drained = ring.drain(noop, new IMpscRing.Handler<>() {
+                @Override public void onSuccess(String fr, BiConsumer<String,String> h, String in, String corrId, String out) {
+                    got.add(new Rec("ok", in, corrId, out, null));
                 }
-                @Override public void onFailure(String fr, String in, long corr, Throwable err) {
-                    got.add(new Rec("err", fr, in, corr, null, err.getClass().getSimpleName()));
+                @Override public void onFailure(String fr, BiConsumer<String,String> h, String in, String corrId, Throwable err) {
+                    got.add(new Rec("err", in, corrId, null, err.getClass().getSimpleName()));
                 }
             });
             if (drained == 0) Thread.sleep(1);
@@ -169,10 +166,9 @@ public class MpscRingStressTest {
         assertEquals(TOTAL, got.size());
 
         // Basic integrity
-        Set<Long> seen = new HashSet<>(TOTAL);
+        Set<String> seen = new HashSet<>(TOTAL);
         for (Rec r : got) {
             assertTrue(seen.add(r.corr), "duplicate corr " + r.corr);
-            assertEquals(FR, r.fr);
             if ("ok".equals(r.kind)) {
                 assertEquals("in-"+r.corr, r.in);
                 assertEquals("out-"+r.corr, r.out);
@@ -203,25 +199,26 @@ public class MpscRingStressTest {
             started.countDown();
             try { started.await(); } catch (InterruptedException e) { Thread.currentThread().interrupt(); }
             for (int i = 0; i < PER_PRODUCER; i++) {
-                long corr = corrGen.getAndIncrement();
+                String corrId = Long.toString(corrGen.getAndIncrement());
                 for (;;) {
-                    if (ring.offerSuccess(FR, "in-"+corr, corr, "out-"+corr)) break;
+                    if (ring.offerSuccess("in-"+corrId, corrId, "out-"+corrId)) break;
                     Thread.onSpinWait();
                 }
-                if ((corr & 7) == 0) Thread.yield();
+                if ((Long.parseLong(corrId) & 7) == 0) Thread.yield();
             }
             done.countDown();
         };
         for (int i = 0; i < PRODUCERS; i++) pool.submit(producer);
 
         List<Rec> got = Collections.synchronizedList(new ArrayList<>(TOTAL));
+        BiConsumer<String,String> noop = (in, out) -> {};
         while (done.getCount() > 0 || got.size() < TOTAL) {
-            int drained = ring.drain(new IMpscRing.Handler<>() {
-                @Override public void onSuccess(String fr, String in, long corr, String out) {
-                    got.add(new Rec("ok", fr, in, corr, out, null));
+            int drained = ring.drain(noop, new IMpscRing.Handler<>() {
+                @Override public void onSuccess(String fr, BiConsumer<String,String> h, String in, String corrId, String out) {
+                    got.add(new Rec("ok", in, corrId, out, null));
                 }
-                @Override public void onFailure(String fr, String in, long corr, Throwable err) {
-                    got.add(new Rec("err", fr, in, corr, null, err.getClass().getSimpleName()));
+                @Override public void onFailure(String fr, BiConsumer<String,String> h, String in, String corrId, Throwable err) {
+                    got.add(new Rec("err", in, corrId, null, err.getClass().getSimpleName()));
                 }
             });
             if (drained == 0) Thread.onSpinWait();
@@ -229,14 +226,12 @@ public class MpscRingStressTest {
 
         assertEquals(TOTAL, got.size());
         // spot check ends
-        assertTrue(got.get(0).corr >= 1);
-        assertTrue(got.get(got.size()-1).corr <= TOTAL);
+        assertTrue(Long.parseLong(got.get(0).corr) >= 1);
+        assertTrue(Long.parseLong(got.get(got.size()-1).corr) <= TOTAL);
         // integrity: no dups
-        BitSet seen = new BitSet(TOTAL + 10);
+        Set<String> seen = new HashSet<>(TOTAL + 10);
         for (Rec r : got) {
-            int idx = Math.toIntExact(r.corr);
-            assertFalse(seen.get(idx), "dup corr " + r.corr);
-            seen.set(idx);
+            assertTrue(seen.add(r.corr), "dup corr " + r.corr);
         }
     }
 
@@ -245,9 +240,10 @@ public class MpscRingStressTest {
     @Test
     void emptyDrainReturnsZero() {
         IMpscRing<String, String, String> ring = new MpscRing<>(8);
-        int drained = ring.drain(new IMpscRing.Handler<>() {
-            @Override public void onSuccess(String fr, String in, long corr, String out) { /* no-op */ }
-            @Override public void onFailure(String fr, String in, long corr, Throwable err) { /* no-op */ }
+        BiConsumer<String,String> noop = (in, out) -> {};
+        int drained = ring.drain(noop, new IMpscRing.Handler<>() {
+            @Override public void onSuccess(String fr, BiConsumer<String,String> h, String in, String corrId, String out) { /* no-op */ }
+            @Override public void onFailure(String fr, BiConsumer<String,String> h, String in, String corrId, Throwable err) { /* no-op */ }
         });
         assertEquals(0, drained);
     }

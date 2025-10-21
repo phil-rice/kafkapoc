@@ -16,10 +16,13 @@ import com.hcltech.rmg.metrics.EnvelopeMetrics;
 import com.hcltech.rmg.metrics.EnvelopeMetricsTC;
 import org.apache.flink.api.common.functions.RuntimeContext;
 import org.apache.flink.streaming.api.functions.KeyedProcessFunction;
+import org.apache.flink.streaming.api.operators.Output;
+import org.apache.flink.streaming.runtime.streamrecord.StreamRecord;
 import org.apache.flink.util.Collector;
 
 import java.util.List;
 import java.util.Objects;
+import java.util.function.BiConsumer;
 
 /**
  * Keyed operator that keeps CEP state and runs the OrderPreservingAsyncExecutor
@@ -34,14 +37,15 @@ public class EnvelopeAsyncProcessingFunction<ESC, CepState, Msg, Schema>
         extends AbstractEnvelopeAsyncProcessingFunction<ESC, CepState, Msg, Schema, RuntimeContext, FlinkMetricsParams> {
 
     private final String module;
-    private ParseMessagePipelineStep<ESC, CepState, Msg, Schema, RuntimeContext, Collector<Envelope<CepState, Msg>>, FlinkMetricsParams> parser;
-    private EnrichmentPipelineStep<ESC, CepState, Msg, Schema, RuntimeContext, Collector<Envelope<CepState, Msg>>, FlinkMetricsParams> enrichmentPipelineStep;
-    private BizLogicPipelineStep<ESC, CepState, Msg, Schema, RuntimeContext, Collector<Envelope<CepState, Msg>>, FlinkMetricsParams> bizLogic;
+    private ParseMessagePipelineStep<ESC, CepState, Msg, Schema, RuntimeContext, Output<StreamRecord<Envelope<CepState, Msg>>>, FlinkMetricsParams> parser;
+    private EnrichmentPipelineStep<ESC, CepState, Msg, Schema, RuntimeContext, Output<StreamRecord<Envelope<CepState, Msg>>>, FlinkMetricsParams> enrichmentPipelineStep;
+    private BizLogicPipelineStep<ESC, CepState, Msg, Schema, RuntimeContext, Output<StreamRecord<Envelope<CepState, Msg>>>, FlinkMetricsParams> bizLogic;
     private com.hcltech.rmg.metrics.Metrics metrics;
     private EnvelopeMetrics<Envelope<?, ?>> envelopeMetrics;
     private ITimeService timeService;
     private CepStateTypeClass<CepState> cepStateTypeClass;
     private CepEventLog cepEventLog;
+    private BiConsumer<Envelope<CepState, Msg>, Envelope<CepState, Msg>> setKey;
 
     public EnvelopeAsyncProcessingFunction(AppContainerDefn appContainerDefn, String module) {
         super(appContainerDefn);
@@ -49,21 +53,35 @@ public class EnvelopeAsyncProcessingFunction<ESC, CepState, Msg, Schema>
     }
 
     @Override
-    public void processElement(Envelope<CepState, Msg> value, KeyedProcessFunction<String, Envelope<CepState, Msg>, Envelope<CepState, Msg>>.Context ctx, Collector<Envelope<CepState, Msg>> out) throws Exception {
-        super.processElement(value, ctx, out);
+    public void processElement(StreamRecord<Envelope<CepState, Msg>> record) throws Exception {
+        var existing = cepEventLog.getAll();
+
+        var env = record.getValue();
+        if (env instanceof ValueEnvelope<CepState, Msg> ve) {
+            var cepState = cepEventLog.foldAll(cepStateTypeClass, cepStateTypeClass.createEmpty());
+            ve.setCepState(cepState);
+        }
+
+        super.processElement(record);
+    }
+
+
+    @Override
+    protected void setKey(Envelope<CepState, Msg> in, Envelope<CepState, Msg> out) {
+        if (out instanceof ValueEnvelope<CepState, Msg> veOut) {
+            setCurrentKey(in.domainId());
+            this.cepEventLog.append(veOut.cepStateModifications());
+        }
     }
 
     /**
      * Note that this must be called inside an open method of a flink rich thing
      */
     @Override
-    protected OrderPreservingAsyncExecutor.UserFnPort<Envelope<CepState, Msg>, Envelope<CepState, Msg>, Collector<Envelope<CepState, Msg>>> createUserFnPort(AppContainer<ESC, CepState, Msg, Schema, RuntimeContext, Collector<Envelope<CepState, Msg>>, FlinkMetricsParams> container) {
-        return (frTypeClass, fr, env, corrId) -> {
+    protected OrderPreservingAsyncExecutor.UserFnPort<Envelope<CepState, Msg>, Envelope<CepState, Msg>, Output<StreamRecord<Envelope<CepState, Msg>>>> createUserFnPort(AppContainer<ESC, CepState, Msg, Schema, RuntimeContext, Output<StreamRecord<Envelope<CepState, Msg>>>, FlinkMetricsParams> container) {
+        return (frTypeClass, env, corrId, completion) -> {
             Objects.requireNonNull(cepEventLog, "MakeEmptyValueEnvelopeWithCepStateFunction not opened");
             if (env instanceof ValueEnvelope<CepState, Msg> ve) {
-                var existing = cepEventLog.getAll();
-                var cepState = cepEventLog.foldAll(cepStateTypeClass, cepStateTypeClass.createEmpty());
-                ve.setCepState(cepState);
 
                 long start = timeService.currentTimeNanos();
                 var afterParse = parser.parse(env);
@@ -78,18 +96,17 @@ public class EnvelopeAsyncProcessingFunction<ESC, CepState, Msg, Schema>
                     cepEventLog.append(e.cepStateModifications());
                     return e;
                 });
-                frTypeClass.completed(fr, updated);
-
+                completion.success(env, corrId, updated);
             } else {
-                frTypeClass.completed(fr, env);
+                completion.success(env, corrId, env);
+
             }
         };
     }
 
 
     @Override
-    void protectedSetupInOpen
-            (AppContainer<ESC, CepState, Msg, Schema, RuntimeContext, Collector<Envelope<CepState, Msg>>, FlinkMetricsParams> container) {
+    protected void protectedSetupInOpen(AppContainer<ESC, CepState, Msg, Schema, RuntimeContext, Output<StreamRecord<Envelope<CepState, Msg>>>, FlinkMetricsParams> container) {
         this.parser = new ParseMessagePipelineStep<>(container);
         this.enrichmentPipelineStep = new EnrichmentPipelineStep<>(container, module);
         this.bizLogic = new BizLogicPipelineStep<>(container, null, module);
@@ -100,6 +117,8 @@ public class EnvelopeAsyncProcessingFunction<ESC, CepState, Msg, Schema>
         this.timeService = container.timeService();
         this.cepStateTypeClass = container.cepStateTypeClass();
         this.cepEventLog = container.eventLogFromRuntimeContext().apply(getRuntimeContext());
+        this.setKey = createSetKey();
     }
+
 }
 

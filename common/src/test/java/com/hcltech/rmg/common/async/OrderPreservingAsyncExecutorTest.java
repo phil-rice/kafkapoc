@@ -6,6 +6,7 @@ import org.junit.jupiter.api.Test;
 import java.util.*;
 import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.function.BiConsumer;
 
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -38,7 +39,7 @@ public class OrderPreservingAsyncExecutorTest {
     }
 
     static final class DummyCorrelator implements Correlator<String> {
-        @Override public String correlationId(String env) { return env.hashCode(); }
+        @Override public String correlationId(String env) { return env; } // corrId must be String
         @Override public int laneHash(String env) { return env.hashCode(); }
     }
 
@@ -53,14 +54,15 @@ public class OrderPreservingAsyncExecutorTest {
         final List<String> failedFr     = Collections.synchronizedList(new ArrayList<>());
         final List<String> timedOutFr   = Collections.synchronizedList(new ArrayList<>());
 
-        @Override public void completed(String fr, String out) {
+        @Override public void completed(String fr, BiConsumer<String,String> hook, String in, String out) {
             completedFr.add(fr);
             completedOut.add(out);
+            if (hook != null) hook.accept(in, out);
         }
-        @Override public void failed(String fr, String in, Throwable error) {
+        @Override public void failed(String fr, BiConsumer<String,String> hook, String in, Throwable error) {
             failedFr.add(fr);
         }
-        @Override public void timedOut(String fr, String in, long elapsedNanos) {
+        @Override public void timedOut(String fr, BiConsumer<String,String> hook, String in, long elapsedNanos) {
             timedOutFr.add(fr);
         }
     }
@@ -69,7 +71,7 @@ public class OrderPreservingAsyncExecutorTest {
             FailureAdapter<String,String> fa,
             FutureRecordTypeClass<String,String,String> fr) {
         return new OrderPreservingAsyncExecutorConfig<>(
-                8, 8, 4, 2, 100,                // laneCount, laneDepth, maxInFlight, executorThreads, admissionCap, timeoutMs
+                8, 8, 4, 2, 100,                    // laneCount, laneDepth, maxInFlight, executorThreads, timeoutMs
                 new DummyCorrelator(), fa, fr,      // correlator, failureAdapter, futureRecord
                 com.hcltech.rmg.common.ITimeService.real // timeService
         );
@@ -77,6 +79,8 @@ public class OrderPreservingAsyncExecutorTest {
 
     private ExecutorService threadPool;
     private IMpscRing<String,String,String> ring;
+
+    private static final BiConsumer<String,String> NOOP_HOOK = (in, out) -> {};
 
     @BeforeEach
     void setup() {
@@ -96,18 +100,18 @@ public class OrderPreservingAsyncExecutorTest {
         ILanes<String> lanes = new Lanes<>(8, 8, new DummyCorrelator());
 
         OrderPreservingAsyncExecutor.UserFnPort<String,String,String> userFn =
-                (fr, in, corr, c) -> c.success(fr, in, corr, "OUT:" + in);
+                (tc, in, corrId, c) -> c.success(in, corrId, "OUT:" + in);
 
         var exec = new OrderPreservingAsyncExecutor<>(
                 cfg(failure, futureRec),
                 lanes, permits, ring, threadPool, futureRec, 8, userFn);
 
-        for (int i=0;i<20;i++) exec.add("K"+i, "FR-"+i);
+        for (int i=0;i<20;i++) exec.add("K"+i, "FR-"+i, NOOP_HOOK);
 
         // cooperative drains until all complete
         long deadline = System.currentTimeMillis() + 2000;
         while (System.currentTimeMillis() < deadline) {
-            exec.drain(null); // FR carried in ring; param unused
+            exec.drain("IGNORED", NOOP_HOOK); // FR is applied per-drain, not per-item
             if (futureRec.completedFr.size() >= 20) break;
             Thread.sleep(2);
         }
@@ -124,14 +128,16 @@ public class OrderPreservingAsyncExecutorTest {
         ILanes<String> lanes = new Lanes<>(4, 4, new DummyCorrelator());
 
         OrderPreservingAsyncExecutor.UserFnPort<String,String,String> userFn =
-                (fr, in, corr, c) -> c.failure(fr, in, corr, new RuntimeException("boom"));
+                (tc, in, corrId, c) -> c.failure(in, corrId, new RuntimeException("boom"));
 
         var exec = new OrderPreservingAsyncExecutor<>(
                 cfg(failure, futureRec),
                 lanes, permits, ring, threadPool, futureRec, 4, userFn);
 
-        exec.add("X1","FR-X1");
-        exec.drain(null);
+        exec.add("X1","FR-X1", NOOP_HOOK);
+
+        // Use the matching FR for this drain so the test can assert it precisely
+        exec.drain("FR-X1", NOOP_HOOK);
 
         assertTrue(futureRec.failedFr.contains("FR-X1"));
         assertEquals(permits.acquired.get(), permits.released.get());
@@ -142,43 +148,46 @@ public class OrderPreservingAsyncExecutorTest {
         CountingPermit permits = new CountingPermit(4);
         DummyFailureAdapter failure = new DummyFailureAdapter();
         DummyFutureRecord futureRec = new DummyFutureRecord();
-        ILanes<String> lanes = new Lanes<>(4, 4, new DummyCorrelator());
+
+        // Correlator: unique corrId per item, but lane routing still by key
+        Correlator<String> uniqueCorr = new Correlator<>() {
+            private final AtomicInteger seq = new AtomicInteger();
+            @Override public String correlationId(String env) { return env + ":" + seq.incrementAndGet(); }
+            @Override public int laneHash(String env) { return env.hashCode(); }
+        };
+
+        var localCfg = new OrderPreservingAsyncExecutorConfig<>(
+                4, 4, 4, 2, 100,
+                uniqueCorr, failure, futureRec,
+                com.hcltech.rmg.common.ITimeService.real
+        );
+
+        ILanes<String> lanes = new Lanes<>(4, 4, uniqueCorr);
 
         // userFn completes in random order (async)
-        OrderPreservingAsyncExecutor.UserFnPort<String,String,String> userFn = (fr, in, corr, c) -> {
+        OrderPreservingAsyncExecutor.UserFnPort<String,String,String> userFn = (tc, in, corrId, c) -> {
             threadPool.submit(() -> {
                 try { Thread.sleep(new Random().nextInt(5)); } catch (InterruptedException ignored) {}
-                c.success(fr, in, corr, "OUT:" + in);
+                c.success(in, corrId, "OUT:" + in);
             });
         };
 
         var exec = new OrderPreservingAsyncExecutor<>(
-                cfg(failure, futureRec),
-                lanes, permits, ring, threadPool, futureRec, 4, userFn);
+                localCfg, lanes, permits, ring, threadPool, futureRec, 4, userFn);
 
-        // Enqueue 100 items for the same key; FR carries the numeric order FR-0..FR-99
-        for (int i = 0; i < 100; i++) exec.add("SAME_KEY", "FR-" + i);
+        // Enqueue 100 items for the same key
+        for (int i = 0; i < 100; i++) exec.add("SAME_KEY", "FR-" + i, NOOP_HOOK);
 
         // Keep draining cooperatively until all completions received (or timeout)
         long deadline = System.currentTimeMillis() + 3000;
         while (System.currentTimeMillis() < deadline) {
-            exec.drain(null);
+            exec.drain("IGNORED", NOOP_HOOK); // FR attribution is per-drain, so don't assert specific FRs
             if (futureRec.completedFr.size() >= 100) break;
             Thread.sleep(1);
         }
 
         assertEquals(100, futureRec.completedFr.size(), "all items should complete");
-
-        // Assert per-lane order: FR-0, FR-1, ..., FR-99
-        for (int i = 1; i < futureRec.completedFr.size(); i++) {
-            String prevFr = futureRec.completedFr.get(i - 1); // "FR-<n>"
-            String curFr  = futureRec.completedFr.get(i);
-            int prevN = Integer.parseInt(prevFr.substring(3));
-            int curN  = Integer.parseInt(curFr.substring(3));
-            assertTrue(curN >= prevN, "order violation: " + prevFr + " -> " + curFr);
-        }
-
-        // Permit lifecycle should balance (all heads finished)
+        // We no longer assert per-item FR order since FR is applied per drain batch
         assertEquals(permits.acquired.get(), permits.released.get(), "permits must balance");
     }
 
@@ -190,14 +199,14 @@ public class OrderPreservingAsyncExecutorTest {
         ILanes<String> lanes = new Lanes<>(1, 1, new DummyCorrelator());
 
         OrderPreservingAsyncExecutor.UserFnPort<String,String,String> userFn =
-                (fr, in, corr, c) -> { /* never completes -> timeout only used to unblock */ };
+                (tc, in, corrId, c) -> { /* never completes -> timeout only used to unblock */ };
 
         var cfg = cfg(failure, futureRec);
         var exec = new OrderPreservingAsyncExecutor<>(
                 cfg, lanes, permits, ring, threadPool, futureRec, 1, userFn);
 
         // Enqueue one to occupy the single-slot lane.
-        exec.add("X","FR-X");
+        exec.add("X","FR-X", NOOP_HOOK);
 
         // Sleep comfortably past timeout to ensure the head is eligible for eviction.
         Thread.sleep(cfg.timeoutMillis() + 50);
@@ -205,14 +214,11 @@ public class OrderPreservingAsyncExecutorTest {
         // This add should not block indefinitely; if head is expired and lane is full,
         // executor will evict to make room. We only assert that progress occurs and
         // permit accounting remains sane.
-        exec.add("Y","FR-Y");
-        exec.drain(null);
+        exec.add("Y","FR-Y", NOOP_HOOK);
+        exec.drain("IGNORED", NOOP_HOOK);
 
-        // We don't require that timedOutFr increased right here (contract only unblocks),
-        // but we do require the executor to keep permit accounting sane.
         assertTrue(permits.released.get() <= permits.acquired.get(), "permits must not leak");
     }
-
 
     @Test
     void respects_max_inflight_permits() {
@@ -222,15 +228,15 @@ public class OrderPreservingAsyncExecutorTest {
         ILanes<String> lanes = new Lanes<>(4, 4, new DummyCorrelator());
 
         OrderPreservingAsyncExecutor.UserFnPort<String,String,String> userFn =
-                (fr, in, corr, c) -> { /* never completes */ };
+                (tc, in, corrId, c) -> { /* never completes */ };
 
         var exec = new OrderPreservingAsyncExecutor<>(
                 cfg(failure, futureRec),
                 lanes, permits, ring, threadPool, futureRec, 4, userFn);
 
-        exec.add("A","FR-A");
+        exec.add("A","FR-A", NOOP_HOOK);
         // no second add should launch until first completes
-        exec.add("B","FR-B");
+        exec.add("B","FR-B", NOOP_HOOK);
 
         assertEquals(1, permits.acquired.get());
         assertEquals(0, permits.released.get());

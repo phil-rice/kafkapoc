@@ -18,7 +18,7 @@ final class LanesTest {
     }
 
     static final class StubCorrelator implements Correlator<Env> {
-        @Override public String correlationId(Env env) { return env.id.hashCode() ^ (env.hash * 31L); }
+        @Override public String correlationId(Env env) { return env.id + ":" + env.hash; } // String corrId
         @Override public int  laneHash(Env env)      { return env.hash; }
     }
 
@@ -88,7 +88,7 @@ final class LanesTest {
         ILanesTestHooks<Env> hooks = lanes;
 
         Env e1 = new Env("e1", 0x1234);
-        api.lane(e1).enqueue(e1, 111L, 1_000L);
+        api.lane(e1).enqueue(e1, "111", 1_000L);
 
         int seen = 0;
         for (int i = 0; i < hooks._laneCount(); i++) {
@@ -116,18 +116,18 @@ final class LanesTest {
         assertSame(lane, api.lane(e2));
 
         // Fill lane
-        lane.enqueue(e1, 11L, 110L);
-        lane.enqueue(e2, 22L, 220L);
-        lane.enqueue(e1, 33L, 330L);
-        lane.enqueue(e2, 44L, 440L);
+        lane.enqueue(e1, "11", 110L);
+        lane.enqueue(e2, "22", 220L);
+        lane.enqueue(e1, "33", 330L);
+        lane.enqueue(e2, "44", 440L);
         assertTrue(lane.isFull());
 
         // Pop two, then enqueue two to force wrap
         assertTrue(lane.popHead((Env t) -> {}));
         assertTrue(lane.popHead((Env t) -> {}));
         assertFalse(lane.isFull());
-        lane.enqueue(e1, 55L, 550L);
-        lane.enqueue(e2, 66L, 660L);
+        lane.enqueue(e1, "55", 550L);
+        lane.enqueue(e2, "66", 660L);
         assertTrue(lane.isFull());
 
         // Drain in order
@@ -154,7 +154,7 @@ final class LanesTest {
         assertSame(hooks._laneAt(0), l0);
 
         // Fill, pop, repeat
-        l0.enqueue(e0, 1, 1);
+        l0.enqueue(e0, "1", 1);
         assertTrue(l0.isFull());
         assertSame(e0, l0.headT());
         assertTrue(l0.popHead((Env t) -> {}));
@@ -162,9 +162,9 @@ final class LanesTest {
         assertFalse(l0.popHead((Env t) -> {}));
 
         // Enqueue when full throws (depth=1)
-        l0.enqueue(e0, 2, 2);
+        l0.enqueue(e0, "2", 2);
         assertTrue(l0.isFull());
-        assertThrows(IllegalStateException.class, () -> l0.enqueue(new Env("e1", 0), 3, 3));
+        assertThrows(IllegalStateException.class, () -> l0.enqueue(new Env("e1", 0), "3", 3));
     }
 
     @Test

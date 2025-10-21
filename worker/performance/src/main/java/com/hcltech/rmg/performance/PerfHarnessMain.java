@@ -18,6 +18,8 @@ import com.hcltech.rmg.shared_worker.EnvelopeRouting;
 import com.hcltech.rmg.shared_worker.KafkaFlinkHelper;
 import dev.cel.checker.Env;
 import org.apache.flink.api.common.functions.RuntimeContext;
+import org.apache.flink.api.common.typeinfo.TypeHint;
+import org.apache.flink.api.common.typeinfo.TypeInformation;
 import org.apache.flink.configuration.Configuration;
 import org.apache.flink.streaming.api.datastream.DataStream;
 import org.apache.flink.streaming.api.datastream.KeyedStream;
@@ -25,6 +27,8 @@ import org.apache.flink.streaming.api.datastream.SingleOutputStreamOperator;
 import org.apache.flink.streaming.api.environment.StreamExecutionEnvironment;
 import org.apache.flink.streaming.api.functions.KeyedProcessFunction;
 import org.apache.flink.streaming.api.functions.async.RichAsyncFunction;
+import org.apache.flink.streaming.api.operators.OneInputStreamOperator;
+import org.apache.flink.streaming.api.operators.OneInputStreamOperatorFactory;
 import org.apache.flink.util.Collector;
 
 import java.util.Map;
@@ -42,18 +46,31 @@ public final class PerfHarnessMain {
         AppContainer<KafkaConfig, CepState, Msg, Schema, RuntimeContext, Collector<Envelope<CepState, Msg>>, FlinkMetricsParams> app = IAppContainerFactory.resolve(appContainerDefn).valueOrThrow();
         KafkaConfig kafka = app.eventSourceConfig();
 
-        var raw = KafkaFlinkHelper.createRawMessageStreamFromKafka(appContainerDefn, env, kafka, app.checkPointIntervalMillis());
-        KeyedStream<RawMessage, String> keyedStream = raw.keyBy(RawMessage::domainId);
-        DataStream<Envelope<CepState, Msg>> withCepState = keyedStream.map(new MakeEmptyValueEnvelope<>(appContainerDefn));
+        DataStream<RawMessage> raw = KafkaFlinkHelper.createRawMessageStreamFromKafka(
+                appContainerDefn, env, kafka, app.checkPointIntervalMillis());
+        KeyedStream<RawMessage, String> keyedRaw = raw.keyBy(RawMessage::domainId);
 
-        //just in for now to get compiling. Not used
-        KeyedProcessFunction<String, Envelope<CepState, Msg>, Envelope<CepState, Msg>> fn = new EnvelopeAsyncProcessingFunction<>(appContainerDefn, "notification");
-        var processedStream = withCepState.keyBy(Envelope::domainId).process(fn);
+// 2) Map to Envelope
+        DataStream<Envelope<CepState, Msg>> withCepState =
+                keyedRaw.map(new MakeEmptyValueEnvelope<>(appContainerDefn));
 
-//        var processedStream = KafkaHelpers.liftFunctionToOrderedAsync(withCepState, "main-async", func, kafka.sourceParallelism(), lanes, asyncTimeoutMillis)
-//                .keyBy(Envelope::domainId);
+// 3) Key again by domainId (so the operator gets a KeyContext)
+        KeyedStream<Envelope<CepState, Msg>, String> keyedEnvelopes =
+                withCepState.keyBy(Envelope::domainId);
 
-//        var withUpdatedCepState = processedStream.map(new UpdateCepStateAtEndFunction<>(appContainerDefn));
+// 4) Use transform(...) with your OneInputStreamOperator
+        OneInputStreamOperator<Envelope<CepState, Msg>, Envelope<CepState, Msg>> fn = new EnvelopeAsyncProcessingFunction<KafkaConfig, CepState, Msg, Schema>(appContainerDefn, "notification");
+
+        SingleOutputStreamOperator<Envelope<CepState, Msg>> processedStream =
+                keyedEnvelopes.<Envelope<CepState, Msg>>transform(
+                                "envelope-async",
+                                (TypeInformation<Envelope<CepState, Msg>>) TypeInformation.of(new TypeHint<Envelope<CepState, Msg>>() {
+                                }),
+                                fn
+                        )
+                        .uid("envelope-async")        // optional but recommended for savepoints
+                        .name("EnvelopeAsyncProcessing");
+
 
         SingleOutputStreamOperator<ValueEnvelope<CepState, Msg>> values = processedStream.process(new SplitEnvelopes<>()).name("splitter");
 

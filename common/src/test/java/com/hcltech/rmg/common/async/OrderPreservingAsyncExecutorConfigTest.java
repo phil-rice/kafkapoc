@@ -3,13 +3,15 @@ package com.hcltech.rmg.common.async;
 import com.hcltech.rmg.common.ITimeService;
 import org.junit.jupiter.api.Test;
 
+import java.util.function.BiConsumer;
+
 import static org.junit.jupiter.api.Assertions.*;
 
 final class OrderPreservingAsyncExecutorConfigTest {
 
     // Minimal stubs for required ports
     static final class StubCorrelator implements Correlator<String> {
-        @Override public String correlationId(String env) { return 1L; }
+        @Override public String correlationId(String env) { return env; } // String corrId
         @Override public int laneHash(String env) { return 0; }
     }
     static final class StubFailure implements FailureAdapter<String, String> {
@@ -17,9 +19,9 @@ final class OrderPreservingAsyncExecutorConfigTest {
         @Override public String onTimeout(String in, long elapsedNanos) { return "timeout"; }
     }
     static final class StubFR implements FutureRecordTypeClass<Object, String, String> {
-        @Override public void completed(Object fr, String out) {}
-        @Override public void timedOut(Object fr, String in, long elapsedNanos) {}
-        @Override public void failed(Object fr, String in, Throwable error) {}
+        @Override public void completed(Object fr, BiConsumer<String,String> hook, String in, String out) {}
+        @Override public void timedOut(Object fr, BiConsumer<String,String> hook, String in, long elapsedNanos) {}
+        @Override public void failed(Object fr, BiConsumer<String,String> hook, String in, Throwable error) {}
     }
 
     private OrderPreservingAsyncExecutorConfig<String, String, Object> cfg(
@@ -68,11 +70,7 @@ final class OrderPreservingAsyncExecutorConfigTest {
         assertDoesNotThrow(() -> cfg(8, 8, 4, 4, 2, 100));
     }
 
-    @Test
-    void admissionCycleCap_must_be_positive() {
-        assertThrows(IllegalArgumentException.class, () -> cfg(8, 8, 4, 2, 0, 100));
-        assertThrows(IllegalArgumentException.class, () -> cfg(8, 8, 4, 2, -1, 100));
-    }
+
 
     @Test
     void timeoutMillis_must_be_non_negative() {
