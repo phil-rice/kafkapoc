@@ -11,6 +11,7 @@ import org.apache.flink.api.common.functions.RuntimeContext;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 
 /**
@@ -36,8 +37,9 @@ public class MakeEmptyValueEnvelope<MSC, CepState, Msg, Schema, FR, MetricParam>
 
     @Override
     public Envelope<CepState, Msg> map(RawMessage rawMessage) {
-        var header = new EnvelopeHeader<CepState>(IEventTypeExtractor.unknownEventType, null, rawMessage, null, null);
+        var header = new EnvelopeHeader<CepState>(IEventTypeExtractor.unknownEventType, null, rawMessage, null, null, Map.of());
         var ve = new ValueEnvelope<CepState, Msg>(header, null, null, new ArrayList<>());
         return ve;
     }
+
 }

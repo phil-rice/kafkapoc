@@ -11,13 +11,14 @@ import static org.junit.jupiter.api.Assertions.*;
 class HasSeqsForEnvelopeTest {
 
     private static EnvelopeHeader<Object> header(String domainId) {
-        // parameters = null, config = null are legal
+        // parameters = null, config = null, cargo = null are legal
         return new EnvelopeHeader<>(
                 "domainType",
                 "eventType",
                 new RawMessage("raw", domainId, 0L, 0L, 0, 0L, "", "", ""),
-                null,
-                null
+                null,   // Parameters
+                null,   // BehaviorConfig
+                null    // cargo
         );
     }
 

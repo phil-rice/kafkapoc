@@ -37,7 +37,8 @@ public class AsyncCepProcessFunctionValueEnvelopeIT {
                 "eventType",
                 new RawMessage("raw", domainId, 0L, 0L, 0, 0L, "", "", ""),
                 null,
-                null
+                null,
+                Map.of()
         );
     }
 

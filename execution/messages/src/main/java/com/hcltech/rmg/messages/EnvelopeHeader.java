@@ -4,6 +4,8 @@ import com.hcltech.rmg.config.config.BehaviorConfig;
 import com.hcltech.rmg.parameters.ParameterExtractor;
 import com.hcltech.rmg.parameters.Parameters;
 
+import java.util.Map;
+
 /**
  * Local-only domain envelope that exists *inside a single operator box*
  * (no network hops). It is intentionally not serializable and should
@@ -19,7 +21,9 @@ public record EnvelopeHeader<CepState>(
         RawMessage rawMessage,
         Parameters parameters,
 //This will be null at start until we have parsed the message and found them. The actual parameters are defined in the config. Includes event type and domain type
-        BehaviorConfig config // the specific combination for this set of parameters
+        BehaviorConfig config, // the specific combination for this set of parameters
+        Map<String, Object> cargo
+        //Occasionally we want to carry 'stuff'. Like when doing tests: we might carry the expecter
 ) {
     <Msg> EnvelopeHeader<CepState> withMessage(ParameterExtractor<Msg> parameterExtractor, Msg message, String eventType) {
         return new EnvelopeHeader<>(
@@ -27,7 +31,12 @@ public record EnvelopeHeader<CepState>(
                 eventType,
                 rawMessage,
                 parameterExtractor.parameters(message, eventType, domainType, rawMessage().domainId()).valueOrThrow(),
-                config);
+                config,
+                Map.of());
+    }
+
+    public EnvelopeHeader<CepState> withCargo(Map<String, Object> cargo) {
+        return new EnvelopeHeader<>(domainType, eventType, rawMessage, parameters, config, cargo);
     }
 
 

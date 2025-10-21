@@ -25,7 +25,7 @@ public class DefaultPerKeyAsyncExecutorEnvelopeStressTest {
                 "eventType",
                 new RawMessage("raw", domainId, 0L, 0L, 0, 0L, "", "", ""),
                 null,
-                null
+                null, Map.of()
         );
     }
 
@@ -38,18 +38,43 @@ public class DefaultPerKeyAsyncExecutorEnvelopeStressTest {
             (HasSeq<Envelope<Object, String>>) (HasSeq<?>) HasSeqsForEnvelope.INSTANCE;
 
     static final class CountingPermitManager implements PermitManager {
-        private final Semaphore sem; private final int max;
+        private final Semaphore sem;
+        private final int max;
         int acquired = 0, released = 0;
-        CountingPermitManager(int max) { this.sem = new Semaphore(max); this.max = max; }
-        @Override public boolean tryAcquire() { boolean ok = sem.tryAcquire(); if (ok) acquired++; return ok; }
-        @Override public void release() { released++; sem.release(); }
-        @Override public int availablePermits() { return sem.availablePermits(); }
-        @Override public int maxPermits() { return max; }
+
+        CountingPermitManager(int max) {
+            this.sem = new Semaphore(max);
+            this.max = max;
+        }
+
+        @Override
+        public boolean tryAcquire() {
+            boolean ok = sem.tryAcquire();
+            if (ok) acquired++;
+            return ok;
+        }
+
+        @Override
+        public void release() {
+            released++;
+            sem.release();
+        }
+
+        @Override
+        public int availablePermits() {
+            return sem.availablePermits();
+        }
+
+        @Override
+        public int maxPermits() {
+            return max;
+        }
     }
 
     static final class CapturingExec
             extends DefaultPerKeyAsyncExecutor<Envelope<Object, String>, Envelope<Object, String>> {
         final List<Envelope<Object, String>> ordered = new ArrayList<>();
+
         CapturingExec(int K,
                       Executor exec,
                       Function<Envelope<Object, String>, CompletionStage<Envelope<Object, String>>> fn,
@@ -57,10 +82,15 @@ public class DefaultPerKeyAsyncExecutorEnvelopeStressTest {
                       PermitManager pm) {
             super(K, exec, fn, failure, pm, SEQ, SEQ);
         }
-        @Override protected void handleOrdered(Envelope<Object, String> out) { ordered.add(out); }
+
+        @Override
+        protected void handleOrdered(Envelope<Object, String> out) {
+            ordered.add(out);
+        }
     }
 
-    record Due(long dueNanos, int index, CompletableFuture<Envelope<Object, String>> f) {}
+    record Due(long dueNanos, int index, CompletableFuture<Envelope<Object, String>> f) {
+    }
 
     @Test
     void stress_realTime_singleThread_outOfOrderCompletions_but_strictOrderedEmits() {
@@ -74,8 +104,7 @@ public class DefaultPerKeyAsyncExecutorEnvelopeStressTest {
 
         final PriorityQueue<Due> dueQueue = new PriorityQueue<>(Comparator.comparingLong(Due::dueNanos));
         final List<Integer> completionOrder = new ArrayList<>();
-        @SuppressWarnings("unchecked")
-        final CompletableFuture<Envelope<Object, String>>[] futures = new CompletableFuture[N];
+        @SuppressWarnings("unchecked") final CompletableFuture<Envelope<Object, String>>[] futures = new CompletableFuture[N];
 
         Function<Envelope<Object, String>, CompletionStage<Envelope<Object, String>>> asyncFn = in -> {
             int idx = Integer.parseInt(in.valueEnvelope().data());
@@ -110,7 +139,10 @@ public class DefaultPerKeyAsyncExecutorEnvelopeStressTest {
                 long now = System.nanoTime();
                 long sleepNanos = next.dueNanos() - now;
                 if (sleepNanos > 0) {
-                    try { TimeUnit.NANOSECONDS.sleep(sleepNanos); } catch (InterruptedException ignored) {}
+                    try {
+                        TimeUnit.NANOSECONDS.sleep(sleepNanos);
+                    } catch (InterruptedException ignored) {
+                    }
                 }
 
                 now = System.nanoTime();
@@ -133,7 +165,10 @@ public class DefaultPerKeyAsyncExecutorEnvelopeStressTest {
         // 1. Out-of-order completions must have occurred
         boolean sawOutOfOrder = false;
         for (int i = 1; i < completionOrder.size(); i++) {
-            if (completionOrder.get(i) < completionOrder.get(i - 1)) { sawOutOfOrder = true; break; }
+            if (completionOrder.get(i) < completionOrder.get(i - 1)) {
+                sawOutOfOrder = true;
+                break;
+            }
         }
         assertTrue(sawOutOfOrder, "test did not exercise out-of-order completions");
 
@@ -144,7 +179,7 @@ public class DefaultPerKeyAsyncExecutorEnvelopeStressTest {
             assertEquals("ok:" + i, e.valueEnvelope().data(), "emit order mismatch at " + i);
             if (i > 0) {
                 long prevSeq = SEQ.get(exec.ordered.get(i - 1));
-                long curSeq  = SEQ.get(e);
+                long curSeq = SEQ.get(e);
                 assertTrue(prevSeq < curSeq, "seq must increase at index " + i);
             }
         }

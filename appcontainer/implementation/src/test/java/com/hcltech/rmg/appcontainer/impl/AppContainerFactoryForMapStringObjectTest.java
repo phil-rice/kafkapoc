@@ -5,7 +5,9 @@ import com.hcltech.rmg.common.errorsor.ErrorsOr;
 import com.hcltech.rmg.config.config.RootConfig;
 import com.hcltech.rmg.flink_metrics.FlinkMetricsParams;
 import com.hcltech.rmg.kafkaconfig.KafkaConfig;
+import com.hcltech.rmg.messages.Envelope;
 import org.apache.flink.api.common.functions.RuntimeContext;
+import org.apache.flink.util.Collector;
 import org.codehaus.stax2.validation.XMLValidationSchema;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.DisplayName;
@@ -31,9 +33,9 @@ public final class AppContainerFactoryForMapStringObjectTest {
     @Test
     @DisplayName("resolve(prod): returns same singleton for same id")
     void resolve_sameId_sameInstance() {
-        AppContainer<KafkaConfig, Map<String,Object>, Map<String,Object>, XMLValidationSchema, RuntimeContext, FlinkMetricsParams> a =
+        AppContainer<?, ?, ?, ?, ?, ?, ?> a =
                 AppContainerFactoryForMapStringObject.resolve("prod").valueOrThrow();
-        AppContainer<KafkaConfig, Map<String,Object>, Map<String,Object>, XMLValidationSchema, RuntimeContext, FlinkMetricsParams> b =
+        AppContainer<?, ?, ?, ?, ?, ?, ?> b =
                 AppContainerFactoryForMapStringObject.resolve("prod").valueOrThrow();
         assertSame(a, b, "Expected same cached instance for the same id");
     }
@@ -41,9 +43,9 @@ public final class AppContainerFactoryForMapStringObjectTest {
     @Test
     @DisplayName("resolve: id normalization (trim + lowercase)")
     void resolve_normalizesId() {
-        AppContainer<KafkaConfig, Map<String,Object>, Map<String,Object>, XMLValidationSchema, RuntimeContext, FlinkMetricsParams> a =
+        AppContainer<?, ?, ?, ?, ?, ?, ?> a =
                 AppContainerFactoryForMapStringObject.resolve(" prod ").valueOrThrow();
-        AppContainer<KafkaConfig, Map<String,Object>, Map<String,Object>, XMLValidationSchema, RuntimeContext, FlinkMetricsParams> b =
+        AppContainer<?, ?, ?, ?, ?, ?, ?> b =
                 AppContainerFactoryForMapStringObject.resolve("PROD").valueOrThrow();
         assertSame(a, b, "Ids differing only by case/whitespace should map to same instance");
     }
@@ -51,9 +53,9 @@ public final class AppContainerFactoryForMapStringObjectTest {
     @Test
     @DisplayName("resolve: different ids yield different instances")
     void resolve_differentIds_differentInstances() {
-        AppContainer<KafkaConfig, Map<String,Object>, Map<String,Object>, XMLValidationSchema, RuntimeContext, FlinkMetricsParams> prod =
+        AppContainer<?, ?, ?, ?, ?, ?, ?> prod =
                 AppContainerFactoryForMapStringObject.resolve("prod").valueOrThrow();
-        AppContainer<KafkaConfig, Map<String,Object>, Map<String,Object>, XMLValidationSchema, RuntimeContext, FlinkMetricsParams> test =
+        AppContainer<?, ?, ?, ?, ?, ?, ?> test =
                 AppContainerFactoryForMapStringObject.resolve("test").valueOrThrow();
         assertNotSame(prod, test, "Different env ids should not return the same instance");
     }
@@ -63,25 +65,24 @@ public final class AppContainerFactoryForMapStringObjectTest {
     @Test
     @DisplayName("prod: timeService is close to system clock (nanos)")
     void prod_timeService_closeToNow() {
-        AppContainer<KafkaConfig, Map<String,Object>, Map<String,Object>, XMLValidationSchema, RuntimeContext, FlinkMetricsParams> prod =
+        AppContainer<?, ?, ?, ?, ?, ?, ?> prod =
                 AppContainerFactoryForMapStringObject.resolve("prod").valueOrThrow();
 
         long before = System.nanoTime();
         long t = prod.timeService().currentTimeNanos();
         long after = System.nanoTime();
 
-        long toleranceNanos = 5_000_000_000L; // 5 milliseconds in nanoseconds
+        long toleranceNanos = 5_000_000L; // 5 milliseconds in nanoseconds
         assertTrue(
                 t >= before - toleranceNanos && t <= after + toleranceNanos,
                 "prod timeService should be within " + (toleranceNanos / 1_000_000) + "ms of System.nanoTime()"
         );
     }
 
-
     @Test
     @DisplayName("prod: keyPath is hardcoded")
     void prod_keyPath_isHardcoded() {
-        AppContainer<KafkaConfig, Map<String,Object>, Map<String,Object>, XMLValidationSchema, RuntimeContext, FlinkMetricsParams> prod =
+        AppContainer<?, ?, ?, ?, ?, ?, ?> prod =
                 AppContainerFactoryForMapStringObject.resolve("prod").valueOrThrow();
         List<String> path = prod.keyPath();
         List<String> expected = List.of("domainId");
@@ -92,7 +93,7 @@ public final class AppContainerFactoryForMapStringObjectTest {
     @Test
     @DisplayName("prod: uuid generator yields different values across calls")
     void prod_uuid_isRandomEnough() {
-        AppContainer<KafkaConfig, Map<String,Object>, Map<String,Object>, XMLValidationSchema, RuntimeContext, FlinkMetricsParams> prod =
+        AppContainer<?, ?, ?, ?, ?, ?, ?> prod =
                 AppContainerFactoryForMapStringObject.resolve("prod").valueOrThrow();
         String u1 = prod.uuid().generate();
         String u2 = prod.uuid().generate();
@@ -104,7 +105,7 @@ public final class AppContainerFactoryForMapStringObjectTest {
     @Test
     @DisplayName("XML: xml.extractId works on a simple path")
     void prod_xml_services_present_and_work() {
-        AppContainer<KafkaConfig, Map<String,Object>, Map<String,Object>, XMLValidationSchema, RuntimeContext, FlinkMetricsParams> prod =
+        AppContainer<?, ?, ?, ?, ?, ?, ?> prod =
                 AppContainerFactoryForMapStringObject.resolve("prod").valueOrThrow();
         var xml = prod.xml();
         assertNotNull(xml, "xml typeclass should be provided");
@@ -120,9 +121,9 @@ public final class AppContainerFactoryForMapStringObjectTest {
     @Test
     @DisplayName("prod: eventSourceConfig (Kafka) is constructed")
     void prod_eventSourceConfig_present() {
-        AppContainer<KafkaConfig, Map<String,Object>, Map<String,Object>, XMLValidationSchema, RuntimeContext, FlinkMetricsParams> prod =
+        AppContainer<?, ?, ?, ?, ?, ?, ?> prod =
                 AppContainerFactoryForMapStringObject.resolve("prod").valueOrThrow();
-        KafkaConfig cfg = prod.eventSourceConfig();
+        KafkaConfig cfg = (KafkaConfig) prod.eventSourceConfig(); // safe cast by contract
         assertNotNull(cfg, "KafkaConfig should be present");
 
         assertNotNull(cfg.bootstrapServer(), "bootstrapServer should be set");
@@ -141,19 +142,17 @@ public final class AppContainerFactoryForMapStringObjectTest {
     @Test
     @DisplayName("prod: rootConfig is loaded, schema map contains schema, and env marker is prod")
     void prod_rootConfig_loaded() {
-        AppContainer<KafkaConfig, Map<String,Object>, Map<String,Object>, XMLValidationSchema, RuntimeContext, FlinkMetricsParams> prod =
+        AppContainer<?, ?, ?, ?, ?, ?, ?> prod =
                 AppContainerFactoryForMapStringObject.resolve("prod").valueOrThrow();
         RootConfig rc = prod.rootConfig();
         assertNotNull(rc, "rootConfig should be loaded for prod");
 
-        // If xmlSchemaPath is set, nameToSchemaMap should contain it
         String schemaName = rc.xmlSchemaPath();
         if (schemaName != null && !schemaName.isBlank()) {
             assertTrue(prod.nameToSchemaMap().containsKey(schemaName),
                     "nameToSchemaMap should contain " + schemaName);
         }
 
-        // differentiate prod vs test by parameter default
         var params = rc.parameterConfig().parameters();
         assertFalse(params.isEmpty());
         assertEquals("prod", params.get(0).defaultValue(), "prod env should default to 'prod'");
@@ -162,7 +161,7 @@ public final class AppContainerFactoryForMapStringObjectTest {
     @Test
     @DisplayName("prod: extractors are wired and non-null")
     void prod_extractors_present() {
-        AppContainer<KafkaConfig, Map<String,Object>, Map<String,Object>, XMLValidationSchema, RuntimeContext, FlinkMetricsParams> prod =
+        AppContainer<KafkaConfig, Map<String, Object>, Map<String, Object>, XMLValidationSchema, RuntimeContext, ?, FlinkMetricsParams> prod =
                 AppContainerFactoryForMapStringObject.resolve("prod").valueOrThrow();
 
         assertNotNull(prod.eventTypeExtractor(), "eventTypeExtractor should be present");
@@ -183,7 +182,7 @@ public final class AppContainerFactoryForMapStringObjectTest {
     @Test
     @DisplayName("test env: deterministic defaults are returned")
     void test_env_defaults() {
-        AppContainer<KafkaConfig, Map<String,Object>, Map<String,Object>, XMLValidationSchema, RuntimeContext, FlinkMetricsParams> test =
+        AppContainer<?, ?, ?, ?, ?, ?, ?> test =
                 AppContainerFactoryForMapStringObject.resolve("test").valueOrThrow();
         assertEquals(1_726_000_000_000L, test.timeService().currentTimeNanos());
         assertEquals("11111111-2222-3333-4444-555555555555", test.uuid().generate());
@@ -193,9 +192,9 @@ public final class AppContainerFactoryForMapStringObjectTest {
     @Test
     @DisplayName("test env: eventSourceConfig (Kafka) is constructed")
     void test_eventSourceConfig_present() {
-        AppContainer<KafkaConfig, Map<String,Object>, Map<String,Object>, XMLValidationSchema, RuntimeContext, FlinkMetricsParams> test =
+        AppContainer<?, ?, ?, ?, ?, ?, ?> test =
                 AppContainerFactoryForMapStringObject.resolve("test").valueOrThrow();
-        KafkaConfig cfg = test.eventSourceConfig();
+        KafkaConfig cfg = (KafkaConfig) test.eventSourceConfig(); // safe cast by contract
         assertNotNull(cfg, "KafkaConfig should be present");
 
         assertNotNull(cfg.bootstrapServer(), "bootstrapServer should be set");
@@ -214,7 +213,7 @@ public final class AppContainerFactoryForMapStringObjectTest {
     @Test
     @DisplayName("test env: rootConfig is loaded from classpath and env marker is dev")
     void test_rootConfig_loaded() {
-        AppContainer<KafkaConfig, Map<String,Object>, Map<String,Object>, XMLValidationSchema, RuntimeContext, FlinkMetricsParams> test =
+        AppContainer<?, ?, ?, ?, ?, ?, ?> test =
                 AppContainerFactoryForMapStringObject.resolve("test").valueOrThrow();
         RootConfig rc = test.rootConfig();
         assertNotNull(rc, "rootConfig should be loaded for test");
@@ -232,8 +231,7 @@ public final class AppContainerFactoryForMapStringObjectTest {
         int threads = Math.max(4, Runtime.getRuntime().availableProcessors());
         ExecutorService pool = Executors.newFixedThreadPool(threads);
         try {
-            Set<AppContainer<KafkaConfig, Map<String,Object>, Map<String,Object>, XMLValidationSchema, RuntimeContext, FlinkMetricsParams>> results =
-                    ConcurrentHashMap.newKeySet();
+            Set<AppContainer<?, ?, ?, ?, ?, ?, ?>> results = ConcurrentHashMap.newKeySet();
             CountDownLatch start = new CountDownLatch(1);
 
             var tasks = IntStream.range(0, 64).mapToObj(i -> pool.submit(() -> {
@@ -242,7 +240,7 @@ public final class AppContainerFactoryForMapStringObjectTest {
             })).toList();
 
             start.countDown();
-            for (Future<AppContainer<KafkaConfig, Map<String,Object>, Map<String,Object>, XMLValidationSchema, RuntimeContext, FlinkMetricsParams>> f : tasks) {
+            for (Future<AppContainer<KafkaConfig, Map<String, Object>, Map<String, Object>, XMLValidationSchema, RuntimeContext, Collector<Envelope<Map<String, Object>, Map<String, Object>>>, FlinkMetricsParams>> f : tasks) {
                 results.add(f.get(3, TimeUnit.SECONDS));
             }
 
@@ -256,10 +254,10 @@ public final class AppContainerFactoryForMapStringObjectTest {
     @Test
     @DisplayName("clearCache: clears cache; next resolve produces a fresh instance")
     void clearCache_createsFreshInstance() {
-        AppContainer<KafkaConfig, Map<String,Object>, Map<String,Object>, XMLValidationSchema, RuntimeContext, FlinkMetricsParams> a =
+        AppContainer<?, ?, ?, ?, ?, ?, ?> a =
                 AppContainerFactoryForMapStringObject.resolve("prod").valueOrThrow();
         AppContainerFactoryForMapStringObject.clearCache();
-        AppContainer<KafkaConfig, Map<String,Object>, Map<String,Object>, XMLValidationSchema, RuntimeContext, FlinkMetricsParams> b =
+        AppContainer<?, ?, ?, ?, ?, ?, ?> b =
                 AppContainerFactoryForMapStringObject.resolve("prod").valueOrThrow();
         assertNotSame(a, b, "After clearCache, a fresh instance should be created on next resolve");
     }
@@ -275,11 +273,7 @@ public final class AppContainerFactoryForMapStringObjectTest {
     @Test
     @DisplayName("resolve: unknown id yields ErrorsOr.error")
     void resolve_unknown_returnsError() {
-        ErrorsOr<AppContainer<KafkaConfig, Map<String,Object>, Map<String,Object>, XMLValidationSchema, RuntimeContext, FlinkMetricsParams>> eo =
-                AppContainerFactoryForMapStringObject.resolve("nope");
-        assertTrue(eo.isError(), "Unknown id should return ErrorsOr.error");
-        var errors = eo.errorsOrThrow();
-        assertFalse(errors.isEmpty());
-        assertTrue(errors.get(0).toLowerCase().contains("unknown"), "Error should mention unknown id");
+        var errors = AppContainerFactoryForMapStringObject.resolve("nope").errorsOrThrow();
+        assertEquals(List.of("Unknown container id: nope"), errors);
     }
 }

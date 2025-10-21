@@ -14,6 +14,7 @@ import org.junit.jupiter.api.Test;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.TimeUnit;
 
 import static org.junit.jupiter.api.Assertions.*;
@@ -43,7 +44,8 @@ public class FlinkResultFutureTypeClassIT {
                 "test-event",
                 new RawMessage("raw", domainId, 1L, 2L, 3, 4L, "tp", "ts", "bg"),
                 null,
-                null
+                null,
+                Map.of()
         );
     }
 

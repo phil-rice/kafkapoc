@@ -38,6 +38,7 @@ import org.apache.flink.api.common.functions.RuntimeContext;
 import org.apache.flink.util.Collector;
 import org.codehaus.stax2.validation.XMLValidationSchema;
 
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -71,6 +72,16 @@ public final class AppContainerFactoryForMapStringObject implements IAppContaine
 
     public static final List<String> defaultParameters = List.of("productType", "company");
 
+    public static ValueEnvelope<Map<String, Object>, Map<String, Object>> aiMessagePostParse(ValueEnvelope<Map<String, Object>, Map<String, Object>> ve) {
+        var data = ve.data();
+        var input = (Map<String, Object>) data.get("input");
+        var output = data.get("output");
+        ve.setData(input);
+        var cargo = new HashMap<>(ve.header().cargo());
+        cargo.put("expected", output);
+        return ve.witHeader(ve.header().withCargo(cargo));
+    }
+
     private static ErrorsOr<AppContainer<KafkaConfig, Map<String, Object>, Map<String, Object>, XMLValidationSchema, RuntimeContext, Collector<Envelope<Map<String, Object>, Map<String, Object>>>, FlinkMetricsParams>> build(String id) {
 
         return switch (id) {
@@ -85,7 +96,22 @@ public final class AppContainerFactoryForMapStringObject implements IAppContaine
                             "company", List.of("msg", "company"))),
                     IEventTypeExtractor.fromPathForMapStringObject(List.of("msg", "eventType")),
                     IDomainTypeExtractor.fixed("parcel"),
-                    "config/prod/"
+                    "config/prod/",
+                    v -> v
+            );
+            case "ai" -> basic(
+                    id,
+                    ITimeService.real,
+                    IUuidGenerator.defaultGenerator(),
+                    "config/root-prod.json",
+                    30_000,
+                    ParameterExtractor.defaultParameterExtractor(defaultParameters, Map.of(), Map.of(
+                            "productType", List.of("msg", "productType"),
+                            "company", List.of("msg", "company"))),
+                    IEventTypeExtractor.fromPathForMapStringObject(List.of("msg", "eventType")),
+                    IDomainTypeExtractor.fixed("parcel"),
+                    "config/prod/",
+                    AppContainerFactoryForMapStringObject::aiMessagePostParse
             );
             case "test" -> basic(
                     id,
@@ -96,7 +122,8 @@ public final class AppContainerFactoryForMapStringObject implements IAppContaine
                     ParameterExtractor.defaultParameterExtractor(defaultParameters, Map.of(), Map.of()),
                     IEventTypeExtractor.fromPathForMapStringObject(List.of("eventType")),
                     IDomainTypeExtractor.fixed("parcel"),
-                    "config/test/"
+                    "config/test/",
+                    v -> v
             );
             default -> ErrorsOr.error("Unknown container id: " + id);
         };
@@ -113,7 +140,8 @@ public final class AppContainerFactoryForMapStringObject implements IAppContaine
             ParameterExtractor<Map<String, Object>> parameterExtractor,
             IEventTypeExtractor<Map<String, Object>> eventTypeExtractor,
             IDomainTypeExtractor<Map<String, Object>> domainTypeExtractor,
-            String configResourcePrefix
+            String configResourcePrefix,
+            Function<ValueEnvelope<Map<String, Object>, Map<String, Object>>, ValueEnvelope<Map<String, Object>, Map<String, Object>>> afterParse
     ) {
         Objects.requireNonNull(time, "timeService service must not be null");
         Objects.requireNonNull(uuid, "uuid generator must not be null");
@@ -169,6 +197,7 @@ public final class AppContainerFactoryForMapStringObject implements IAppContaine
                                                     time,
                                                     uuid,
                                                     xml,
+                                                    afterParse,
                                                     cepStateTypeClass,
                                                     checkpointIntervalMillis,
                                                     cepEventLogFunction,

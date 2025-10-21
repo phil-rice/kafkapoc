@@ -89,7 +89,8 @@ public abstract class AbstractCelValidationExecutorTest {
                 "evt",          // eventType (executor exposes only msg + cepState vars)
                 null,           // rawMessage
                 null,           // parameters
-                null          // config
+                null   ,       // config,
+                Map.of()
         );
         return new ValueEnvelope<>(header, msg, cepState, List.of());
     }

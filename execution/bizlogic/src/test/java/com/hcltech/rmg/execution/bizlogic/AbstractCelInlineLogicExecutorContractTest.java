@@ -82,7 +82,7 @@ public abstract class AbstractCelInlineLogicExecutorContractTest {
 
     // Header no longer carries cepState — build a basic header here.
     private static <S> EnvelopeHeader<S> header() {
-        return new EnvelopeHeader<>("domType", "evt", /* raw */ null, /* params */ null, /* config */ null);
+        return new EnvelopeHeader<>("domType", "evt", /* raw */ null, /* params */ null, /* config */ null, Map.of());
     }
 
     private static String keyFor(String eventName, String moduleName) {

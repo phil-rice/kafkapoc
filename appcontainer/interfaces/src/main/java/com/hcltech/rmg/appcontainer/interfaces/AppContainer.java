@@ -13,6 +13,7 @@ import com.hcltech.rmg.execution.bizlogic.BizLogicExecutor;
 import com.hcltech.rmg.messages.Envelope;
 import com.hcltech.rmg.messages.IDomainTypeExtractor;
 import com.hcltech.rmg.messages.IEventTypeExtractor;
+import com.hcltech.rmg.messages.ValueEnvelope;
 import com.hcltech.rmg.metrics.MetricsFactory;
 import com.hcltech.rmg.parameters.ParameterExtractor;
 import com.hcltech.rmg.xml.XmlTypeClass;
@@ -27,6 +28,9 @@ public record AppContainer<EventSourceConfig, CepState, Msg, Schema, FlinkRT, Fl
 
         // XML services
         XmlTypeClass<Msg, Schema> xml,                // keyExtraction + parse + validate
+        Function<ValueEnvelope<CepState, Msg>, ValueEnvelope<CepState, Msg>> afterParse,
+//adjusts the message after parsing. Could be validation. In the case of the AI pipeline we extract input and put the expected output into cargo
+
 
         //Flink
         CepStateTypeClass<CepState> cepStateTypeClass,

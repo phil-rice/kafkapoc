@@ -9,6 +9,7 @@ import com.hcltech.rmg.xml.XmlTypeClass;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.function.Function;
 
 /**
  * In:  (domainId, raw)
@@ -24,6 +25,7 @@ public class ParseMessagePipelineStep<MSC, CepState, Msg, Schema,FlinkRT, FlinkF
     private final Schema schema;
     private final ParameterExtractor<Msg> parameterExtractor;
     private final Map<String, Config> keyToConfigMap;
+    private final Function<ValueEnvelope<CepState, Msg>, ValueEnvelope<CepState, Msg>> afterParse;
 
     public ParseMessagePipelineStep(AppContainer<MSC, CepState, Msg, Schema,FlinkRT, FlinkFR,MetricParam> container) {
         this.xmlTypeClass = container.xml();
@@ -32,6 +34,7 @@ public class ParseMessagePipelineStep<MSC, CepState, Msg, Schema,FlinkRT, FlinkF
         this.schema = container.nameToSchemaMap().get(container.rootConfig().xmlSchemaPath());
         this.parameterExtractor = container.parameterExtractor();
         this.keyToConfigMap = container.keyToConfigMap();
+        this.afterParse  =container.afterParse();
         if (this.schema == null) {
             throw new IllegalArgumentException("Schema not found for: " + container.rootConfig().xmlSchemaPath() + " Legal values: " + container.nameToSchemaMap().keySet());
         }
@@ -51,11 +54,11 @@ public class ParseMessagePipelineStep<MSC, CepState, Msg, Schema,FlinkRT, FlinkF
                 return new ErrorEnvelope<>(valueEnvelope, "ParseMessageFunction", List.of("Event type extraction resulted in null"));
             var parameters = parameterExtractor.parameters(message, eventType, domainType, rawMessage.domainId()).valueOrThrow();
             var behaviorConfig = keyToConfigMap.get(parameters.key()).behaviorConfig();
-            var header = new EnvelopeHeader<CepState>(domainType, eventType, rawMessage, parameters, behaviorConfig);
+            var header = new EnvelopeHeader<CepState>(domainType, eventType, rawMessage, parameters, behaviorConfig, Map.of());
             valueEnvelope.setHeader(header);
             valueEnvelope.setData(message);
-            return valueEnvelope;
-
+            var postParse = afterParse.apply(valueEnvelope);
+            return postParse;
         }
         return in;
     }

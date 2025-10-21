@@ -32,6 +32,11 @@ public final class ValueEnvelope<CepState, Msg> implements Envelope<CepState, Ms
         return new ValueEnvelope<>(header, newData, cepState, cepStateModifications);
     }
 
+
+    public ValueEnvelope<CepState, Msg> witHeader(EnvelopeHeader<CepState> header) {
+        return new ValueEnvelope<>(header, data, cepState, cepStateModifications);
+    }
+
     @Override
     public Envelope<CepState, Msg> map(Function<ValueEnvelope<CepState, Msg>, Envelope<CepState, Msg>> mapper) {
         try {
@@ -91,6 +96,7 @@ public final class ValueEnvelope<CepState, Msg> implements Envelope<CepState, Ms
     public int getFullCepStateSize() {
         return cepStateSizeAsStart + cepStateModifications.size();
     }
+
     public void setCepStateSizeAsStart(int cepStateSizeAsStart) {
         this.cepStateSizeAsStart = cepStateSizeAsStart;
     }
@@ -104,9 +110,13 @@ public final class ValueEnvelope<CepState, Msg> implements Envelope<CepState, Ms
     }
 
 
-    public long getSeq() { return seq; }
+    public long getSeq() {
+        return seq;
+    }
 
-    public void setSeq(long seq) { this.seq = seq; }
+    public void setSeq(long seq) {
+        this.seq = seq;
+    }
 
     @Override
     public boolean equals(Object obj) {

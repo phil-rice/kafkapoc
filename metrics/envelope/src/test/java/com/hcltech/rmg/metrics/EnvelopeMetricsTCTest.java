@@ -4,6 +4,7 @@ import com.hcltech.rmg.messages.*;
 import org.junit.jupiter.api.Test;
 
 import java.util.List;
+import java.util.Map;
 
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -13,14 +14,33 @@ class EnvelopeMetricsTCTest {
 
     {
         long processingTimestamp = 2000L;
-        rawMessage = new RawMessage("raw", "domId", 1000L, processingTimestamp, 10, 1000, "traceParent", "traceState", "baggage");
+        rawMessage = new RawMessage(
+                "raw",
+                "domId",
+                1000L,              // source timestamp
+                processingTimestamp,
+                10,                 // partition
+                1000L,              // offset
+                "traceParent",
+                "traceState",
+                "baggage"
+        );
     }
 
-    EnvelopeHeader<String> header = new EnvelopeHeader<>("domType", "evType", rawMessage,null, null);
-    ValueEnvelope<String, String> valueEnvelope=new ValueEnvelope<>(header, "data", null, List.of());
-    RetryEnvelope<String, String> retryEnvelope=new RetryEnvelope<>(valueEnvelope, "stage", 1);
-    ErrorEnvelope<String, String> errorEnvelope=new ErrorEnvelope<>(valueEnvelope, "errorMsg", List.of("some message"));
-    EnvelopeMetricsTC sut =  EnvelopeMetricsTC.INSTANCE;
+    // Updated: add cargo (can be empty)
+    EnvelopeHeader<String> header =
+            new EnvelopeHeader<>("domType", "evType", rawMessage, null, null, Map.of());
+
+    ValueEnvelope<String, String> valueEnvelope =
+            new ValueEnvelope<>(header, "data", null, List.of());
+
+    RetryEnvelope<String, String> retryEnvelope =
+            new RetryEnvelope<>(valueEnvelope, "stage", 1);
+
+    ErrorEnvelope<String, String> errorEnvelope =
+            new ErrorEnvelope<>(valueEnvelope, "errorMsg", List.of("some message"));
+
+    EnvelopeMetricsTC sut = EnvelopeMetricsTC.INSTANCE;
 
     @Test
     void metricName_valueEnvelope_success() {
@@ -33,6 +53,7 @@ class EnvelopeMetricsTCTest {
         String metricName = sut.metricName(retryEnvelope);
         assertEquals("retry", metricName);
     }
+
     @Test
     void metricName_errorEnvelope_error() {
         String metricName = sut.metricName(errorEnvelope);

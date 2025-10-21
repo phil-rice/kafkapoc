@@ -19,7 +19,7 @@ public class DefaultPerKeyAsyncExecutorEnvelopeFailureTest {
                 "eventType",
                 new RawMessage("raw", domainId, 0L, 0L, 0, 0L, "", "", ""),
                 null,
-                null
+                null, Map.of()
         );
     }
 
@@ -34,19 +34,44 @@ public class DefaultPerKeyAsyncExecutorEnvelopeFailureTest {
 
     // ------- simple PermitManager -------
     static final class CountingPermitManager implements PermitManager {
-        private final Semaphore sem; private final int max;
+        private final Semaphore sem;
+        private final int max;
         int acquired = 0, released = 0;
-        CountingPermitManager(int max) { this.sem = new Semaphore(max); this.max = max; }
-        @Override public boolean tryAcquire() { boolean ok = sem.tryAcquire(); if (ok) acquired++; return ok; }
-        @Override public void release() { released++; sem.release(); }
-        @Override public int availablePermits() { return sem.availablePermits(); }
-        @Override public int maxPermits() { return max; }
+
+        CountingPermitManager(int max) {
+            this.sem = new Semaphore(max);
+            this.max = max;
+        }
+
+        @Override
+        public boolean tryAcquire() {
+            boolean ok = sem.tryAcquire();
+            if (ok) acquired++;
+            return ok;
+        }
+
+        @Override
+        public void release() {
+            released++;
+            sem.release();
+        }
+
+        @Override
+        public int availablePermits() {
+            return sem.availablePermits();
+        }
+
+        @Override
+        public int maxPermits() {
+            return max;
+        }
     }
 
     // ------- capturing executor -------
     static final class CapturingExec
             extends DefaultPerKeyAsyncExecutor<Envelope<Object, String>, Envelope<Object, String>> {
         final List<Envelope<Object, String>> ordered = new ArrayList<>();
+
         CapturingExec(int K,
                       Executor exec,
                       Function<Envelope<Object, String>, CompletionStage<Envelope<Object, String>>> fn,
@@ -54,7 +79,11 @@ public class DefaultPerKeyAsyncExecutorEnvelopeFailureTest {
                       PermitManager pm) {
             super(K, exec, fn, failure, pm, SEQ, SEQ);
         }
-        @Override protected void handleOrdered(Envelope<Object, String> out) { ordered.add(out); }
+
+        @Override
+        protected void handleOrdered(Envelope<Object, String> out) {
+            ordered.add(out);
+        }
     }
 
     @Test

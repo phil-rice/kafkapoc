@@ -5,7 +5,6 @@ import com.hcltech.rmg.cepstate.CepStateTypeClass;
 import com.hcltech.rmg.common.errorsor.Value;
 import com.hcltech.rmg.config.configs.Configs;
 import com.hcltech.rmg.config.config.BehaviorConfig;
-import com.hcltech.rmg.execution.aspects.AspectExecutor;
 import com.hcltech.rmg.parameters.ParameterExtractor;
 import com.hcltech.rmg.parameters.Parameters;
 import org.junit.jupiter.api.Test;
@@ -13,6 +12,7 @@ import org.mockito.MockedStatic;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.function.Function;
 
 import static org.junit.jupiter.api.Assertions.*;
@@ -25,7 +25,7 @@ import static org.mockito.Mockito.*;
  *  - We keep generics simple (CepState = String, Msg = String) for readability.
  *  - External collaborators are mocked.
  */
-class EnvelopeTests {
+class EnvelopeTest {
 
     @Test
     void valueEnvelope_withData_returnsNewInstanceWithUpdatedData() {
@@ -38,6 +38,8 @@ class EnvelopeTests {
         assertEquals("new", ve2.data());
         assertSame(header, ve2.header()); // unchanged
         assertEquals("S0", ve2.cepState()); // unchanged
+        // cargo unchanged
+        assertSame(header.cargo(), ve2.header().cargo());
     }
 
     @Test
@@ -88,6 +90,9 @@ class EnvelopeTests {
         assertEquals("S1", ve2.cepState());
         assertEquals(1, ve2.cepStateModifications().size());
         assertSame(event, ve2.cepStateModifications().get(0));
+        // cargo carried through (header instance is the same)
+        assertSame(ve.header(), ve2.header());
+        assertSame(ve.header().cargo(), ve2.header().cargo());
     }
 
     @Test
@@ -117,7 +122,8 @@ class EnvelopeTests {
                 "EVENT_TYPE",
                 mock(RawMessage.class),
                 parameters,
-                mock(BehaviorConfig.class)
+                mock(BehaviorConfig.class),
+                Map.of("foo", 42)
         );
 
         var ve = new ValueEnvelope<String, String>(header, "data", "S", new ArrayList<>());
@@ -135,16 +141,18 @@ class EnvelopeTests {
     }
 
     @Test
-    void header_withMessage_setsEventTypeAndParameters() {
+    void header_withMessage_setsEventTypeParameters_and_resetsCargoToEmpty() {
         var raw = mock(RawMessage.class);
         when(raw.domainId()).thenReturn("dom-1");
 
+        // Start with some cargo to verify it is reset by withMessage(...)
         var original = new EnvelopeHeader<String>(
                 "customer",
                 null,         // eventType initially unknown
                 raw,
                 null,         // parameters initially unknown
-                null
+                null,         // config initially unknown
+                Map.of("testTag", "keep-alive")
         );
 
         @SuppressWarnings("unchecked")
@@ -166,6 +174,32 @@ class EnvelopeTests {
         assertSame(params, updated.parameters());
         // config preserved
         assertNull(updated.config());
+        // cargo is explicitly reset to empty by withMessage(...)
+        assertNotNull(updated.cargo());
+        assertTrue(updated.cargo().isEmpty(), "withMessage should reset cargo to an empty map");
+    }
+
+    @Test
+    void cargo_is_available_on_header_and_survives_valueEnvelope_lifecycle() {
+        Map<String,Object> cargo = Map.of("expecter", "E-123", "trace", 99);
+        var header = new EnvelopeHeader<String>(
+                "domainA",
+                "evtA",
+                mock(RawMessage.class),
+                mock(Parameters.class),
+                mock(BehaviorConfig.class),
+                cargo
+        );
+
+        var ve = new ValueEnvelope<String, String>(header, "data", "S0", new ArrayList<>());
+        assertSame(cargo, ve.header().cargo());
+        assertEquals("E-123", ve.header().cargo().get("expecter"));
+        assertEquals(99, ve.header().cargo().get("trace"));
+
+        // withData creates a new ValueEnvelope but preserves the header reference
+        var ve2 = ve.withData("new-data");
+        assertSame(ve.header(), ve2.header());
+        assertSame(cargo, ve2.header().cargo());
     }
 
     @Test
@@ -202,7 +236,8 @@ class EnvelopeTests {
                 event,
                 mock(RawMessage.class),
                 params,
-                mock(BehaviorConfig.class)
+                mock(BehaviorConfig.class),
+                Map.of("seed", 1)
         );
     }
 }
