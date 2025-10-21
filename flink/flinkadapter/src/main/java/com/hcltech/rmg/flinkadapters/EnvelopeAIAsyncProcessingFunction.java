@@ -15,12 +15,9 @@ import com.hcltech.rmg.messages.ValueEnvelope;
 import com.hcltech.rmg.metrics.EnvelopeMetrics;
 import com.hcltech.rmg.metrics.EnvelopeMetricsTC;
 import org.apache.flink.api.common.functions.RuntimeContext;
-import org.apache.flink.streaming.api.functions.KeyedProcessFunction;
 import org.apache.flink.streaming.api.operators.Output;
 import org.apache.flink.streaming.runtime.streamrecord.StreamRecord;
-import org.apache.flink.util.Collector;
 
-import java.util.List;
 import java.util.Objects;
 import java.util.function.BiConsumer;
 
@@ -33,7 +30,7 @@ import java.util.function.BiConsumer;
  * In  : Envelope<CepState, Msg>
  * Out : Envelope<CepState, Msg>
  */
-public class EnvelopeAsyncProcessingFunction<ESC, CepState, Msg, Schema>
+public class EnvelopeAIAsyncProcessingFunction<ESC, CepState, Msg, Schema>
         extends AbstractEnvelopeAsyncProcessingFunction<ESC, CepState, Msg, Schema, RuntimeContext, FlinkMetricsParams> {
 
     private final String module;
@@ -47,7 +44,7 @@ public class EnvelopeAsyncProcessingFunction<ESC, CepState, Msg, Schema>
     private CepEventLog cepEventLog;
     private BiConsumer<Envelope<CepState, Msg>, Envelope<CepState, Msg>> setKey;
 
-    public EnvelopeAsyncProcessingFunction(AppContainerDefn appContainerDefn, String module) {
+    public EnvelopeAIAsyncProcessingFunction(AppContainerDefn appContainerDefn, String module) {
         super(appContainerDefn);
         this.module = module;
     }

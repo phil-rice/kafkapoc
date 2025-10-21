@@ -14,14 +14,14 @@ import java.util.function.BiConsumer;
  * FutureRecordTypeClass that completes a Flink ResultFuture with a single result.
  * Hooks (onComplete/onFailed/onTimedOut) run on the operator thread before completing.
  */
-public final class FlinkResultFutureAdapter<In, Out>
+public final class FlinkResultFutureTypeClass<In, Out>
         implements FutureRecordTypeClass<ResultFuture<Out>, In, Out>, Serializable {
 
     private static final long serialVersionUID = 1L;
 
     private final FailureAdapter<In, Out> failureAdapter;
 
-    public FlinkResultFutureAdapter(FailureAdapter<In, Out> failureAdapter) {
+    public FlinkResultFutureTypeClass(FailureAdapter<In, Out> failureAdapter) {
         this.failureAdapter = Objects.requireNonNull(failureAdapter, "failureAdapter");
     }
 

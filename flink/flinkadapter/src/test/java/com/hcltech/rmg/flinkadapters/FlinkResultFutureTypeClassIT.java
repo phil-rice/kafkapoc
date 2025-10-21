@@ -2,13 +2,7 @@ package com.hcltech.rmg.flinkadapters;
 
 import com.hcltech.rmg.common.async.FailureAdapter;
 import com.hcltech.rmg.common.async.FutureRecordTypeClass;
-import com.hcltech.rmg.messages.Envelope;
-import com.hcltech.rmg.messages.EnvelopeFailureAdapter;
-import com.hcltech.rmg.messages.EnvelopeHeader;
-import com.hcltech.rmg.messages.ErrorEnvelope;
-import com.hcltech.rmg.messages.RawMessage;
-import com.hcltech.rmg.messages.RetryEnvelope;
-import com.hcltech.rmg.messages.ValueEnvelope;
+import com.hcltech.rmg.messages.*;
 import org.apache.flink.streaming.api.datastream.AsyncDataStream;
 import org.apache.flink.streaming.api.datastream.DataStream;
 import org.apache.flink.streaming.api.environment.StreamExecutionEnvironment;
@@ -24,14 +18,12 @@ import java.util.concurrent.TimeUnit;
 
 import static org.junit.jupiter.api.Assertions.*;
 
-public class FlinkResultFutureAdapterIT {
+public class FlinkResultFutureTypeClassIT {
 
     // --------- tiny static collecting sink (Flink 2.0 friendly) ----------
     static final class CollectSink<T> implements SinkFunction<T> {
         static final List<Object> VALUES = new ArrayList<>();
-        @Override public synchronized void invoke(T value, Context ctx) {
-            VALUES.add(value);
-        }
+        @Override public synchronized void invoke(T value, Context ctx) { VALUES.add(value); }
         static synchronized <X> List<X> drain() {
             @SuppressWarnings("unchecked")
             List<X> copy = new ArrayList<>((List<X>)(List<?>)VALUES);
@@ -67,20 +59,25 @@ public class FlinkResultFutureAdapterIT {
                 Envelope<Object, String>, Envelope<Object, String>> frAdapter;
 
         AdapterDrivenAsyncFn(FailureAdapter<Envelope<Object, String>, Envelope<Object, String>> failure) {
-            this.frAdapter = new FlinkResultFutureAdapter<>(failure);
+            this.frAdapter = new FlinkResultFutureTypeClass<>(failure);
         }
 
         @Override
         public void asyncInvoke(Envelope<Object, String> input, ResultFuture<Envelope<Object, String>> rf) {
             String d = input.valueEnvelope().data();
+
+            // We don’t need a hook here, so pass null.
             if (d.startsWith("ok:")) {
-                frAdapter.completed(rf, input);
+                // success: pass-through the same envelope as Out
+                frAdapter.completed(rf, /* onComplete */ null, /* In */ input, /* Out */ input);
             } else if (d.startsWith("fail:")) {
-                frAdapter.failed(rf, input, new IllegalStateException("boom"));
+                // failure: adapter will map ErrorEnvelope
+                frAdapter.failed(rf, /* onFailed */ null, /* In */ input, new IllegalStateException("boom"));
             } else if (d.startsWith("timeout:")) {
-                frAdapter.timedOut(rf, input, TimeUnit.MILLISECONDS.toNanos(7));
+                // timeout: adapter will map RetryEnvelope
+                frAdapter.timedOut(rf, /* onTimedOut */ null, /* In */ input, TimeUnit.MILLISECONDS.toNanos(7));
             } else {
-                frAdapter.completed(rf, input);
+                frAdapter.completed(rf, null, input, input);
             }
         }
     }
