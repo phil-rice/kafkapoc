@@ -13,16 +13,16 @@ import org.apache.kafka.clients.consumer.ConsumerRecord;
 
 import java.nio.charset.StandardCharsets;
 
-public final class RawMessageDeserialiser<ESC, CepState, Msg, Schema,RT, MetricsParam> implements KafkaRecordDeserializationSchema<RawMessage> {
+public final class RawMessageDeserialiser<ESC, CepState, Msg, Schema,RT,FR, MetricsParam> implements KafkaRecordDeserializationSchema<RawMessage> {
 
     // --- serialized ---
-    private AppContainerDefn<ESC, CepState, Msg, Schema, RT,MetricsParam> appContainerDefn;
+    private AppContainerDefn<ESC, CepState, Msg, Schema, RT,FR,MetricsParam> appContainerDefn;
 
     // --- resolved in open() (not serialized) ---
     private transient ITimeService timeService;
     private transient IUuidGenerator uuid;
 
-    public RawMessageDeserialiser(AppContainerDefn<ESC, CepState, Msg, Schema,RT, MetricsParam> appContainerDefn) {
+    public RawMessageDeserialiser(AppContainerDefn<ESC, CepState, Msg, Schema,RT, FR,MetricsParam> appContainerDefn) {
         this.appContainerDefn = appContainerDefn;
     }
 

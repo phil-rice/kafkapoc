@@ -1,110 +1,88 @@
 package com.hcltech.rmg.common.async;
 
-import com.hcltech.rmg.common.function.TriConsumer;
-
 import java.util.Objects;
 import java.util.concurrent.Executor;
 
-/**
- * Order-preserving async executor (single operator thread API).
- * Zero-GC hot path: per-lane FR storage, reusable ring handler, reusable completion,
- * and preconstructed success/failure handlers.
- */
 public final class OrderPreservingAsyncExecutor<In, Out, FR>
         implements IOrderPreservingAsyncExecutor<In, Out, FR>,
         IOrderPreservingAsyncExecutorForTests<In, Out, FR> {
 
     private final OrderPreservingAsyncExecutorConfig<In, Out, FR> cfg;
-    private final ILanes<FR, In> lanes;
+    private final ILanes<In> lanes;
     private final PermitManager permits;
-    private final IMpscRing<In, Out> ring;
+    private final IMpscRing<FR, In, Out> ring;
     private final Executor executor;
-    private final UserFnPort<In, Out> userFn;
+    private final FutureRecordTypeClass<FR, In, Out> frTypeClass; // (kept if you use it elsewhere)
+    private final UserFnPort<In, Out, FR> userFn;
 
-    private final boolean[] running; // one flag per lane
-    private final CircularBufferWithCallback<Out> outBuffer;
-    private long emitSeq = 0L;
+    private final boolean[] running;
     private final long timeoutNanos;
     private volatile boolean finished = false;
 
-    // single reusable ring handler
-    private final IMpscRing.Handler<In, Out> ringHandler = new IMpscRing.Handler<>() {
+    // lane geometry
+    private final int laneCount, laneMask, laneDepth, depthMask;
+
+    // Per-lane FR shadow rings (arrays) — no allocations at runtime
+    private final Object[][] frRings; // [laneIdx][slot] holds FR
+    private final int[] frHeadIdx, frTailIdx, frCount;
+
+    // Ring handler: FR arrives from ring
+    private final IMpscRing.Handler<FR, In, Out> ringHandler = new IMpscRing.Handler<>() {
         @Override
-        public void onSuccess(In in, long corrId, Out out) {
-            handleCompletion(in, corrId, out, null);
+        public void onSuccess(FR fr, In in, String corrId, Out out) {
+            handleCompletion(fr, in, corrId, out, null);
         }
 
         @Override
-        public void onFailure(In in, long corrId, Throwable error) {
-            handleCompletion(in, corrId, null, error);
-        }
-    };
-
-    // reusable completion adapter
-    private final UserFnPort.Completion<In, Out> completion = new UserFnPort.Completion<>() {
-        @Override
-        public void success(In in, long corrId, Out out) {
-            ring.offerSuccess(in, corrId, out);
-        }
-
-        @Override
-        public void failure(In in, long corrId, Throwable err) {
-            ring.offerFailure(in, corrId, err);
+        public void onFailure(FR fr, In in, String corrId, Throwable error) {
+            handleCompletion(fr, in, corrId, null, error);
         }
     };
 
-    // prebuilt lane pop handlers (initialised in constructor)
-    private final TriConsumer<FR, In, Out> onSuccess;
-    private final TriConsumer<FR, In, Throwable> onFailure;
 
     public OrderPreservingAsyncExecutor(
             OrderPreservingAsyncExecutorConfig<In, Out, FR> cfg,
-            ILanes<FR, In> lanes,
+            ILanes<In> lanes,
             PermitManager permits,
-            IMpscRing<In, Out> ring,
+            IMpscRing<FR, In, Out> ring,
             Executor executor,
+            FutureRecordTypeClass<FR, In, Out> frTypeClass,
             int laneCount,
-            UserFnPort<In, Out> userFn
+            UserFnPort<In, Out, FR> userFn
     ) {
         this.cfg = Objects.requireNonNull(cfg);
         this.lanes = Objects.requireNonNull(lanes);
         this.permits = Objects.requireNonNull(permits);
         this.ring = Objects.requireNonNull(ring);
         this.executor = Objects.requireNonNull(executor);
+        this.frTypeClass = frTypeClass;
         this.userFn = Objects.requireNonNull(userFn);
-        if (laneCount <= 0) throw new IllegalArgumentException("laneCount must be > 0");
+
+        if (laneCount <= 0 || (laneCount & (laneCount - 1)) != 0)
+            throw new IllegalArgumentException("laneCount must be power of two > 0");
+        if (cfg.laneDepth() <= 0 || (cfg.laneDepth() & (cfg.laneDepth() - 1)) != 0)
+            throw new IllegalArgumentException("laneDepth must be power of two > 0");
+
+        this.laneCount = laneCount;
+        this.laneMask = laneCount - 1;
+        this.laneDepth = cfg.laneDepth();
+        this.depthMask = laneDepth - 1;
+
         this.running = new boolean[laneCount];
         this.timeoutNanos = cfg.timeoutMillis() <= 0 ? 0L : cfg.timeoutMillis() * 1_000_000L;
 
-        this.outBuffer = new CircularBufferWithCallback<>(
-                Math.min(Math.max(cfg.maxInFlight(), 8), 1 << 16),
-                o -> {
-                },
-                (v, t) -> {
-                }
-        );
-
-        // now we can safely capture cfg / outBuffer
-        this.onSuccess = (fr, in, out) -> {
-            if (fr != null) {
-                cfg.futureRecord().completed(fr, out);
-                outBuffer.put(emitSeq++, out);
-            }
-        };
-        this.onFailure = (fr, in, err) -> {
-            if (fr != null) cfg.futureRecord().failed(fr, in, err);
-        };
+        // init FR rings
+        this.frRings = new Object[laneCount][laneDepth];
+        this.frHeadIdx = new int[laneCount];
+        this.frTailIdx = new int[laneCount];
+        this.frCount = new int[laneCount];
     }
 
-    // =====================================================================
-    // public API
-    // =====================================================================
-
     @Override
-    public void add(In input, FR futureRecord) {
+    public void add(In input, FR fr) {
         while (!finished) {
-            drain();
-            if (internalTryAndAdd(input, futureRecord)) return;
+            drain(fr); // FR carried per event; param here is just for API symmetry
+            if (internalTryAndAdd(input, fr)) return;
         }
     }
 
@@ -114,87 +92,80 @@ public final class OrderPreservingAsyncExecutor<In, Out, FR>
     }
 
     @Override
-    public void drain() {
+    public void drain(FR fr) {
         if (!finished) ring.drain(ringHandler);
     }
 
-    @Override
-    public ILanes<FR, In> lanes() {
-        return lanes;
-    }
-
-    @Override
-    public Executor executor() {
-        return executor;
-    }
-
-    @Override
-    public CircularBufferWithCallback<Out> outBuffer() {
-        return outBuffer;
-    }
-
-    // =====================================================================
-    // core logic
-    // =====================================================================
-
     private boolean internalTryAndAdd(In in, FR fr) {
-        final ILane<FR, In> lane = lanes.lane(Objects.requireNonNull(in));
+        final ILane<In> lane = lanes.lane(Objects.requireNonNull(in));
+        final int idx = indexFrom(in);
+
         if (lane.isFull()) {
-            if (!maybeTimeoutHead(lane, indexFrom(in))) return false;
+            if (!maybeTimeoutHead(idx, lane)) return false;
         }
 
         final long now = cfg.timeService().currentTimeNanos();
-        final long corrId = cfg.correlator().correlationId(in);
-        lane.enqueue(in, fr, corrId, now);
+        final String corrId = cfg.correlator().correlationId(in);
 
-        final int idx = indexFrom(in);
+        lane.enqueue(in, corrId, now);
+        frOffer(idx, fr); // mirror FR for this enqueued item
+
         if (!running[idx] && permits.tryAcquire()) {
             running[idx] = true;
-            submitHead(lane);
+            submitHead(idx, lane); // uses frPeek(idx) — no capture
         }
         return true;
     }
 
-    private boolean maybeTimeoutHead(ILane<FR, In> lane, int laneIdx) {
+    private boolean maybeTimeoutHead(int laneIdx, ILane<In> lane) {
         if (timeoutNanos <= 0) return false;
+
         final long now = cfg.timeService().currentTimeNanos();
-        if ((now - lane.headStartedAtNanos()) < timeoutNanos) return false;
+        final long headStarted = lane.headStartedAtNanos();
+        if ((now - headStarted) < timeoutNanos) return false;
 
         final In headIn = lane.headT();
-        final long elapsed = now - lane.headStartedAtNanos();
+        final long elapsed = now - headStarted;
 
-        lane.popHead((frHead, ignoredT) -> {
-            if (frHead != null) {
-                cfg.futureRecord().timedOut(frHead, headIn, elapsed);
-                Out mapped = cfg.failureAdapter().onTimeout(headIn, elapsed);
-                outBuffer.put(emitSeq++, mapped);
-            }
-        });
+        @SuppressWarnings("unchecked")
+        FR headFr = (FR) frPoll(laneIdx); // pop matching FR
+        lane.popHead(ignored -> cfg.futureRecord().timedOut(headFr, headIn, elapsed));
 
-        if (!lane.isEmpty()) submitHead(lane);
+        if (!lane.isEmpty()) submitHead(laneIdx, lane);
         else markIdleAndRelease(laneIdx);
+
         return true;
     }
 
-    private void handleCompletion(In in, long corrId, Out out, Throwable error) {
+    private void handleCompletion(FR fr, In in, String corrId, Out out, Throwable error) {
         if (finished) return;
-        final ILane<FR, In> lane = lanes.lane(in);
-        if (lane.isEmpty() || lane.headT() != in || lane.headCorrId() != corrId) return; // stale
 
-        if (error == null) lane.popHead(out, onSuccess);
-        else lane.popHead(error, onFailure);
+        final ILane<In> lane = lanes.lane(in);
+        final int idx = indexFrom(in);
 
-        if (!lane.isEmpty()) submitHead(lane);
-        else markIdleAndRelease(indexFrom(in));
+        if (lane.isEmpty() || lane.headT() != in || !lane.headCorrId().equals(corrId)) return; // stale
+
+        // advance lane & FR head in lockstep
+        frPoll(idx);
+        lane.popHead(ignored -> {
+        });
+
+        if (error == null) cfg.futureRecord().completed(fr, out);
+        else cfg.futureRecord().failed(fr, in, error);
+
+        if (!lane.isEmpty()) submitHead(idx, lane);
+        else markIdleAndRelease(idx);
     }
 
-    private void submitHead(ILane<FR, In> lane) {
+    private void submitHead(int laneIdx, ILane<In> lane) {
         final In headIn = lane.headT();
-        final long headCorr = lane.headCorrId();
+        final String corrId = lane.headCorrId();
+
+        @SuppressWarnings("unchecked") final FR headFr = (FR) frPeek(laneIdx); // no capture; pass explicitly
         try {
-            userFn.submit(headIn, headCorr, completion);
+            userFn.submit(frTypeClass, headFr, headIn, corrId);
         } catch (Throwable submitError) {
-            ring.offerFailure(headIn, headCorr, submitError);
+            ring.offerFailure(headFr, headIn, corrId, submitError);
         }
     }
 
@@ -206,19 +177,46 @@ public final class OrderPreservingAsyncExecutor<In, Out, FR>
     }
 
     private int indexFrom(In in) {
-        return cfg.correlator().laneHash(in) & (running.length - 1);
+        return cfg.correlator().laneHash(in) & laneMask;
+    }
+
+    // ---- FR ring helpers (array-based, zero-GC) ----
+    private Object frPeek(int laneIdx) {
+        return frCount[laneIdx] == 0 ? null : frRings[laneIdx][frHeadIdx[laneIdx]];
+    }
+
+    private void frOffer(int laneIdx, Object fr) {
+        if (frCount[laneIdx] == laneDepth) throw new IllegalStateException("FR ring full");
+        frRings[laneIdx][frTailIdx[laneIdx]] = fr;
+        frTailIdx[laneIdx] = (frTailIdx[laneIdx] + 1) & depthMask;
+        frCount[laneIdx]++;
+    }
+
+    private Object frPoll(int laneIdx) {
+        if (frCount[laneIdx] == 0) return null;
+        int h = frHeadIdx[laneIdx];
+        Object fr = frRings[laneIdx][h];
+        frRings[laneIdx][h] = null;
+        frHeadIdx[laneIdx] = (h + 1) & depthMask;
+        frCount[laneIdx]--;
+        return fr;
     }
 
     // ---------------------------------------------------------------------
-    // Async user function port
+    // Async user function port — FR is explicit (no capture)
     // ---------------------------------------------------------------------
-    public interface UserFnPort<I, O> {
-        void submit(I in, long corrId, Completion<I, O> completion);
+    public interface UserFnPort<I, O, FR> {
+        void submit(FutureRecordTypeClass<FR, I, O> tc, FR fr, I in, String corrId);
 
-        interface Completion<I, O> {
-            void success(I in, long corrId, O out);
+    }
 
-            void failure(I in, long corrId, Throwable err);
-        }
+    @Override
+    public ILanes<In> lanes() {
+        return lanes;
+    }
+
+    @Override
+    public Executor executor() {
+        return executor;
     }
 }

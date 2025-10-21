@@ -6,6 +6,6 @@ package com.hcltech.rmg.common.async;
  * - laneHash must be a stable hash for routing; it need not equal correlationId.
  */
 public interface Correlator<Env> {
-    long correlationId(Env env);
+    String correlationId(Env env);
     int  laneHash(Env env); // laneIndex = laneHash(env) & (lanes - 1)
 }

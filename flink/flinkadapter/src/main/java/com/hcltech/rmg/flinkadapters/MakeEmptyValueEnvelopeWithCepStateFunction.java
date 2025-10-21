@@ -20,13 +20,13 @@ import java.util.function.Supplier;
  * <p>
  * All error paths are wrapped as ErrorEnvelope by the factory (via recover()).
  */
-public class MakeEmptyValueEnvelopeWithCepStateFunction<MSC, CepState, Msg, Schema, MetricParam> extends RichMapFunction<RawMessage, Envelope<CepState, Msg>> {
+public class MakeEmptyValueEnvelopeWithCepStateFunction<MSC, CepState, Msg, Schema, FR,MetricParam> extends RichMapFunction<RawMessage, Envelope<CepState, Msg>> {
 
-    private final AppContainerDefn<MSC, CepState, Msg, Schema, RuntimeContext, MetricParam> appContainerDefn;
+    private final AppContainerDefn<MSC, CepState, Msg, Schema, RuntimeContext, FR,MetricParam> appContainerDefn;
     private CepEventLog cepEventLog;
     private CepStateTypeClass<CepState> cepStateTypeClass;
 
-    public MakeEmptyValueEnvelopeWithCepStateFunction(AppContainerDefn<MSC, CepState, Msg, Schema, RuntimeContext, MetricParam> appContainerDefn) {
+    public MakeEmptyValueEnvelopeWithCepStateFunction(AppContainerDefn<MSC, CepState, Msg, Schema, RuntimeContext,FR, MetricParam> appContainerDefn) {
         this.appContainerDefn = appContainerDefn;
     }
 

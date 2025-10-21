@@ -16,42 +16,49 @@ import com.hcltech.rmg.messages.RawMessage;
 import com.hcltech.rmg.messages.ValueEnvelope;
 import com.hcltech.rmg.shared_worker.EnvelopeRouting;
 import com.hcltech.rmg.shared_worker.KafkaFlinkHelper;
+import dev.cel.checker.Env;
 import org.apache.flink.api.common.functions.RuntimeContext;
 import org.apache.flink.configuration.Configuration;
 import org.apache.flink.streaming.api.datastream.DataStream;
+import org.apache.flink.streaming.api.datastream.KeyedStream;
 import org.apache.flink.streaming.api.datastream.SingleOutputStreamOperator;
 import org.apache.flink.streaming.api.environment.StreamExecutionEnvironment;
+import org.apache.flink.streaming.api.functions.KeyedProcessFunction;
 import org.apache.flink.streaming.api.functions.async.RichAsyncFunction;
+import org.apache.flink.util.Collector;
 
 import java.util.Map;
 
 public final class PerfHarnessMain {
-
 
     /**
      * Build the pipeline using the provided environment (no internal getExecutionEnvironment).
      */
     public static <CepState, Msg, Schema> ValueErrorRetryStreams<CepState, Msg> buildPipeline(
             StreamExecutionEnvironment env,
-            AppContainerDefn<KafkaConfig, CepState, Msg, Schema, RuntimeContext, FlinkMetricsParams> appContainerDefn,
+            AppContainerDefn<KafkaConfig, CepState, Msg, Schema, RuntimeContext, Collector<Envelope<CepState, Msg>>, FlinkMetricsParams> appContainerDefn,
             RichAsyncFunction<Envelope<CepState, Msg>, Envelope<CepState, Msg>> func,
             int lanes, long asyncTimeoutMillis) {
-        AppContainer<KafkaConfig, CepState, Msg, Schema, RuntimeContext, FlinkMetricsParams> app = IAppContainerFactory.resolve(appContainerDefn).valueOrThrow();
+        AppContainer<KafkaConfig, CepState, Msg, Schema, RuntimeContext, Collector<Envelope<CepState, Msg>>, FlinkMetricsParams> app = IAppContainerFactory.resolve(appContainerDefn).valueOrThrow();
         KafkaConfig kafka = app.eventSourceConfig();
 
         var raw = KafkaFlinkHelper.createRawMessageStreamFromKafka(appContainerDefn, env, kafka, app.checkPointIntervalMillis());
-        DataStream<RawMessage> keyedStream = raw.keyBy(RawMessage::domainId);
-        var withCepState = keyedStream.map(new MakeEmptyValueEnvelopeWithCepStateFunction<>(appContainerDefn));
-        var processedStream = KafkaHelpers.liftFunctionToOrderedAsync(withCepState, "main-async", func, kafka.sourceParallelism(), lanes, asyncTimeoutMillis);
+        KeyedStream<RawMessage, String> keyedStream = raw.keyBy(RawMessage::domainId);
+        DataStream<Envelope<CepState, Msg>> withCepState = keyedStream.map(new MakeEmptyValueEnvelope<>(appContainerDefn));
+
+        //just in for now to get compiling. Not used
+        KeyedProcessFunction<String, Envelope<CepState, Msg>, Envelope<CepState, Msg>> fn = new EnvelopeAsyncProcessingFunction<>(appContainerDefn, "notification");
+        var processedStream = withCepState.keyBy(Envelope::domainId).process(fn);
+
+//        var processedStream = KafkaHelpers.liftFunctionToOrderedAsync(withCepState, "main-async", func, kafka.sourceParallelism(), lanes, asyncTimeoutMillis)
 //                .keyBy(Envelope::domainId);
 
-        var withUpdatedCepState = processedStream.map(new UpdateCepStateAtEndFunction<>(appContainerDefn));
+//        var withUpdatedCepState = processedStream.map(new UpdateCepStateAtEndFunction<>(appContainerDefn));
 
-        SingleOutputStreamOperator<ValueEnvelope<CepState, Msg>> values = withUpdatedCepState.process(new SplitEnvelopes<>()).name("splitter");
+        SingleOutputStreamOperator<ValueEnvelope<CepState, Msg>> values = processedStream.process(new SplitEnvelopes<>()).name("splitter");
 
         return ValueErrorRetryStreams.from(env, values);
     }
-
 
     public static void main(String[] args) throws Exception {
         Configuration conf = FlinkHelper.makeDefaultFlinkConfig();

@@ -7,16 +7,16 @@ import java.util.Objects;
  * Uses a Correlator to route items: index = correlator.laneHash(t) & (laneCount - 1).
  * Single-threaded usage only (operator thread).
  */
-public final class Lanes<FR, T> implements ILanes<FR, T>, ILanesTestHooks<FR, T> {
+public final class Lanes< T> implements ILanes< T>, ILanesTestHooks< T> {
 
     private final Correlator<T> correlator;
-    private final ILane<FR, T>[] lanes;
+    private final ILane< T>[] lanes;
     private final int laneCount;
     private final int laneMask;
     private final int laneDepth;
 
     @SuppressWarnings("unchecked")
-    Lanes(int laneCount, int laneDepth, Correlator<T> correlator) {
+    public Lanes(int laneCount, int laneDepth, Correlator<T> correlator) {
         if (laneCount <= 0) throw new IllegalArgumentException("laneCount must be > 0");
         if (laneDepth <= 0) throw new IllegalArgumentException("laneDepth must be > 0");
         if (Integer.bitCount(laneCount) != 1) throw new IllegalArgumentException("laneCount must be a power of two");
@@ -27,7 +27,7 @@ public final class Lanes<FR, T> implements ILanes<FR, T>, ILanesTestHooks<FR, T>
         this.laneMask = laneCount - 1;
         this.laneDepth = laneDepth;
 
-        ILane<FR, T>[] arr = (ILane<FR, T>[]) new ILane[laneCount];
+        ILane< T>[] arr = (ILane< T>[]) new ILane[laneCount];
         for (int i = 0; i < laneCount; i++) {
             arr[i] = new Lane<>(laneDepth);
         }
@@ -37,7 +37,7 @@ public final class Lanes<FR, T> implements ILanes<FR, T>, ILanesTestHooks<FR, T>
     // ------------ ILanes (prod) ------------
 
     @Override
-    public ILane<FR, T> lane(T t) {
+    public ILane< T> lane(T t) {
         int idx = correlator.laneHash(t) & laneMask;
         return lanes[idx];
     }
@@ -45,7 +45,7 @@ public final class Lanes<FR, T> implements ILanes<FR, T>, ILanesTestHooks<FR, T>
     // ------------ ILanesTestHooks (tests) ------------
 
     @Override
-    public ILane<FR, T> _laneAt(int index) {
+    public ILane< T> _laneAt(int index) {
         return lanes[index];
     }
 

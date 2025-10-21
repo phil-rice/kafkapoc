@@ -9,7 +9,7 @@ final class OrderPreservingAsyncExecutorConfigTest {
 
     // Minimal stubs for required ports
     static final class StubCorrelator implements Correlator<String> {
-        @Override public long correlationId(String env) { return 1L; }
+        @Override public String correlationId(String env) { return 1L; }
         @Override public int laneHash(String env) { return 0; }
     }
     static final class StubFailure implements FailureAdapter<String, String> {
@@ -27,7 +27,7 @@ final class OrderPreservingAsyncExecutorConfigTest {
             int cycles, long timeoutMillis
     ) {
         return new OrderPreservingAsyncExecutorConfig<>(
-                laneCount, laneDepth, maxInFlight, threads, cycles, timeoutMillis,
+                laneCount, laneDepth, maxInFlight, threads, timeoutMillis,
                 new StubCorrelator(), new StubFailure(), new StubFR(), ITimeService.real
         );
     }
@@ -85,28 +85,28 @@ final class OrderPreservingAsyncExecutorConfigTest {
         // correlator
         assertThrows(NullPointerException.class, () ->
                 new OrderPreservingAsyncExecutorConfig<>(
-                        8, 8, 4, 2, 2, 100,
+                        8, 8, 4, 2, 100,
                         null, new StubFailure(), new StubFR(), ITimeService.real
                 )
         );
         // failure
         assertThrows(NullPointerException.class, () ->
                 new OrderPreservingAsyncExecutorConfig<>(
-                        8, 8, 4, 2, 2, 100,
+                        8, 8, 4, 2, 100,
                         new StubCorrelator(), null, new StubFR(), ITimeService.real
                 )
         );
         // future record
         assertThrows(NullPointerException.class, () ->
                 new OrderPreservingAsyncExecutorConfig<>(
-                        8, 8, 4, 2, 2, 100,
+                        8, 8, 4, 2, 100,
                         new StubCorrelator(), new StubFailure(), null, ITimeService.real
                 )
         );
         // time service
         assertThrows(NullPointerException.class, () ->
                 new OrderPreservingAsyncExecutorConfig<>(
-                        8, 8, 4, 2, 2, 100,
+                        8, 8, 4, 2, 100,
                         new StubCorrelator(), new StubFailure(), new StubFR(), null
                 )
         );

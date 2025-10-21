@@ -18,11 +18,11 @@ final class LanesTest {
     }
 
     static final class StubCorrelator implements Correlator<Env> {
-        @Override public long correlationId(Env env) { return env.id.hashCode() ^ (env.hash * 31L); }
+        @Override public String correlationId(Env env) { return env.id.hashCode() ^ (env.hash * 31L); }
         @Override public int  laneHash(Env env)      { return env.hash; }
     }
 
-    private static Lanes<String, Env> mk(int laneCount, int laneDepth) {
+    private static Lanes<Env> mk(int laneCount, int laneDepth) {
         return new Lanes<>(laneCount, laneDepth, new StubCorrelator());
     }
 
@@ -39,16 +39,16 @@ final class LanesTest {
 
     @Test
     void constructor_rejects_null_correlator() {
-        assertThrows(NullPointerException.class, () -> new Lanes<String, Env>(8, 4, null));
+        assertThrows(NullPointerException.class, () -> new Lanes<Env>(8, 4, null));
     }
 
     // ---- Routing basics ------------------------------------------------------
 
     @Test
     void routing_uses_hash_and_mask_correctly() {
-        Lanes<String, Env> lanes = mk(8, 4);
-        ILanes<String, Env> api = lanes;
-        ILanesTestHooks<String, Env> hooks = lanes;
+        Lanes<Env> lanes = mk(8, 4);
+        ILanes<Env> api = lanes;
+        ILanesTestHooks<Env> hooks = lanes;
 
         assertEquals(8, hooks._laneCount());
         assertEquals(7, hooks._laneMask());
@@ -66,12 +66,12 @@ final class LanesTest {
 
     @Test
     void stability_same_env_routes_to_same_lane() {
-        Lanes<String, Env> lanes = mk(8, 4);
-        ILanes<String, Env> api = lanes;
-        ILanesTestHooks<String, Env> hooks = lanes;
+        Lanes<Env> lanes = mk(8, 4);
+        ILanes<Env> api = lanes;
+        ILanesTestHooks<Env> hooks = lanes;
 
         Env e = new Env("steady", 0xCAFEBABE);
-        ILane<String, Env> first = api.lane(e);
+        ILane<Env> first = api.lane(e);
         for (int i = 0; i < 10; i++) {
             assertSame(first, api.lane(e));
         }
@@ -83,12 +83,12 @@ final class LanesTest {
 
     @Test
     void routed_enqueue_goes_into_exactly_one_lane() {
-        Lanes<String, Env> lanes = mk(8, 8);
-        ILanes<String, Env> api = lanes;
-        ILanesTestHooks<String, Env> hooks = lanes;
+        Lanes<Env> lanes = mk(8, 8);
+        ILanes<Env> api = lanes;
+        ILanesTestHooks<Env> hooks = lanes;
 
         Env e1 = new Env("e1", 0x1234);
-        api.lane(e1).enqueue(e1, "FR", 111L, 1_000L);
+        api.lane(e1).enqueue(e1, 111L, 1_000L);
 
         int seen = 0;
         for (int i = 0; i < hooks._laneCount(); i++) {
@@ -101,9 +101,9 @@ final class LanesTest {
     @Test
     void filled_then_wrap_enqueue_and_pop_per_lane() {
         int laneCount = 8, laneDepth = 4;
-        Lanes<String, Env> lanes = mk(laneCount, laneDepth);
-        ILanes<String, Env> api = lanes;
-        ILanesTestHooks<String, Env> hooks = lanes;
+        Lanes<Env> lanes = mk(laneCount, laneDepth);
+        ILanes<Env> api = lanes;
+        ILanesTestHooks<Env> hooks = lanes;
         int mask = hooks._laneMask();
 
         int targetIdx = 3;
@@ -112,29 +112,29 @@ final class LanesTest {
         assertEquals(targetIdx, e1.hash & mask);
         assertEquals(targetIdx, e2.hash & mask);
 
-        ILane<String, Env> lane = api.lane(e1);
+        ILane<Env> lane = api.lane(e1);
         assertSame(lane, api.lane(e2));
 
         // Fill lane
-        lane.enqueue(e1, "FR-11", 11L, 110L);
-        lane.enqueue(e2, "FR-22", 22L, 220L);
-        lane.enqueue(e1, "FR-33", 33L, 330L);
-        lane.enqueue(e2, "FR-44", 44L, 440L);
+        lane.enqueue(e1, 11L, 110L);
+        lane.enqueue(e2, 22L, 220L);
+        lane.enqueue(e1, 33L, 330L);
+        lane.enqueue(e2, 44L, 440L);
         assertTrue(lane.isFull());
 
         // Pop two, then enqueue two to force wrap
-        assertTrue(lane.popHead((fr, t) -> {}));
-        assertTrue(lane.popHead((fr, t) -> {}));
+        assertTrue(lane.popHead((Env t) -> {}));
+        assertTrue(lane.popHead((Env t) -> {}));
         assertFalse(lane.isFull());
-        lane.enqueue(e1, "FR-55", 55L, 550L);
-        lane.enqueue(e2, "FR-66", 66L, 660L);
+        lane.enqueue(e1, 55L, 550L);
+        lane.enqueue(e2, 66L, 660L);
         assertTrue(lane.isFull());
 
         // Drain in order
-        assertSame(e1, lane.headT()); assertTrue(lane.popHead((fr, t) -> {}));
-        assertSame(e2, lane.headT()); assertTrue(lane.popHead((fr, t) -> {}));
-        assertSame(e1, lane.headT()); assertTrue(lane.popHead((fr, t) -> {}));
-        assertSame(e2, lane.headT()); assertTrue(lane.popHead((fr, t) -> {}));
+        assertSame(e1, lane.headT()); assertTrue(lane.popHead((Env t) -> {}));
+        assertSame(e2, lane.headT()); assertTrue(lane.popHead((Env t) -> {}));
+        assertSame(e1, lane.headT()); assertTrue(lane.popHead((Env t) -> {}));
+        assertSame(e2, lane.headT()); assertTrue(lane.popHead((Env t) -> {}));
         assertTrue(lane.isEmpty());
     }
 
@@ -142,36 +142,36 @@ final class LanesTest {
 
     @Test
     void laneCount1_depth1_mask0_and_fullCycle() {
-        Lanes<String, Env> lanes = mk(1, 1); // mask = 0
-        ILanes<String, Env> api = lanes;
-        ILanesTestHooks<String, Env> hooks = lanes;
+        Lanes<Env> lanes = mk(1, 1); // mask = 0
+        ILanes<Env> api = lanes;
+        ILanesTestHooks<Env> hooks = lanes;
         assertEquals(1, hooks._laneCount());
         assertEquals(0, hooks._laneMask());
         assertEquals(1, hooks._laneDepth());
 
         Env e0 = new Env("e0", 0);
-        ILane<String, Env> l0 = api.lane(e0);
+        ILane<Env> l0 = api.lane(e0);
         assertSame(hooks._laneAt(0), l0);
 
         // Fill, pop, repeat
-        l0.enqueue(e0, "FR-1", 1, 1);
+        l0.enqueue(e0, 1, 1);
         assertTrue(l0.isFull());
         assertSame(e0, l0.headT());
-        assertTrue(l0.popHead((fr, t) -> {}));
+        assertTrue(l0.popHead((Env t) -> {}));
         assertTrue(l0.isEmpty());
-        assertFalse(l0.popHead((fr, t) -> {}));
+        assertFalse(l0.popHead((Env t) -> {}));
 
         // Enqueue when full throws (depth=1)
-        l0.enqueue(e0, "FR-2", 2, 2);
+        l0.enqueue(e0, 2, 2);
         assertTrue(l0.isFull());
-        assertThrows(IllegalStateException.class, () -> l0.enqueue(new Env("e1", 0), "FR-3", 3, 3));
+        assertThrows(IllegalStateException.class, () -> l0.enqueue(new Env("e1", 0), 3, 3));
     }
 
     @Test
     void hashZero_routesToLane0() {
-        Lanes<String, Env> lanes = mk(8, 2); // mask 7
-        ILanes<String, Env> api = lanes;
-        ILanesTestHooks<String, Env> hooks = lanes;
+        Lanes<Env> lanes = mk(8, 2); // mask 7
+        ILanes<Env> api = lanes;
+        ILanesTestHooks<Env> hooks = lanes;
 
         Env e = new Env("zero", 0);
         assertSame(hooks._laneAt(0), api.lane(e));
@@ -179,9 +179,9 @@ final class LanesTest {
 
     @Test
     void integerMinValue_routesWithMask() {
-        Lanes<String, Env> lanes = mk(8, 2); // mask 7
-        ILanes<String, Env> api = lanes;
-        ILanesTestHooks<String, Env> hooks = lanes;
+        Lanes<Env> lanes = mk(8, 2); // mask 7
+        ILanes<Env> api = lanes;
+        ILanesTestHooks<Env> hooks = lanes;
 
         Env e = new Env("min", Integer.MIN_VALUE); // 0x80000000 & 7 == 0
         int idx = Integer.MIN_VALUE & hooks._laneMask();
@@ -191,9 +191,9 @@ final class LanesTest {
 
     @Test
     void negativeHashes_mapCorrectly() {
-        Lanes<String, Env> lanes = mk(4, 2); // mask 3
-        ILanes<String, Env> api = lanes;
-        ILanesTestHooks<String, Env> hooks = lanes;
+        Lanes<Env> lanes = mk(4, 2); // mask 3
+        ILanes<Env> api = lanes;
+        ILanesTestHooks<Env> hooks = lanes;
 
         int[] hashes = { -1, -2, -3, -4, -123456789 };
         for (int h : hashes) {
@@ -206,8 +206,8 @@ final class LanesTest {
     @Test
     void lane_null_env_throwsNpe() {
         // Ensure Lanes.lane() does: Objects.requireNonNull(t, "env");
-        Lanes<String, Env> lanes = mk(8, 4);
-        assertThrows(NullPointerException.class, () -> ((ILanes<String, Env>) lanes).lane(null));
+        Lanes<Env> lanes = mk(8, 4);
+        assertThrows(NullPointerException.class, () -> ((ILanes<Env>) lanes).lane(null));
     }
 
     // ---- Distribution sanity -------------------------------------------------
@@ -216,9 +216,9 @@ final class LanesTest {
     void distribution_smoke_over_random_hashes() {
         // Not a strict statistical test; just sanity that we hit many lanes
         int laneCount = 32, laneDepth = 2;
-        Lanes<String, Env> lanes = mk(laneCount, laneDepth);
-        ILanes<String, Env> api = lanes;
-        ILanesTestHooks<String, Env> hooks = lanes;
+        Lanes<Env> lanes = mk(laneCount, laneDepth);
+        ILanes<Env> api = lanes;
+        ILanesTestHooks<Env> hooks = lanes;
 
         int[] hits = new int[laneCount];
         Random rnd = new Random(12345);
@@ -226,7 +226,7 @@ final class LanesTest {
         for (int i = 0; i < n; i++) {
             int h = rnd.nextInt();
             Env e = new Env("x" + i, h);
-            ILane<String, Env> l = api.lane(e);
+            ILane<Env> l = api.lane(e);
             // Map back to index for counting
             for (int idx = 0; idx < laneCount; idx++) {
                 if (hooks._laneAt(idx) == l) { hits[idx]++; break; }

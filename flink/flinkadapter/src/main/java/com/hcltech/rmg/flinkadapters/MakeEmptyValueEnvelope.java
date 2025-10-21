@@ -4,7 +4,6 @@ import com.hcltech.rmg.appcontainer.interfaces.AppContainerDefn;
 import com.hcltech.rmg.appcontainer.interfaces.IAppContainerFactory;
 import com.hcltech.rmg.cepstate.CepEventLog;
 import com.hcltech.rmg.cepstate.CepStateTypeClass;
-import com.hcltech.rmg.common.errorsor.ErrorsOr;
 import com.hcltech.rmg.messages.*;
 import org.apache.flink.api.common.functions.OpenContext;
 import org.apache.flink.api.common.functions.RichMapFunction;
@@ -20,27 +19,25 @@ import java.util.Objects;
  * <p>
  * All error paths are wrapped as ErrorEnvelope by the factory (via recover()).
  */
-public class UpdateCepStateAtEndFunction<MSC, CepState, Msg, Schema,FR, MetricParam> extends RichMapFunction<Envelope<CepState, Msg>, Envelope<CepState, Msg>> {
+public class MakeEmptyValueEnvelope<MSC, CepState, Msg, Schema, FR, MetricParam> extends RichMapFunction<RawMessage, Envelope<CepState, Msg>> {
 
-    private final AppContainerDefn<MSC, CepState, Msg, Schema, RuntimeContext,FR, MetricParam> appContainerDefn;
+    private final AppContainerDefn<MSC, CepState, Msg, Schema, RuntimeContext, FR, MetricParam> appContainerDefn;
     private CepEventLog cepEventLog;
+    private CepStateTypeClass<CepState> cepStateTypeClass;
 
-    public UpdateCepStateAtEndFunction(AppContainerDefn<MSC, CepState, Msg, Schema, RuntimeContext,FR, MetricParam> appContainerDefn) {
+    public MakeEmptyValueEnvelope(AppContainerDefn<MSC, CepState, Msg, Schema, RuntimeContext, FR, MetricParam> appContainerDefn) {
         this.appContainerDefn = appContainerDefn;
     }
 
     @Override
     public void open(OpenContext parameters) {
         var container = IAppContainerFactory.resolve(appContainerDefn).valueOrThrow();
-        this.cepEventLog = container.eventLogFromRuntimeContext().apply(getRuntimeContext());
     }
 
     @Override
-    public Envelope<CepState, Msg> map(Envelope<CepState, Msg> envelope) {
-        Objects.requireNonNull(cepEventLog, "UpdateCepStateAtEndFunction not opened");
-        return envelope.map(ve -> {
-            cepEventLog.append(ve.cepStateModifications());
-            return ve;
-        });
+    public Envelope<CepState, Msg> map(RawMessage rawMessage) {
+        var header = new EnvelopeHeader<CepState>(IEventTypeExtractor.unknownEventType, null, rawMessage, null, null);
+        var ve = new ValueEnvelope<CepState, Msg>(header, null, null, new ArrayList<>());
+        return ve;
     }
 }

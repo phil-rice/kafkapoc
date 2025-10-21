@@ -19,17 +19,17 @@ import java.util.List;
 import java.util.concurrent.atomic.AtomicLong;
 
 
-public class NormalPipelineFunction<MSC, CepState, Msg, RT, Schema> extends RichAsyncFunction<Envelope<CepState, Msg>, Envelope<CepState, Msg>> {
-    private final AppContainerDefn<MSC, CepState, Msg, Schema, RT, FlinkMetricsParams> appContainerDefn;
+public class NormalPipelineFunction<MSC, CepState, Msg, RT, FR,Schema> extends RichAsyncFunction<Envelope<CepState, Msg>, Envelope<CepState, Msg>> {
+    private final AppContainerDefn<MSC, CepState, Msg, Schema, RT,FR, FlinkMetricsParams> appContainerDefn;
     private final String module;
-    transient private EnrichmentPipelineStep<MSC, CepState, Msg, Schema, RT, FlinkMetricsParams> enrichmentPipelineStep;
-    transient private BizLogicPipelineStep<MSC, CepState, Msg, Schema, RT, FlinkMetricsParams> bizLogic;
-    transient private ParseMessagePipelineStep<MSC, CepState, Msg, Schema, RT, FlinkMetricsParams> parser;
+    transient private EnrichmentPipelineStep<MSC, CepState, Msg, Schema, RT,FR, FlinkMetricsParams> enrichmentPipelineStep;
+    transient private BizLogicPipelineStep<MSC, CepState, Msg, Schema, RT, FR,FlinkMetricsParams> bizLogic;
+    transient private ParseMessagePipelineStep<MSC, CepState, Msg, Schema, RT,FR, FlinkMetricsParams> parser;
     transient private EnvelopeMetrics<Envelope<?, ?>> envelopeMetrics;
     transient private Metrics metrics;
     transient private ITimeService timeService;
 
-    public NormalPipelineFunction(AppContainerDefn<MSC, CepState, Msg, Schema, RT, FlinkMetricsParams> appContainerDefn, String module) {
+    public NormalPipelineFunction(AppContainerDefn<MSC, CepState, Msg, Schema, RT,FR, FlinkMetricsParams> appContainerDefn, String module) {
         this.appContainerDefn = appContainerDefn;
         this.module = module;
     }

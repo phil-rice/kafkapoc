@@ -1,5 +1,7 @@
 package com.hcltech.rmg.common.async;
 
+import java.util.function.Consumer;
+
 /**
  * Minimal, framework-agnostic async executor interface.
  *

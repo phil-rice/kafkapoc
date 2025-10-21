@@ -10,6 +10,9 @@ import com.hcltech.rmg.cepstate.CepEventLog;
 import com.hcltech.rmg.cepstate.CepStateTypeClass;
 import com.hcltech.rmg.cepstate.MapStringObjectCepStateTypeClass;
 import com.hcltech.rmg.common.ITimeService;
+import com.hcltech.rmg.common.async.Correlator;
+import com.hcltech.rmg.common.async.OrderPreservingAsyncExecutor;
+import com.hcltech.rmg.common.async.OrderPreservingAsyncExecutorConfig;
 import com.hcltech.rmg.common.errorsor.ErrorsOr;
 import com.hcltech.rmg.common.uuid.IUuidGenerator;
 import com.hcltech.rmg.config.config.RootConfig;
@@ -23,17 +26,16 @@ import com.hcltech.rmg.execution.bizlogic.BizLogicExecutor;
 import com.hcltech.rmg.flink_metrics.FlinkMetricsFactory;
 import com.hcltech.rmg.flink_metrics.FlinkMetricsParams;
 import com.hcltech.rmg.flinkadapters.FlinkCepEventForMapStringObjectLog;
+import com.hcltech.rmg.flinkadapters.FlinkCollectorFutureRecordAdapter;
 import com.hcltech.rmg.kafkaconfig.KafkaConfig;
-import com.hcltech.rmg.messages.IDomainTypeExtractor;
-import com.hcltech.rmg.messages.IEventTypeExtractor;
-import com.hcltech.rmg.messages.MapStringObjectAndListStringMsgTypeClass;
-import com.hcltech.rmg.messages.ValueEnvelope;
+import com.hcltech.rmg.messages.*;
 import com.hcltech.rmg.parameters.ParameterExtractor;
 import com.hcltech.rmg.parameters.Parameters;
 import com.hcltech.rmg.woodstox.WoodstoxXmlForMapStringObjectTypeClass;
 import com.hcltech.rmg.xml.XmlTypeClass;
 import org.apache.flink.api.common.functions.RuntimeContext;
 
+import org.apache.flink.util.Collector;
 import org.codehaus.stax2.validation.XMLValidationSchema;
 
 import java.util.List;
@@ -44,13 +46,13 @@ import java.util.function.Function;
 
 import static java.util.Objects.requireNonNull;
 
-public final class AppContainerFactoryForMapStringObject implements IAppContainerFactory<KafkaConfig, Map<String, Object>, Map<String, Object>, XMLValidationSchema, RuntimeContext, FlinkMetricsParams> {
+public final class AppContainerFactoryForMapStringObject implements IAppContainerFactory<KafkaConfig, Map<String, Object>, Map<String, Object>, XMLValidationSchema, RuntimeContext, Collector<Envelope<Map<String, Object>, Map<String, Object>>>, FlinkMetricsParams> {
 
-    private static final Map<String, ErrorsOr<AppContainer<KafkaConfig, Map<String, Object>, Map<String, Object>, XMLValidationSchema, RuntimeContext, FlinkMetricsParams>>> CACHE =
+    private static final Map<String, ErrorsOr<AppContainer<KafkaConfig, Map<String, Object>, Map<String, Object>, XMLValidationSchema, RuntimeContext, Collector<Envelope<Map<String, Object>, Map<String, Object>>>, FlinkMetricsParams>>> CACHE =
             new ConcurrentHashMap<>();
 
 
-    public static ErrorsOr<AppContainer<KafkaConfig, Map<String, Object>, Map<String, Object>, XMLValidationSchema, RuntimeContext, FlinkMetricsParams>> resolve(String id) {
+    public static ErrorsOr<AppContainer<KafkaConfig, Map<String, Object>, Map<String, Object>, XMLValidationSchema, RuntimeContext, Collector<Envelope<Map<String, Object>, Map<String, Object>>>, FlinkMetricsParams>> resolve(String id) {
         requireNonNull(id, "container id must not be null");
         final String norm = id.trim().toLowerCase();
         return CACHE.computeIfAbsent(norm, AppContainerFactoryForMapStringObject::build);
@@ -61,7 +63,7 @@ public final class AppContainerFactoryForMapStringObject implements IAppContaine
     }
 
     @Override
-    public ErrorsOr<AppContainer<KafkaConfig, Map<String, Object>, Map<String, Object>, XMLValidationSchema, RuntimeContext, FlinkMetricsParams>> create(String id) {
+    public ErrorsOr<AppContainer<KafkaConfig, Map<String, Object>, Map<String, Object>, XMLValidationSchema, RuntimeContext, Collector<Envelope<Map<String, Object>, Map<String, Object>>>, FlinkMetricsParams>> create(String id) {
         return resolve(id);
     }
 
@@ -69,7 +71,11 @@ public final class AppContainerFactoryForMapStringObject implements IAppContaine
 
     public static final List<String> defaultParameters = List.of("productType", "company");
 
-    private static ErrorsOr<AppContainer<KafkaConfig, Map<String, Object>, Map<String, Object>, XMLValidationSchema, RuntimeContext, FlinkMetricsParams>> build(String id) {
+    private static ErrorsOr<AppContainer<KafkaConfig, Map<String, Object>, Map<String, Object>, XMLValidationSchema, RuntimeContext, Collector<Envelope<Map<String, Object>, Map<String, Object>>>, FlinkMetricsParams>> build(String id) {
+
+        OrderPreservingAsyncExecutor.UserFnPort<Envelope<Map<String, Object>, Map<String, Object>>, Envelope<Map<String, Object>, Map<String, Object>>, Collector<Envelope<Map<String, Object>, Map<String, Object>>>> asyncFn =
+                (frTc, fr, in, corrId) ->
+                        frTc.completed(fr, in); // No-op async function
         return switch (id) {
             case "prod" -> basic(
                     id,
@@ -82,7 +88,8 @@ public final class AppContainerFactoryForMapStringObject implements IAppContaine
                             "company", List.of("msg", "company"))),
                     IEventTypeExtractor.fromPathForMapStringObject(List.of("msg", "eventType")),
                     IDomainTypeExtractor.fixed("parcel"),
-                    "config/prod/"
+                    "config/prod/",
+                    asyncFn
             );
             case "test" -> basic(
                     id,
@@ -93,7 +100,8 @@ public final class AppContainerFactoryForMapStringObject implements IAppContaine
                     ParameterExtractor.defaultParameterExtractor(defaultParameters, Map.of(), Map.of()),
                     IEventTypeExtractor.fromPathForMapStringObject(List.of("eventType")),
                     IDomainTypeExtractor.fixed("parcel"),
-                    "config/test/"
+                    "config/test/",
+                    asyncFn
             );
             default -> ErrorsOr.error("Unknown container id: " + id);
         };
@@ -101,7 +109,7 @@ public final class AppContainerFactoryForMapStringObject implements IAppContaine
 
     // ---------- monadic composition (inlined) ----------
 
-    private static ErrorsOr<AppContainer<KafkaConfig, Map<String, Object>, Map<String, Object>, XMLValidationSchema, RuntimeContext, FlinkMetricsParams>> basic(
+    private static ErrorsOr<AppContainer<KafkaConfig, Map<String, Object>, Map<String, Object>, XMLValidationSchema, RuntimeContext, Collector<Envelope<Map<String, Object>, Map<String, Object>>>, FlinkMetricsParams>> basic(
             String env,
             ITimeService time,
             IUuidGenerator uuid,
@@ -110,7 +118,8 @@ public final class AppContainerFactoryForMapStringObject implements IAppContaine
             ParameterExtractor<Map<String, Object>> parameterExtractor,
             IEventTypeExtractor<Map<String, Object>> eventTypeExtractor,
             IDomainTypeExtractor<Map<String, Object>> domainTypeExtractor,
-            String configResourcePrefix
+            String configResourcePrefix,
+            OrderPreservingAsyncExecutor.UserFnPort<Envelope<Map<String, Object>, Map<String, Object>>, Envelope<Map<String, Object>, Map<String, Object>>, Collector<Envelope<Map<String, Object>, Map<String, Object>>>> asyncFn
     ) {
         Objects.requireNonNull(time, "timeService service must not be null");
         Objects.requireNonNull(uuid, "uuid generator must not be null");
@@ -130,6 +139,22 @@ public final class AppContainerFactoryForMapStringObject implements IAppContaine
 
         var msgTypeClass = new MapStringObjectAndListStringMsgTypeClass();
         Function<RuntimeContext, CepEventLog> cepEventLogFunction = rt -> FlinkCepEventForMapStringObjectLog.from(rt, "CepState");
+
+
+        EnvelopeFailureAdapter<Map<String, Object>, Map<String, Object>> failureAdapter = new EnvelopeFailureAdapter<>("AppContainerForMapStringObject");
+        OrderPreservingAsyncExecutorConfig<Envelope<Map<String, Object>, Map<String, Object>>, Envelope<Map<String, Object>, Map<String, Object>>, Collector<Envelope<Map<String, Object>, Map<String, Object>>>> opaeConfig =
+                new OrderPreservingAsyncExecutorConfig<>(
+                        256,//lane count
+                        64,//lane depth
+                        512,//max in flight
+                        100, //executor threads
+                        1_000, //timeout millis
+                        new EnvelopeCorrelator<>(),
+                        failureAdapter,
+                        new FlinkCollectorFutureRecordAdapter<>(failureAdapter),
+                        time
+                );
+
         // RootConfig -> Configs -> SchemaMap -> Container
         return RootConfigLoader.fromClasspath(rootConfigPath).flatMap((RootConfig root) ->
                 ConfigsBuilder.buildFromClasspath(
@@ -146,13 +171,15 @@ public final class AppContainerFactoryForMapStringObject implements IAppContaine
                             return IEnrichmentAspectExecutor.<Map<String, Object>, Map<String, Object>>create(cepStateTypeClass, configs, oneEnrichmentExecutor).map(
                                     enricher ->
 
-                                            new AppContainer<KafkaConfig, Map<String, Object>, Map<String, Object>, XMLValidationSchema, RuntimeContext, FlinkMetricsParams>(
+                                            new AppContainer<KafkaConfig, Map<String, Object>, Map<String, Object>, XMLValidationSchema, RuntimeContext, Collector<Envelope<Map<String, Object>, Map<String, Object>>>, FlinkMetricsParams>(
                                                     time,
                                                     uuid,
                                                     xml,
                                                     cepStateTypeClass,
                                                     checkpointIntervalMillis,
                                                     cepEventLogFunction,
+                                                    opaeConfig,
+                                                    asyncFn,
                                                     keyPath,
                                                     eventSourceConfig,
                                                     root,
