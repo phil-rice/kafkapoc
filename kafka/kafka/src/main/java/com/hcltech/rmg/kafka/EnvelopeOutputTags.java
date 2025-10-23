@@ -1,5 +1,6 @@
 package com.hcltech.rmg.kafka;
 
+import com.hcltech.rmg.messages.AiFailureEnvelope;
 import com.hcltech.rmg.messages.ErrorEnvelope;
 import com.hcltech.rmg.messages.RetryEnvelope;
 import org.apache.flink.api.common.typeinfo.TypeHint;
@@ -17,6 +18,11 @@ public interface EnvelopeOutputTags {
     OutputTag<RetryEnvelope<?, ?>> RETRIES =
             new OutputTag<>("retries",
                     TypeInformation.of(new TypeHint<RetryEnvelope<?, ?>>() {
+                    })) {
+            };
+    OutputTag<AiFailureEnvelope<?, ?>> AI_FAILURES =
+            new OutputTag<>("failures",
+                    TypeInformation.of(new TypeHint<AiFailureEnvelope<?, ?>>() {
                     })) {
             };
 }

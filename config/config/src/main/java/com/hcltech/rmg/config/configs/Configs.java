@@ -1,12 +1,15 @@
 package com.hcltech.rmg.config.configs;
 
+import com.fasterxml.jackson.annotation.JsonValue;
 import com.hcltech.rmg.common.errorsor.ErrorsOr;
 import com.hcltech.rmg.config.config.BehaviorConfig;
 import com.hcltech.rmg.config.config.Config;
 
+import java.io.Serializable;
 import java.util.Map;
 
-public record Configs(Map<String, Config> keyToConfigMap) {
+
+public record Configs(@JsonValue Map<String, Config> keyToConfigMap) implements Serializable {
     public static String composeKey(String paramKey, String eventName, String moduleName) {
         // If you already have a canonical key util that accepts paramKey, call it here instead.
         // e.g., return KeyUtil.configKey(paramKey, BehaviorConfig.bizlogicAspectName, eventName, moduleName);

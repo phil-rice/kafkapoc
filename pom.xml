@@ -44,10 +44,12 @@
 
         <module>optics</module>
 
+        <module>worker/ai_worker</module>
         <module>worker/flink_worker</module>
         <module>worker/performance</module>
         <module>worker/producer</module>
-        <module>worker/producer_same_id</module>
+        <module>worker/producer_inputs_outputs_worker</module>
+        <module>worker/producer_same_id_worker</module>
         <module>worker/shared_worker</module>
 
         <module>xml/xml</module>

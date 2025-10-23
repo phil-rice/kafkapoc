@@ -5,10 +5,12 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.hcltech.rmg.config.aspect.AspectMap;
 
+import java.io.Serializable;
 import java.util.*;
 
 @JsonIgnoreProperties(ignoreUnknown = true)
-public record BehaviorConfig(Map<String, AspectMap> events) {
+/** The events is a map from the event name to the AspectMap for that event. */
+public record BehaviorConfig(Map<String, AspectMap> events) implements Serializable {
     public final static String validationAspectName = "validation";
     public final static String transformationAspectName = "transformation";
     public final static String bizlogicAspectName = "bizlogic";

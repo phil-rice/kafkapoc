@@ -5,7 +5,7 @@ import com.hcltech.rmg.common.errorsor.ErrorsOr;
 import java.util.concurrent.ConcurrentHashMap;
 
 public interface IAppContainerFactory<EventSourceConfig, CepState, Msg, Schema, FlinkRT, FlinkFr, MetricsParam> {
-    ErrorsOr<AppContainer<EventSourceConfig, CepState, Msg, Schema, FlinkRT, FlinkFr, MetricsParam>> create(String id);
+    ErrorsOr<AppContainer<EventSourceConfig, CepState, Msg, Schema, FlinkRT, FlinkFr, MetricsParam>> create(String id, AiDefn defnOrNull);
 
     // factoryClass -> ErrorsOr<factory>
     static ConcurrentHashMap<Class<?>, ErrorsOr<? extends IAppContainerFactory<?, ?, ?, ?, ?, ?, ?>>> FACTORIES =
@@ -31,7 +31,7 @@ public interface IAppContainerFactory<EventSourceConfig, CepState, Msg, Schema, 
         ErrorsOr<IAppContainerFactory<ESC, C, M, S, RT, FR, MP>> errorsOrFactory = resolveFactory(clazz);
         return errorsOrFactory.flatMap(factory -> {
             var byEnv = CONTAINERS.computeIfAbsent(clazz, _k -> new ConcurrentHashMap<>());
-            var eo = byEnv.computeIfAbsent(defn.containerId(), factory::create);
+            var eo = byEnv.computeIfAbsent(defn.containerId(), id -> factory.create(id, defn.aiDefnOrNull()));
             return castContainer(eo);
         });
     }

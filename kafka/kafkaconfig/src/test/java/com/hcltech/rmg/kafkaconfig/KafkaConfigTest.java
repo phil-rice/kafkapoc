@@ -50,7 +50,7 @@ class KafkaConfigTest {
         System.clearProperty("kafka.partitions"); // ensure fallback is 12
 
         Properties p = new Properties();
-        KafkaConfig cfg = KafkaConfig.fromProperties(p);
+        KafkaConfig cfg = KafkaConfig.fromProperties(p, null);
 
         assertEquals("localhost:9092", cfg.bootstrapServer());
         assertEquals("test-topic", cfg.topic());
@@ -81,7 +81,7 @@ class KafkaConfigTest {
         p.setProperty("kafka.starting.offsets", "latest");
         p.setProperty("kafka.partition.discovery.seconds", "30");
 
-        KafkaConfig cfg = KafkaConfig.fromProperties(p);
+        KafkaConfig cfg = KafkaConfig.fromProperties(p, null);
 
         assertEquals("broker1:9092", cfg.bootstrapServer());
         assertEquals("orders", cfg.topic());
@@ -97,11 +97,22 @@ class KafkaConfigTest {
     }
 
     @Test
+    void usesTopicIfNotNull(){
+        Properties p = new Properties();
+        p.setProperty("kafka.topic", "orders");
+
+        KafkaConfig cfg = KafkaConfig.fromProperties(p, "overridden-topic");
+
+        assertEquals("overridden-topic", cfg.topic(),
+                "topic parameter to fromProperties() should override property value");
+    }
+
+    @Test
     void discoveryDisabledWhenZeroSeconds() {
         Properties p = new Properties();
         p.setProperty("kafka.partition.discovery.seconds", "0");
 
-        KafkaConfig cfg = KafkaConfig.fromProperties(p);
+        KafkaConfig cfg = KafkaConfig.fromProperties(p, null);
 
         assertNull(cfg.partitionDiscovery(), "discovery should be null when configured as 0");
         assertNull(cfg.extra().getProperty("partition.discovery.interval.ms"),
@@ -115,7 +126,7 @@ class KafkaConfigTest {
         Properties p = new Properties();
         p.setProperty("kafka.source.parallelism", "7");
 
-        KafkaConfig cfg = KafkaConfig.fromProperties(p);
+        KafkaConfig cfg = KafkaConfig.fromProperties(p,null);
         assertEquals(7, cfg.sourceParallelism(), "explicit kafka.source.parallelism should win over system fallback");
     }
 
@@ -124,7 +135,7 @@ class KafkaConfigTest {
         System.setProperty("kafka.partitions", "16");
 
         Properties p = new Properties(); // no kafka.source.parallelism provided
-        KafkaConfig cfg = KafkaConfig.fromProperties(p);
+        KafkaConfig cfg = KafkaConfig.fromProperties(p, null);
 
         assertEquals(16, cfg.sourceParallelism(),
                 "should use Integer.getInteger(\"kafka.partitions\", 12) fallback when explicit not provided");
@@ -135,7 +146,7 @@ class KafkaConfigTest {
         Properties p = new Properties();
         p.setProperty("kafka.starting.offsets", "INVALID_VALUE");
 
-        KafkaConfig cfg = KafkaConfig.fromProperties(p);
+        KafkaConfig cfg = KafkaConfig.fromProperties(p, null);
 
         assertEquals("earliest", cfg.startingOffsets(), "invalid value should fall back to 'earliest'");
         assertIsEarliest(cfg.toOffsetsInitializer());

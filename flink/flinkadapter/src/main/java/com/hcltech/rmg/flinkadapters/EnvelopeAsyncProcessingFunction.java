@@ -9,20 +9,22 @@ import com.hcltech.rmg.cepstate.CepEventLog;
 import com.hcltech.rmg.cepstate.CepStateTypeClass;
 import com.hcltech.rmg.common.ITimeService;
 import com.hcltech.rmg.common.async.OrderPreservingAsyncExecutor;
+import com.hcltech.rmg.common.copy.DeepCopy;
 import com.hcltech.rmg.flink_metrics.FlinkMetricsParams;
+import com.hcltech.rmg.messages.AiFailureEnvelopeFactory;
 import com.hcltech.rmg.messages.Envelope;
+import com.hcltech.rmg.messages.EnvelopeHeader;
 import com.hcltech.rmg.messages.ValueEnvelope;
 import com.hcltech.rmg.metrics.EnvelopeMetrics;
 import com.hcltech.rmg.metrics.EnvelopeMetricsTC;
 import org.apache.flink.api.common.functions.RuntimeContext;
-import org.apache.flink.streaming.api.functions.KeyedProcessFunction;
 import org.apache.flink.streaming.api.operators.Output;
 import org.apache.flink.streaming.runtime.streamrecord.StreamRecord;
-import org.apache.flink.util.Collector;
 
-import java.util.List;
+import java.util.HashMap;
 import java.util.Objects;
 import java.util.function.BiConsumer;
+import java.util.function.Function;
 
 /**
  * Keyed operator that keeps CEP state and runs the OrderPreservingAsyncExecutor
@@ -36,7 +38,9 @@ import java.util.function.BiConsumer;
 public class EnvelopeAsyncProcessingFunction<ESC, CepState, Msg, Schema>
         extends AbstractEnvelopeAsyncProcessingFunction<ESC, CepState, Msg, Schema, RuntimeContext, FlinkMetricsParams> {
 
+
     private final String module;
+    private final boolean rememberBizlogicInput;
     private ParseMessagePipelineStep<ESC, CepState, Msg, Schema, RuntimeContext, Output<StreamRecord<Envelope<CepState, Msg>>>, FlinkMetricsParams> parser;
     private EnrichmentPipelineStep<ESC, CepState, Msg, Schema, RuntimeContext, Output<StreamRecord<Envelope<CepState, Msg>>>, FlinkMetricsParams> enrichmentPipelineStep;
     private BizLogicPipelineStep<ESC, CepState, Msg, Schema, RuntimeContext, Output<StreamRecord<Envelope<CepState, Msg>>>, FlinkMetricsParams> bizLogic;
@@ -46,10 +50,14 @@ public class EnvelopeAsyncProcessingFunction<ESC, CepState, Msg, Schema>
     private CepStateTypeClass<CepState> cepStateTypeClass;
     private CepEventLog cepEventLog;
     private BiConsumer<Envelope<CepState, Msg>, Envelope<CepState, Msg>> setKey;
+    private DeepCopy<Msg> msgDeepCopy;
+    private DeepCopy<CepState> cesStateDeepCopy;
+    private Function<Envelope<CepState, Msg>, Envelope<CepState, Msg>> afterParse;
 
-    public EnvelopeAsyncProcessingFunction(AppContainerDefn appContainerDefn, String module) {
+    public EnvelopeAsyncProcessingFunction(AppContainerDefn appContainerDefn, String module, boolean rememberBizlogicInput) {
         super(appContainerDefn);
         this.module = module;
+        this.rememberBizlogicInput = rememberBizlogicInput;
     }
 
     @Override
@@ -81,8 +89,21 @@ public class EnvelopeAsyncProcessingFunction<ESC, CepState, Msg, Schema>
             if (env instanceof ValueEnvelope<CepState, Msg> ve) {
 
                 long start = timeService.currentTimeNanos();
-                var afterParse = parser.parse(env);
-                var afterEnrichment = enrichmentPipelineStep.process(afterParse);
+                var parsed = parser.parse(env);
+
+                var afterEnrichment = enrichmentPipelineStep.process(parsed);
+                if (rememberBizlogicInput) {
+                    // Deep copy cep state and msg to store in cargo - used for AI pipelines to compare input vs output
+                    var cepStateCopy = cesStateDeepCopy.copy(afterEnrichment.valueEnvelope().cepState());
+                    var msgCopy = msgDeepCopy.copy(afterEnrichment.valueEnvelope().data());
+                    EnvelopeHeader<CepState> header = afterEnrichment.valueEnvelope().header();
+                    var cargo = new HashMap<>(header.cargo());
+                    cargo.put(AiFailureEnvelopeFactory.BIZLOGIC_INPUT_CEP_STATE_CARGO_KEY, cepStateCopy);
+                    cargo.put(AiFailureEnvelopeFactory.BIZLOGIC_INPUT_MSG_CARGO_KEY, msgCopy);
+                    var newHeader = header.withCargo(cargo);
+                    afterEnrichment.valueEnvelope().setHeader(newHeader);
+                }
+
                 var afterBizLogic = bizLogic.process(afterEnrichment);
                 envelopeMetrics.addToMetricsAtEnd(afterBizLogic);
                 long finish = timeService.currentTimeNanos();
@@ -105,6 +126,7 @@ public class EnvelopeAsyncProcessingFunction<ESC, CepState, Msg, Schema>
     @Override
     protected void protectedSetupInOpen(AppContainer<ESC, CepState, Msg, Schema, RuntimeContext, Output<StreamRecord<Envelope<CepState, Msg>>>, FlinkMetricsParams> container) {
         this.parser = new ParseMessagePipelineStep<>(container);
+        this.afterParse = container.afterParse();
         this.enrichmentPipelineStep = new EnrichmentPipelineStep<>(container, module);
         this.bizLogic = new BizLogicPipelineStep<>(container, null, module);
         var metricsFactory = container.metricsFactory();
@@ -115,6 +137,8 @@ public class EnvelopeAsyncProcessingFunction<ESC, CepState, Msg, Schema>
         this.cepStateTypeClass = container.cepStateTypeClass();
         this.cepEventLog = container.eventLogFromRuntimeContext().apply(getRuntimeContext());
         this.setKey = createSetKey();
+        this.cesStateDeepCopy = container.deepCopyCepState();
+        this.msgDeepCopy = container.deepCopyMsg();
     }
 
 }

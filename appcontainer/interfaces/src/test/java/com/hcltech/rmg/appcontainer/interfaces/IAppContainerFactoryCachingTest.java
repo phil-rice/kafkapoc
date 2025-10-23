@@ -34,7 +34,7 @@ public class IAppContainerFactoryCachingTest {
         }
 
         @Override
-        public ErrorsOr<AppContainer<String, String, String, String, String, String, String>> create(String id) {
+        public ErrorsOr<AppContainer<String, String, String, String, String, String, String>> create(String id, AiDefn defnOrNull) {
             createCount.incrementAndGet();
             return creator.apply(id);
         }

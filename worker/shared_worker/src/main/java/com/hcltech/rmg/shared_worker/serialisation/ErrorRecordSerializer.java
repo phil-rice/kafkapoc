@@ -33,7 +33,9 @@ public final class ErrorRecordSerializer<CepState, Msg>
                                 (LFunction<ErrorEnvelope<CepState, Msg>>) e -> e.valueEnvelope().getDurationNanos()
                         ),
                         HeaderPopulators.header("stage",
-                                (SFunction<ErrorEnvelope<CepState, Msg>, String>) ErrorEnvelope::stageName)
+                                (SFunction<ErrorEnvelope<CepState, Msg>, String>) ErrorEnvelope::stageName),
+                        HeaderPopulators.header("rawMessage",
+                                (SFunction<ErrorEnvelope<CepState, Msg>, String>) e -> e.valueEnvelope().header().rawMessage().rawValue())
                 )
         );
     }

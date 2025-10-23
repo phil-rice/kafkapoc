@@ -1,0 +1,9 @@
+{
+  "xmlSchemaPath": "schemas/config.xsd",
+  "parameterConfig": {
+    "parameters": [
+      { "legalValue": ["parcel"], "defaultValue": "parcel", "description": "product type" },
+      { "legalValue": ["rmg"],   "defaultValue": "rmg",   "description": "company" }
+    ]
+  }
+}

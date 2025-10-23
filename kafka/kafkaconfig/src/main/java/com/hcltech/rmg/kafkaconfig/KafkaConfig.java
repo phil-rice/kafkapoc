@@ -9,7 +9,7 @@ import java.util.Properties;
 public record KafkaConfig(
         String bootstrapServer,
         String topic,            // usually 1, but allow many
-      String groupId,
+        String groupId,
         int sourceParallelism,   // source parallelism (usually = #partitions)
         String startingOffsets,  // "earliest" or "latest"
         Duration partitionDiscovery, // null => disabled
@@ -17,15 +17,17 @@ public record KafkaConfig(
 ) {
 
 
-
-
     public static KafkaConfig fromSystemProps() {
-        return fromProperties(System.getProperties());
+        return fromProperties(System.getProperties(), null);
     }
 
-    public static KafkaConfig fromProperties(Properties p) {
+    public static KafkaConfig fromSystemProps(String topicOrNull) {
+        return fromProperties(System.getProperties(), topicOrNull);
+    }
+
+    public static KafkaConfig fromProperties(Properties p, String topicOrNull) {
         String bootstrap = p.getProperty("kafka.bootstrap", "localhost:9092");
-        String topic = p.getProperty("kafka.topic", "test-topic");
+        String topic = topicOrNull == null ? p.getProperty("kafka.topic", "test-topic") : topicOrNull;
         String groupId = p.getProperty("kafka.group.id", "g-" + System.currentTimeMillis());
         int sourceParallelism = getInt(p, "kafka.source.parallelism",
                 Integer.getInteger("kafka.partitions", 12));

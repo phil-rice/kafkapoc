@@ -1,6 +1,6 @@
 <component name="ProjectRunConfigurationManager">
   <configuration default="false" name="ProducerApp" type="Application" factoryName="Application" nameIsGenerated="true">
-    <option name="MAIN_CLASS_NAME" value="com.hcltech.rmg.producer_same_id.ProducerSameIdApp" />
+    <option name="MAIN_CLASS_NAME" value="com.hcltech.rmg.producer_same_id.ProducerInputsOutputApp" />
     <module name="producer" />
     <extension name="coverage">
       <pattern>

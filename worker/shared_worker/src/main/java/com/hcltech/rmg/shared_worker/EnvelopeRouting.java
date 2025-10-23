@@ -1,5 +1,6 @@
 package com.hcltech.rmg.shared_worker;
 
+import com.hcltech.rmg.messages.AiFailureEnvelope;
 import com.hcltech.rmg.messages.ErrorEnvelope;
 import com.hcltech.rmg.messages.RetryEnvelope;
 import com.hcltech.rmg.messages.ValueEnvelope;
@@ -28,6 +29,20 @@ public final class EnvelopeRouting {
             String processedTopic,
             String errorsTopic,
             String retryTopic,
+            Properties producerConfig) {
+        routeToKafkaWithFailures(values, errors, retries, null, brokers, processedTopic, errorsTopic, retryTopic, null, producerConfig);
+    }
+
+    public static <CepState, Msg> void routeToKafkaWithFailures(
+            DataStream<ValueEnvelope<CepState, Msg>> values,
+            DataStream<ErrorEnvelope<CepState, Msg>> errors,
+            DataStream<RetryEnvelope<CepState, Msg>> retries,
+            DataStream<AiFailureEnvelope<CepState, Msg>> failuresOrNull,
+            String brokers,
+            String processedTopic,
+            String errorsTopic,
+            String retryTopic,
+            String failureTopic,
             Properties producerConfig
     ) {
         final Properties cfg = (producerConfig == null) ? new Properties() : producerConfig;
@@ -43,6 +58,11 @@ public final class EnvelopeRouting {
         retries
                 .sinkTo(EnvelopeKafkaSinks.retrySink(brokers, retryTopic, cfg))
                 .name("retries->kafka");
+
+        if (failuresOrNull != null)
+            failuresOrNull
+                    .sinkTo(EnvelopeKafkaSinks.failureSink(brokers, failureTopic, cfg))
+                    .name("failures->kafka");
     }
 
     /**

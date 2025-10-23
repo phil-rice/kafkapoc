@@ -7,6 +7,7 @@ import com.hcltech.rmg.config.config.Config;
 import com.hcltech.rmg.enrichment.IEnrichmentAspectExecutor;
 import com.hcltech.rmg.execution.bizlogic.BizLogicExecutor;
 import com.hcltech.rmg.messages.*;
+import com.hcltech.rmg.parameters.Parameters;
 import com.hcltech.rmg.xml.XmlTypeClass;
 
 import java.util.Map;
@@ -39,7 +40,8 @@ public class EnrichmentPipelineStep<ESC, CepState, Msg, Schema,FlinkRT, FlinkFR,
 
     public Envelope<CepState, Msg> process(Envelope<CepState, Msg> envelope) {
         if (envelope instanceof ValueEnvelope<CepState, Msg> valueEnvelope) {
-            String parameterKey = valueEnvelope.header().parameters().key();
+            Parameters parameters = valueEnvelope.header().parameters();
+            String parameterKey = parameters.key();
             String fullKey = valueEnvelope.keyForModule(module);
             var config = keyToConfigMap.get(parameterKey);
             AspectMap aspectMap = config.behaviorConfig().events().get(valueEnvelope.header().eventType());

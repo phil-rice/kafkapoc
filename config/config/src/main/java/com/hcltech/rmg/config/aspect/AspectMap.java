@@ -8,6 +8,7 @@ import com.hcltech.rmg.config.enrich.EnrichmentAspect;
 import com.hcltech.rmg.config.transformation.TransformationAspect;
 import com.hcltech.rmg.config.validation.ValidationAspect;
 
+import java.io.Serializable;
 import java.util.List;
 import java.util.Map;
 
@@ -17,7 +18,7 @@ public record AspectMap(
         Map<String, TransformationAspect> transformation,
         Map<String, EnrichmentAspect> enrichment,
         Map<String, BizLogicAspect> bizlogic
-) {
+) implements Serializable {
     @JsonCreator
     public AspectMap(
             @JsonProperty("validation") Map<String, ValidationAspect> validation,

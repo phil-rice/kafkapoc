@@ -191,18 +191,15 @@ public final class WoodstoxXmlForMapStringObjectTypeClass implements XmlTypeClas
      *   childName: childVal  (each child)
      *   "text": "..."        (only if mixed content non-blank)
      */
+    // ---------- Streaming map builder (repeats → lists) ----------
     private static final class CelFriendlyStreamingMapBuilder {
         private static final class Node {
             final String name;
             final StringBuilder text = new StringBuilder();
             final Map<String, Object> attrs = new LinkedHashMap<>();
             final Map<String, Object> children = new LinkedHashMap<>();
-
             Node(String name) { this.name = name; }
-
-            boolean hasOnlyText() {
-                return attrs.isEmpty() && children.isEmpty();
-            }
+            boolean hasOnlyText() { return attrs.isEmpty() && children.isEmpty(); }
         }
 
         private final Deque<Node> stack = new ArrayDeque<>();
@@ -212,50 +209,54 @@ public final class WoodstoxXmlForMapStringObjectTypeClass implements XmlTypeClas
 
         void onStart(XMLStreamReader2 r) {
             Node n = new Node(r.getLocalName());
-            // attributes
             for (int i = 0; i < r.getAttributeCount(); i++) {
-                String an = r.getAttributeLocalName(i);
-                String av = r.getAttributeValue(i);
-                n.attrs.put(an, av);
+                n.attrs.put(r.getAttributeLocalName(i), r.getAttributeValue(i));
             }
             stack.push(n);
         }
 
         void onText(XMLStreamReader2 r) {
-            if (!stack.isEmpty()) {
-                // accumulate raw text (characters/cdata/space)
-                stack.peek().text.append(r.getText());
-            }
+            if (!stack.isEmpty()) stack.peek().text.append(r.getText());
         }
 
         void onEnd(XMLStreamReader2 r) {
             Node n = stack.pop();
 
-            // Decide the value for this element
             Object value;
             if (n.hasOnlyText()) {
-                // LEAF: just trimmed text
                 value = n.text.toString().trim();
             } else {
-                // NON-LEAF: build a map with attrs/children and optional "text"
                 Map<String, Object> m = new LinkedHashMap<>();
                 if (!n.attrs.isEmpty()) m.put("attr", n.attrs);
                 if (!n.children.isEmpty()) m.putAll(n.children);
-
                 String t = n.text.toString().trim();
                 if (!t.isEmpty()) m.put("text", t);
-
                 value = m;
             }
 
-            // Attach to parent or to root
+            // ⬇️ CRITICAL: promote duplicates to a list here
             if (!stack.isEmpty()) {
-                // attach under this element name once (no double-nesting)
-                stack.peek().children.put(n.name, value);
+                putMulti(stack.peek().children, n.name, value);
             } else {
-                // top-level
-                result.put(n.name, value);
+                putMulti(result, n.name, value);
+            }
+        }
+
+        @SuppressWarnings("unchecked")
+        private static void putMulti(Map<String, Object> map, String name, Object value) {
+            Object existing = map.get(name);
+            if (existing == null) {
+                map.put(name, value);                       // 1 occurrence → scalar
+            } else if (existing instanceof List<?> list) {
+                ((List<Object>) list).add(value);           // already a list → append
+            } else {
+                List<Object> list = new ArrayList<>();      // 2nd occurrence → listify
+                list.add(existing);
+                list.add(value);
+                map.put(name, list);
             }
         }
     }
+
+
 }

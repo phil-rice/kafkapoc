@@ -2,6 +2,7 @@ package com.hcltech.rmg.shared_worker.serialisation;
 
 import com.hcltech.rmg.common.function.LFunction;
 import com.hcltech.rmg.common.function.SFunction;
+import com.hcltech.rmg.messages.AiFailureEnvelope;
 import com.hcltech.rmg.messages.RawMessage;
 import com.hcltech.rmg.messages.RetryEnvelope;
 import org.apache.flink.api.common.serialization.SerializationSchema;
@@ -37,6 +38,7 @@ public final class RetryRecordSerializer<CepState, Msg>
                 )
         );
     }
+
 
     @Override
     public ProducerRecord<byte[], byte[]> serialize(RetryEnvelope<CepState, Msg> r, KafkaSinkContext ctx, Long ts) {

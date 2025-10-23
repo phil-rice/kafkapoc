@@ -47,7 +47,6 @@ public class MakeEmptyValueEnvelopeWithCepStateFunction<MSC, CepState, Msg, Sche
             var existing = cepEventLog.getAll();
             if (existing.size()>0) {
                 throw new IllegalStateException("Expected empty cep event log but found: " + existing.size() + " events");
-
             }
             var cepState = cepEventLog.foldAll(cepStateTypeClass, cepStateTypeClass.createEmpty());
             ve.setCepState(cepState);

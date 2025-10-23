@@ -25,7 +25,7 @@ public class ParseMessagePipelineStep<MSC, CepState, Msg, Schema,FlinkRT, FlinkF
     private final Schema schema;
     private final ParameterExtractor<Msg> parameterExtractor;
     private final Map<String, Config> keyToConfigMap;
-    private final Function<ValueEnvelope<CepState, Msg>, ValueEnvelope<CepState, Msg>> afterParse;
+    private final Function<Envelope<CepState, Msg>, Envelope<CepState, Msg>> afterParse;
 
     public ParseMessagePipelineStep(AppContainer<MSC, CepState, Msg, Schema,FlinkRT, FlinkFR,MetricParam> container) {
         this.xmlTypeClass = container.xml();
@@ -48,16 +48,21 @@ public class ParseMessagePipelineStep<MSC, CepState, Msg, Schema,FlinkRT, FlinkF
             Objects.requireNonNull(xmlTypeClass, "InitialEnvelopeMapFunction not opened");
             RawMessage rawMessage = in.header().rawMessage();
             var message = xmlTypeClass.parseAndValidate(rawMessage.rawValue(), schema);
-            var domainType = domainTypeExtractor.extractDomainType(message);
-            var eventType = eventTypeExtractor.extractEventType(message);
-            if (eventType == null)
-                return new ErrorEnvelope<>(valueEnvelope, "ParseMessageFunction", List.of("Event type extraction resulted in null"));
-            var parameters = parameterExtractor.parameters(message, eventType, domainType, rawMessage.domainId()).valueOrThrow();
-            var behaviorConfig = keyToConfigMap.get(parameters.key()).behaviorConfig();
-            var header = new EnvelopeHeader<CepState>(domainType, eventType, rawMessage, parameters, behaviorConfig, Map.of());
-            valueEnvelope.setHeader(header);
             valueEnvelope.setData(message);
             var postParse = afterParse.apply(valueEnvelope);
+            var postParseMessage = postParse.valueEnvelope().data();
+
+            var domainType = domainTypeExtractor.extractDomainType(postParseMessage);
+            var eventType = eventTypeExtractor.extractEventType(postParseMessage);
+            if (eventType == null)
+                return new ErrorEnvelope<>(valueEnvelope, "ParseMessageFunction", List.of("Event type extraction resulted in null"));
+            var parameters = parameterExtractor.parameters(postParseMessage, eventType, domainType, rawMessage.domainId()).valueOrThrow();
+            Config config = keyToConfigMap.get(parameters.key());
+            if (config == null)
+                return new ErrorEnvelope<>(valueEnvelope, "ParseMessageFunction", List.of("No config found for key: " + parameters.key() + "Legal values are: " + keyToConfigMap.keySet()));
+            var behaviorConfig = config.behaviorConfig();
+            var header = new EnvelopeHeader<CepState>(domainType, eventType, rawMessage, parameters, behaviorConfig,postParse.header().cargo());
+            postParse.valueEnvelope().setHeader(header);
             return postParse;
         }
         return in;

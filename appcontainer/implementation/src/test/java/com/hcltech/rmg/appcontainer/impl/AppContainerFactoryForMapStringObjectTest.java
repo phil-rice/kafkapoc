@@ -255,10 +255,10 @@ public final class AppContainerFactoryForMapStringObjectTest {
     @DisplayName("clearCache: clears cache; next resolve produces a fresh instance")
     void clearCache_createsFreshInstance() {
         AppContainer<?, ?, ?, ?, ?, ?, ?> a =
-                AppContainerFactoryForMapStringObject.resolve("prod").valueOrThrow();
+                AppContainerFactoryForMapStringObject.resolve("prod",null).valueOrThrow();
         AppContainerFactoryForMapStringObject.clearCache();
         AppContainer<?, ?, ?, ?, ?, ?, ?> b =
-                AppContainerFactoryForMapStringObject.resolve("prod").valueOrThrow();
+                AppContainerFactoryForMapStringObject.resolve("prod",null).valueOrThrow();
         assertNotSame(a, b, "After clearCache, a fresh instance should be created on next resolve");
     }
 
