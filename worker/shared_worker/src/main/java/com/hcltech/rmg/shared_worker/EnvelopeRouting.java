@@ -8,6 +8,7 @@ import org.apache.flink.streaming.api.datastream.DataStream;
 
 import java.util.List;
 import java.util.Properties;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 public final class EnvelopeRouting {
     public static final String processedTopic = "processed";
@@ -30,7 +31,7 @@ public final class EnvelopeRouting {
             String errorsTopic,
             String retryTopic,
             Properties producerConfig) {
-        routeToKafkaWithFailures(values, errors, retries, null, brokers, processedTopic, errorsTopic, retryTopic, null, producerConfig);
+        routeToKafkaWithFailures(values, errors, retries, null, new AtomicBoolean(false), brokers, processedTopic, errorsTopic, retryTopic, null, producerConfig);
     }
 
     public static <CepState, Msg> void routeToKafkaWithFailures(
@@ -38,6 +39,7 @@ public final class EnvelopeRouting {
             DataStream<ErrorEnvelope<CepState, Msg>> errors,
             DataStream<RetryEnvelope<CepState, Msg>> retries,
             DataStream<AiFailureEnvelope<CepState, Msg>> failuresOrNull,
+            AtomicBoolean firstFailureAtomic,
             String brokers,
             String processedTopic,
             String errorsTopic,
@@ -60,7 +62,7 @@ public final class EnvelopeRouting {
                 .name("retries->kafka");
 
         if (failuresOrNull != null)
-            failuresOrNull
+            failuresOrNull.flatMap(new FirstHitFlatMap<>(firstFailureAtomic))
                     .sinkTo(EnvelopeKafkaSinks.failureSink(brokers, failureTopic, cfg))
                     .name("failures->kafka");
     }

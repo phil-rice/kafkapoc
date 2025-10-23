@@ -15,11 +15,13 @@ import com.hcltech.rmg.kafka.KafkaTopics;
 import com.hcltech.rmg.kafka.ValueErrorRetryStreams;
 import com.hcltech.rmg.shared_worker.BuildPipeline;
 import com.hcltech.rmg.shared_worker.EnvelopeRouting;
+import com.hcltech.rmg.shared_worker.FirstHitJobKiller;
 import org.apache.flink.streaming.api.environment.StreamExecutionEnvironment;
 import org.springframework.stereotype.Component;
 
 import java.util.Map;
 import java.util.Properties;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 /**
  * Binds the AI worker job name to your existing PerfHarness pipeline.
@@ -29,7 +31,7 @@ import java.util.Properties;
 public class AiWorkerJobBuilder implements JobBuilder<StreamExecutionEnvironment> {
 
     @Override
-    public void build(StreamExecutionEnvironment env, RootConfig rootConfig, Configs cfg, String celCondition) {
+    public void build(StreamExecutionEnvironment env, RootConfig rootConfig, Configs cfg, String celCondition, AtomicBoolean firstFailureAtomic) throws Exception {
         // Resolve your app container
         var appContainerDefn = AppContainerDefn.withAiDefn(AppContainerFactoryForMapStringObject.class, "ai", new AiDefn(rootConfig, cfg, celCondition));
         var appContainer = IAppContainerFactory.resolve(appContainerDefn).valueOrThrow();
@@ -58,6 +60,7 @@ public class AiWorkerJobBuilder implements JobBuilder<StreamExecutionEnvironment
                 pipe.errors(),
                 pipe.retries(),
                 pipe.aiFailures(),
+                firstFailureAtomic,
                 brokers,
                 "processed",
                 "errors",
