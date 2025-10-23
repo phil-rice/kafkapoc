@@ -17,6 +17,13 @@ public final class PerfStats {
     private static final AtomicBoolean STARTED = new AtomicBoolean(false);
     private static ScheduledExecutorService SCHED;
 
+    public static void clear(){
+        VALUES.reset();
+        ERRORS.reset();
+        RETRIES.reset();
+        FAILURES.reset();
+    }
+
     private PerfStats() {}
 
     // increments called from sinks

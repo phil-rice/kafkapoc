@@ -18,12 +18,12 @@ public interface AiFailureEnvelopeFactory<CepState, Msg> {
             Object expected = valueEnvelope.header().cargo().get(BIZLOGIC_EXPECTED);
             Object actual = valueEnvelope.data();
             Map<String, Object> aiMsg = Map.of(
-                    "inputMsg", input,
+                    "input", input,
                     "cepState", cepState,
                     "actualProjection", actualProjection,
                     "expectedProjection", expectedProjection,
-                    "actualMsg", actual,
-                    "expectedMsg", expected
+                    "actualOutput", actual,
+                    "expectedOutput", expected
             );
             valueEnvelope.setData(aiMsg);
             return new AiFailureEnvelope<>(valueEnvelope);

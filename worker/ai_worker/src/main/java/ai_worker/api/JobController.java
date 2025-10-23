@@ -24,7 +24,8 @@ public class JobController {
             @RequestBody @NotNull AiIncomingPayload body
     ) {
         var currentJob = coordinator.currentJobId();
-        if (currentJob != null) coordinator.kill(currentJob);
+        if (currentJob != null)
+            coordinator.kill(currentJob);
         var configs = AiPayloadToConfigs.toConfigs(body);
         String id = coordinator.restartWith(body.rootConfig(), configs, body.celProjection());
         return ResponseEntity.status(HttpStatus.ACCEPTED).body(new StartJobResponse(id));

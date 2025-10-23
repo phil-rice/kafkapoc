@@ -5,6 +5,7 @@ import java.util.concurrent.atomic.AtomicReference;
 
 import com.hcltech.rmg.config.config.RootConfig;
 import com.hcltech.rmg.config.configs.Configs;
+import com.hcltech.rmg.flinkadapters.PerfStats;
 import org.springframework.stereotype.Service;
 import ai_worker.domain.FlinkJobPort;
 
@@ -38,6 +39,7 @@ public class JobCoordinator {
     public void kill(String jobId) {
         try {
             flink.killJob(jobId);
+            PerfStats.clear();
         } finally {
             currentJobId.compareAndSet(jobId, null);
         }
