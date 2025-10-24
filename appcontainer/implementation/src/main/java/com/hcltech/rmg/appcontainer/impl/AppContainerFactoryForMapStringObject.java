@@ -135,6 +135,7 @@ public final class AppContainerFactoryForMapStringObject implements IAppContaine
                     IEventTypeExtractor.fromPathForMapStringObject(List.of("msg", "eventType")),
                     IDomainTypeExtractor.fixed("parcel"),
                     "config/prod/",
+                    "/tmp/flink-rocksdb-prod",
                     v -> v
             );
             case "ai" -> basic(

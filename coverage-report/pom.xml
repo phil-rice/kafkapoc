@@ -27,7 +27,6 @@
         <dependency><groupId>com.hcltech.rmg</groupId><artifactId>celimpl</artifactId><version>${project.version}</version></dependency>
 
         <dependency><groupId>com.hcltech.rmg</groupId><artifactId>cepstate</artifactId><version>${project.version}</version></dependency>
-        <dependency><groupId>com.hcltech.rmg</groupId><artifactId>cepstate_rocksdb</artifactId><version>${project.version}</version></dependency>
 
         <dependency><groupId>com.hcltech.rmg</groupId><artifactId>config</artifactId><version>${project.version}</version></dependency>
 

@@ -1,13 +1,17 @@
 package com.hcltech.rmg.shared_worker;
 
-import org.apache.flink.contrib.streaming.state.RocksDBStateBackend;
-import org.apache.flink.streaming.api.CheckpointingMode;
 import com.hcltech.rmg.appcontainer.interfaces.AppContainerDefn;
 import com.hcltech.rmg.kafka.KafkaSourceForFlink;
 import com.hcltech.rmg.kafka.WatermarkStrategyProvider;
 import com.hcltech.rmg.kafkaconfig.KafkaConfig;
 import com.hcltech.rmg.messages.RawMessage;
+import org.apache.flink.configuration.CheckpointingOptions;
+import org.apache.flink.configuration.Configuration;
+import org.apache.flink.configuration.StateBackendOptions;
 import org.apache.flink.connector.kafka.source.enumerator.initializer.OffsetsInitializer;
+
+import org.apache.flink.state.rocksdb.RocksDBKeyedStateBackend;
+import org.apache.flink.streaming.api.CheckpointingMode;
 import org.apache.flink.streaming.api.datastream.DataStreamSource;
 import org.apache.flink.streaming.api.environment.StreamExecutionEnvironment;
 
@@ -19,12 +23,7 @@ public class KafkaFlinkHelper {
         env.setParallelism(totalPartitions > 0 ? totalPartitions : env.getParallelism());
         env.getConfig().setAutoWatermarkInterval(0);
         env.enableCheckpointing(checkpointingInterval);
-
         try {
-            RocksDBStateBackend rocksDBStateBackend =
-                new RocksDBStateBackend("file:///tmp/flink-rocksdb", true);
-            env.setStateBackend(rocksDBStateBackend);
-
             env.getCheckpointConfig().setCheckpointingMode(CheckpointingMode.EXACTLY_ONCE);
             env.getCheckpointConfig().setMinPauseBetweenCheckpoints(5000);
             env.getCheckpointConfig().setTolerableCheckpointFailureNumber(3);

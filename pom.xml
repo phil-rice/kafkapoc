@@ -16,7 +16,6 @@
         <module>cel/celcore</module>
         <module>cel/celimpl</module>
         <module>cepstate/cepstate</module>
-        <module>cepstate/cepstate_rocksdb</module>
         <module>config/config</module>
 
         <module>common</module>
@@ -150,11 +149,6 @@
                 <version>${jxpath.version}</version>
             </dependency>
 
-            <dependency>
-                <groupId>org.rocksdb</groupId>
-                <artifactId>rocksdbjni</artifactId>
-                <version>${rocksdb.version}</version>
-            </dependency>
 
             <dependency>
                 <groupId>org.apache.flink</groupId>
@@ -163,6 +157,12 @@
                 <type>pom</type>
                 <scope>import</scope>
             </dependency>
+            <dependency>
+                <groupId>org.apache.flink</groupId>
+                <artifactId>flink-statebackend-rocksdb</artifactId>
+                <version>${flink.version}</version>
+            </dependency>
+
             <dependency>
                 <groupId>org.apache.flink</groupId>
                 <artifactId>flink-core</artifactId>
