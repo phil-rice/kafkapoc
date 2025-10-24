@@ -125,7 +125,7 @@ public final class AppContainerFactoryForMapStringObject implements IAppContaine
                     null,//topic from system properties
                     ITimeService.real,
                     IUuidGenerator.defaultGenerator(),
-                    "config/root-prod.json",
+                    "config/root-dev.json",
                     30_000,
                     RootConfigLoader::fromClasspath,
                     ConfigsBuilder::buildFromClasspath,
