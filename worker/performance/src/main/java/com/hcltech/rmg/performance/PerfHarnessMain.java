@@ -48,7 +48,7 @@ public final class PerfHarnessMain {
         conf.set(CheckpointingOptions.SAVEPOINT_DIRECTORY,   savepoints.toUri().toString());  // file:///C:/flink-tmp/savepoints
 
         StreamExecutionEnvironment env = StreamExecutionEnvironment.createLocalEnvironmentWithWebUI(conf);
-        var appContainerDefn = AppContainerDefn.of(AppContainerFactoryForMapStringObject.class, "dev");
+        var appContainerDefn = AppContainerDefn.of(AppContainerFactoryForMapStringObject.class, "prod");
         var appContainer = IAppContainerFactory.resolve(appContainerDefn).valueOrThrow();
         if (KafkaTopics.ensureTopics(appContainer.eventSourceConfig(), EnvelopeRouting.allTopics, 12, (short) 1).valueOrThrow()) {//just sticking 12/3 in for tests
             System.out.println("Created output topics");
