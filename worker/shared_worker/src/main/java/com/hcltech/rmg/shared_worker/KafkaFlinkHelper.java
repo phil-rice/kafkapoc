@@ -1,5 +1,7 @@
 package com.hcltech.rmg.shared_worker;
 
+import org.apache.flink.contrib.streaming.state.RocksDBStateBackend;
+import org.apache.flink.streaming.api.CheckpointingMode;
 import com.hcltech.rmg.appcontainer.interfaces.AppContainerDefn;
 import com.hcltech.rmg.kafka.KafkaSourceForFlink;
 import com.hcltech.rmg.kafka.WatermarkStrategyProvider;
@@ -17,6 +19,18 @@ public class KafkaFlinkHelper {
         env.setParallelism(totalPartitions > 0 ? totalPartitions : env.getParallelism());
         env.getConfig().setAutoWatermarkInterval(0);
         env.enableCheckpointing(checkpointingInterval);
+
+        try {
+            RocksDBStateBackend rocksDBStateBackend =
+                new RocksDBStateBackend("file:///tmp/flink-rocksdb", true);
+            env.setStateBackend(rocksDBStateBackend);
+
+            env.getCheckpointConfig().setCheckpointingMode(CheckpointingMode.EXACTLY_ONCE);
+            env.getCheckpointConfig().setMinPauseBetweenCheckpoints(5000);
+            env.getCheckpointConfig().setTolerableCheckpointFailureNumber(3);
+        } catch (Exception e) {
+            throw new RuntimeException("Failed to configure RocksDB state backend", e);
+        }
 
         var raw = KafkaSourceForFlink.rawKafkaStream(appContainerDefn, env, kafka.bootstrapServer(), kafka.topic(), kafka.groupId(), totalPartitions, OffsetsInitializer.earliest(), Duration.ofSeconds(60), WatermarkStrategyProvider.none());
         return raw;

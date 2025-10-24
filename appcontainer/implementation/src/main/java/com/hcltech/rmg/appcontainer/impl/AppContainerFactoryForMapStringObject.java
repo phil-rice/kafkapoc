@@ -117,6 +117,7 @@ public final class AppContainerFactoryForMapStringObject implements IAppContaine
                     IEventTypeExtractor.fromPathForMapStringObject(List.of("msg", "eventType")),
                     IDomainTypeExtractor.fixed("parcel"),
                     "config/prod/",
+                    "/opt/flink-rocksdb-prod",
                     v -> v
             );
             case "ai" -> basic(
@@ -135,6 +136,7 @@ public final class AppContainerFactoryForMapStringObject implements IAppContaine
                     IEventTypeExtractor.fromPathForMapStringObject(List.of("msg", "eventType")),
                     IDomainTypeExtractor.fixed("parcel"),
                     "config/prod/",
+                    "/opt/flink-rocksdb-ai",
 
                     AppContainerFactoryForMapStringObject::aiMessagePostParse
             );
@@ -152,6 +154,7 @@ public final class AppContainerFactoryForMapStringObject implements IAppContaine
                     IEventTypeExtractor.fromPathForMapStringObject(List.of("eventType")),
                     IDomainTypeExtractor.fixed("parcel"),
                     "config/test/",
+                    "/opt/flink-rocksdb-test",
                     v -> v
             );
             default -> ErrorsOr.error("Unknown container id: " + id);
@@ -174,6 +177,7 @@ public final class AppContainerFactoryForMapStringObject implements IAppContaine
             IEventTypeExtractor<Map<String, Object>> eventTypeExtractor,
             IDomainTypeExtractor<Map<String, Object>> domainTypeExtractor,
             String configResourcePrefix,
+            String rocksDBPath,
             Function<Envelope<Map<String, Object>, Map<String, Object>>, Envelope<Map<String, Object>, Map<String, Object>>> afterParse
     ) {
         Objects.requireNonNull(time, "timeService service must not be null");
@@ -249,6 +253,7 @@ public final class AppContainerFactoryForMapStringObject implements IAppContaine
                                                     new MapObjectDeepCopy(),
                                                     new MapObjectDeepCopy(),
                                                     AiFailureEnvelopeFactory.fromValueEnvelope(),
+                                                    rocksDBPath,
                                                     metricsFactory,
                                                     configs.keyToConfigMap()
                                             ));
