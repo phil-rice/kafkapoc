@@ -1,0 +1,51 @@
+
+
+{
+  "events": {
+    "test-event": {
+      "bizlogic": {
+        "notification": {
+          "type": "cel",
+          "cel": "{'out': [message]}"
+        }
+      },
+      "enrichment": {
+        "notification": {
+          "type": "composite",
+          "enrichers": [
+            {
+              "type": "fixed",
+              "inputs": [],
+              "output": ["fixedAddition"],
+              "value":{"addedValue": "valueAdded"}
+            },
+            {
+              "type": "lookup",
+              "inputs": [["inp","line1"], ["inp","line2"], ["inp","postcode"]],
+              "output": ["destination"],
+              "lookup": {
+                "10 High St.Flat 2.EH1 1AA": "EdinburghDepot",
+                "221B Baker St..NW1 6XE": "LondonCentral",
+                "1 Main St.Apt 4B.G12 8QQ": "GlasgowWest",
+                "42 Elm Rd..SW1A 1AA": "LondonWestminster",
+                "The Mews.Unit 7.EC2A 3PT": "LondonCity"
+              }
+            },
+            {
+              "type": "lookup",
+              "inputs": [["cep","postcode"]],
+              "output": ["postcodeSuffix"],
+              "lookup": {
+                "EH1 1AA": "1AA",
+                "NW1 6XE": "6XE",
+                "G12 8QQ": "8QQ",
+                "SW1A 1AA": "1AA",
+                "EC2A 3PT": "3PT"
+              }
+            }
+          ]
+        }
+      }
+    }
+  }
+}

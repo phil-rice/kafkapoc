@@ -1,0 +1,9 @@
+{
+  "xmlSchemaPath": "schemas/config.xsd",
+  "parameterConfig": {
+    "parameters": [
+      { "legalValue": ["dev"],  "defaultValue": "dev",  "description": "environment" },
+      { "legalValue": ["uk"],   "defaultValue": "uk",   "description": "company/country" }
+    ]
+  }
+}
