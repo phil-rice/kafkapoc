@@ -34,6 +34,7 @@ import com.hcltech.rmg.messages.*;
 import com.hcltech.rmg.parameters.ParameterExtractor;
 import com.hcltech.rmg.parameters.Parameters;
 import com.hcltech.rmg.woodstox.WoodstoxXmlForMapStringObjectTypeClass;
+import com.hcltech.rmg.woodstox.WoodstoxXmlForMapStringObjectTypeClassNoValidation;
 import com.hcltech.rmg.xml.XmlTypeClass;
 import org.apache.flink.api.common.functions.RuntimeContext;
 import org.apache.flink.util.Collector;
@@ -76,6 +77,7 @@ public final class AppContainerFactoryForMapStringObject implements IAppContaine
     // ---------- envs ----------
 
     public static final List<String> defaultParameters = List.of("productType", "company");
+    public static final List<String> defaultParametersForProd = List.of("productType");
 
     public static Envelope<Map<String, Object>, Map<String, Object>> aiMessagePostParse(Envelope<Map<String, Object>, Map<String, Object>> env) {
         if (env instanceof ValueEnvelope<Map<String, Object>, Map<String, Object>> ve) {
@@ -103,7 +105,7 @@ public final class AppContainerFactoryForMapStringObject implements IAppContaine
         return switch (id) {
             case "prod" -> basic(
                     id,
-                    null,//topic from system properties
+                    "mper-input-events",//topic from system properties
                     ITimeService.real,
                     IUuidGenerator.defaultGenerator(),
                     "config/root-prod.json",
@@ -111,10 +113,9 @@ public final class AppContainerFactoryForMapStringObject implements IAppContaine
                     RootConfigLoader::fromClasspath,
                     ConfigsBuilder::buildFromClasspath,
                     "noCelCondition",
-                    ParameterExtractor.defaultParameterExtractor(defaultParameters, Map.of(), Map.of(
-                            "productType", List.of("msg", "productType"),
-                            "company", List.of("msg", "company"))),
-                    IEventTypeExtractor.fromPathForMapStringObject(List.of("msg", "eventType")),
+                    ParameterExtractor.defaultParameterExtractor(defaultParametersForProd, Map.of(), Map.of(
+                            "productType", List.of("MPE", "mailPiece", "mailPieceBarcode","royalMailSegment", "mailTypeCode"))),
+                    IEventTypeExtractor.fromPathForMapStringObject(List.of("MPE", "manualScan", "trackedEventCode")),
                     IDomainTypeExtractor.fixed("parcel"),
                     "config/prod/",
                     "/opt/flink-rocksdb-prod",
@@ -204,7 +205,8 @@ public final class AppContainerFactoryForMapStringObject implements IAppContaine
 
         final FlinkMetricsFactory metricsFactory = new FlinkMetricsFactory(env, "EventProcessor", 100, true);
         final CepStateTypeClass<Map<String, Object>> cepStateTypeClass = new MapStringObjectCepStateTypeClass();
-        final XmlTypeClass<Map<String, Object>, XMLValidationSchema> xml = new WoodstoxXmlForMapStringObjectTypeClass();
+//        final XmlTypeClass<Map<String, Object>, XMLValidationSchema> xml = new WoodstoxXmlForMapStringObjectTypeClass();
+        final XmlTypeClass<Map<String, Object>, XMLValidationSchema> xml = new WoodstoxXmlForMapStringObjectTypeClassNoValidation();
         final List<String> keyPath = List.of("domainId");
         final KafkaConfig eventSourceConfig = KafkaConfig.fromSystemProps(topicOrNull);
 

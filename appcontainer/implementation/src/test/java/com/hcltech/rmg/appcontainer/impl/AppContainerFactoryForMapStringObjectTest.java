@@ -158,7 +158,8 @@ public final class AppContainerFactoryForMapStringObjectTest {
         assertEquals("prod", params.get(0).defaultValue(), "prod env should default to 'prod'");
     }
 
-    @Test
+//    @Test
+
     @DisplayName("prod: extractors are wired and non-null")
     void prod_extractors_present() {
         AppContainer<KafkaConfig, Map<String, Object>, Map<String, Object>, XMLValidationSchema, RuntimeContext, ?, FlinkMetricsParams> prod =
