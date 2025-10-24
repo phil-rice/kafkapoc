@@ -19,7 +19,7 @@ import java.util.function.BiConsumer;
 /**
  * Custom keyed operator that runs the OrderPreservingAsyncExecutor inside the operator
  * (no AsyncFunction). Completions are drained on the operator thread.
- * <p>
+ *
  * K   : String key
  * In  : Envelope<CepState, Msg>
  * Out : Envelope<CepState, Msg>
@@ -28,6 +28,8 @@ public abstract class AbstractEnvelopeAsyncProcessingFunction<ESC, CepState, Msg
         extends AbstractStreamOperator<Envelope<CepState, Msg>>
         implements OneInputStreamOperator<Envelope<CepState, Msg>, Envelope<CepState, Msg>>,
         KeyContext {
+
+    private static final long DRAIN_INTERVAL_MS = 500L; // periodic drain while idle
 
     private final AppContainerDefn<ESC, CepState, Msg, Schema, FlinkRt, Output<StreamRecord<Envelope<CepState, Msg>>>, Metrics> appContainerDefn;
 
@@ -45,6 +47,9 @@ public abstract class AbstractEnvelopeAsyncProcessingFunction<ESC, CepState, Msg
             Output<StreamRecord<Envelope<CepState, Msg>>>,
             Envelope<CepState, Msg>,
             Envelope<CepState, Msg>> frType;
+
+    // --- periodic draining state (operator thread) ---
+    private transient volatile boolean drainingActive;
 
     public AbstractEnvelopeAsyncProcessingFunction(
             AppContainerDefn<ESC, CepState, Msg, Schema, FlinkRt, Output<StreamRecord<Envelope<CepState, Msg>>>, Metrics> appContainerDefn) {
@@ -75,7 +80,6 @@ public abstract class AbstractEnvelopeAsyncProcessingFunction<ESC, CepState, Msg
         permits = new AtomicPermitManager(cfg.maxInFlight());
         ioPool = Executors.newFixedThreadPool(Math.max(4, cfg.executorThreads()));
 
-
         // Build executor config
         var localCfg = new OrderPreservingAsyncExecutorConfig<>(
                 cfg.laneCount(), cfg.laneDepth(), cfg.maxInFlight(),
@@ -87,14 +91,35 @@ public abstract class AbstractEnvelopeAsyncProcessingFunction<ESC, CepState, Msg
         exec = new OrderPreservingAsyncExecutor<>(
                 localCfg, lanes, permits, ring, ioPool, frType, cfg.laneCount(), userFn /*, setKeyFor */
         );
+
+        // Start periodic draining on the operator thread
+        drainingActive = true;
+        scheduleNextDrain();
+    }
+
+    /**
+     * Schedules a processing-time timer to drain completions on the operator thread.
+     * Re-schedules itself while {@code drainingActive} is true.
+     */
+    private void scheduleNextDrain() {
+        if (!drainingActive) return;
+        final long now = getProcessingTimeService().getCurrentProcessingTime();
+        getProcessingTimeService().registerTimer(now + DRAIN_INTERVAL_MS, timestamp -> {
+            if (drainingActive && exec != null) {
+                // Drain using CURRENT FR/hook = operator 'output' and this::setKey
+                exec.drain(output, this::setKey);
+            }
+            if (drainingActive) {
+                scheduleNextDrain();
+            }
+        });
     }
 
     protected BiConsumer<Envelope<CepState, Msg>, Envelope<CepState, Msg>> createSetKey() {
-        BiConsumer<Envelope<CepState, Msg>, Envelope<CepState, Msg>> setKeyFor = (in, out) -> {
+        return (in, out) -> {
             String key = in.domainId();
             this.setCurrentKey(key);
         };
-        return setKeyFor;
     }
 
     abstract protected void setKey(Envelope<CepState, Msg> in, Envelope<CepState, Msg> out);
@@ -102,14 +127,20 @@ public abstract class AbstractEnvelopeAsyncProcessingFunction<ESC, CepState, Msg
     @Override
     public void processElement(StreamRecord<Envelope<CepState, Msg>> element) throws Exception {
         final Envelope<CepState, Msg> env = element.getValue();
-
         exec.add(env, output, this::setKey);
     }
 
     @Override
     public void close() throws Exception {
         try {
-            if (exec != null) exec.close();
+            // Stop periodic drain scheduling
+            drainingActive = false;
+
+            if (exec != null) {
+                // Stop accepting new work and do a final flush on the operator thread
+                exec.close();
+                exec.drain(output, this::setKey);
+            }
         } finally {
             if (ioPool != null) ioPool.shutdownNow();
             super.close();

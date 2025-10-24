@@ -22,15 +22,17 @@ import org.apache.flink.streaming.api.datastream.SingleOutputStreamOperator;
 import org.apache.flink.streaming.api.environment.StreamExecutionEnvironment;
 import org.apache.flink.streaming.api.functions.async.RichAsyncFunction;
 import org.apache.flink.streaming.api.operators.OneInputStreamOperator;
+import org.apache.flink.streaming.api.operators.Output;
+import org.apache.flink.streaming.runtime.streamrecord.StreamRecord;
 import org.apache.flink.util.Collector;
 
 public class BuildPipeline {
     public static <CepState, Msg, Schema> ValueErrorRetryStreams<CepState, Msg> buildPipeline(
             StreamExecutionEnvironment env,
-            AppContainerDefn<KafkaConfig, CepState, Msg, Schema, RuntimeContext, Collector<Envelope<CepState, Msg>>, FlinkMetricsParams> appContainerDefn,
+            AppContainerDefn<KafkaConfig, CepState, Msg, Schema, RuntimeContext, Output<StreamRecord<Envelope<CepState, Msg>>>, FlinkMetricsParams> appContainerDefn,
             RichAsyncFunction<Envelope<CepState, Msg>, Envelope<CepState, Msg>> func,
             boolean rememberBizlogicInput) {
-        AppContainer<KafkaConfig, CepState, Msg, Schema, RuntimeContext, Collector<Envelope<CepState, Msg>>, FlinkMetricsParams> app = IAppContainerFactory.resolve(appContainerDefn).valueOrThrow();
+        AppContainer<KafkaConfig, CepState, Msg, Schema, RuntimeContext, Output<StreamRecord<Envelope<CepState, Msg>>>, FlinkMetricsParams> app = IAppContainerFactory.resolve(appContainerDefn).valueOrThrow();
         KafkaConfig kafka = app.eventSourceConfig();
 
         DataStream<RawMessage> raw = KafkaFlinkHelper.createRawMessageStreamFromKafka(

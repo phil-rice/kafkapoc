@@ -10,7 +10,7 @@ import java.io.Serializable;
         @JsonSubTypes.Type(value = CelFileLogic.class, name = BizLogicAspect.celFileType),
         @JsonSubTypes.Type(value = CelInlineLogic.class, name = BizLogicAspect.celInlineType)
 })
-public sealed interface BizLogicAspect  extends Serializable permits CelFileLogic, CelInlineLogic {
-    public static final String celInlineType = "cel";
-    public static final String celFileType = "celFile";
+public  interface BizLogicAspect  extends Serializable{
+    String celInlineType = "cel";
+    String celFileType = "celFile";
 }

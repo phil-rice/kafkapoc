@@ -1,15 +1,14 @@
 // src/main/java/com/hcltech/rmg/ai_worker/app/JobCoordinator.java
 package ai_worker.services;
 
-import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.concurrent.atomic.AtomicReference;
-
+import ai_worker.domain.FlinkJobPort;
 import com.hcltech.rmg.config.config.RootConfig;
 import com.hcltech.rmg.config.configs.Configs;
 import com.hcltech.rmg.flinkadapters.PerfStats;
-import com.hcltech.rmg.shared_worker.FirstHitJobKiller;
 import org.springframework.stereotype.Service;
-import ai_worker.domain.FlinkJobPort;
+
+import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicReference;
 
 @Service
 public class JobCoordinator {

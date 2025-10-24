@@ -11,6 +11,12 @@ import java.util.function.BiConsumer;
  *
  * NOTE: This implementation deliberately does NOT store FR (ResultFuture) in the ring.
  *       Resolve FR on the consumer side using corrId.
+ *
+ * Throughput/GC notes:
+ * - Power-of-two capacity with sequence tags (classic MPSC technique).
+ * - Producers spin with Thread.onSpinWait() (JDK9+) to hint the CPU.
+ * - All arrays are reused; slots are cleared on consume to allow GC of payloads.
+ * - No allocations on the hot path.
  */
 public final class MpscRing<FR, In, Out> implements IMpscRing<FR, In, Out> {
 
@@ -22,29 +28,38 @@ public final class MpscRing<FR, In, Out> implements IMpscRing<FR, In, Out> {
     private final int mask;
 
     // producers update tail; single consumer reads head
+    // tail is written by multiple producers; head only by the single consumer
     private volatile long tail = 0L; // MPSC
     private long head = 0L;          // SPSC
 
+    // Per-slot sequence to coordinate producers/consumer without locks
     private final long[]  seq;
 
-    // NOTE: no FR array here
+    // NOTE: no FR array here (by design; FR resolved on consumer side via corrId)
     private final Object[] inArr;
     private final String[] corrArr;
     private final Object[] outArr;
     private final Object[] errArr;
     private final byte[]   tagArr;
 
-    private static final VarHandle VH_TAIL, VH_SEQ_A, VH_IN_A, VH_OUT_A, VH_ERR_A, VH_TAG_A;
+    private static final VarHandle VH_TAIL;
+    private static final VarHandle VH_SEQ_A;
+    private static final VarHandle VH_IN_A;
+    private static final VarHandle VH_OUT_A;
+    private static final VarHandle VH_ERR_A;
+    private static final VarHandle VH_TAG_A;
+    private static final VarHandle VH_CORR_A;
 
     static {
         try {
             MethodHandles.Lookup l = MethodHandles.lookup();
             VH_TAIL = l.findVarHandle(MpscRing.class, "tail", long.class);
-            VH_SEQ_A = MethodHandles.arrayElementVarHandle(long[].class);
-            VH_IN_A  = MethodHandles.arrayElementVarHandle(Object[].class);
-            VH_OUT_A = MethodHandles.arrayElementVarHandle(Object[].class);
-            VH_ERR_A = MethodHandles.arrayElementVarHandle(Object[].class);
-            VH_TAG_A = MethodHandles.arrayElementVarHandle(byte[].class);
+            VH_SEQ_A  = MethodHandles.arrayElementVarHandle(long[].class);
+            VH_IN_A   = MethodHandles.arrayElementVarHandle(Object[].class);
+            VH_OUT_A  = MethodHandles.arrayElementVarHandle(Object[].class);
+            VH_ERR_A  = MethodHandles.arrayElementVarHandle(Object[].class);
+            VH_TAG_A  = MethodHandles.arrayElementVarHandle(byte[].class);
+            VH_CORR_A = MethodHandles.arrayElementVarHandle(String[].class);
         } catch (ReflectiveOperationException e) {
             throw new ExceptionInInitializerError(e);
         }
@@ -63,12 +78,15 @@ public final class MpscRing<FR, In, Out> implements IMpscRing<FR, In, Out> {
         this.errArr  = new Object[capacity];
         this.tagArr  = new byte[capacity];
 
+        // Initialize per-slot sequence so producers can claim the right ticket
         for (int i = 0; i < capacity; i++) {
             VH_SEQ_A.setRelease(seq, i, (long) i);
         }
     }
 
-    // ---- producers ----
+    // ---------------------------------------------------------------------
+    // Producers
+    // ---------------------------------------------------------------------
 
     @Override
     public boolean offerSuccess(In in, String corrId, Out out) {
@@ -85,17 +103,20 @@ public final class MpscRing<FR, In, Out> implements IMpscRing<FR, In, Out> {
     }
 
     private boolean offerInternal(In in, String corrId, Out out, Throwable err, byte tag) {
+        // Claim a ticket atomically; modulo capacity for the array index
         long ticket = (long) VH_TAIL.getAndAdd(this, 1L);
         int idx = (int) (ticket & mask);
 
+        // Wait until the consumer advances the sequence to our expected ticket
         for (;;) {
             long s = (long) VH_SEQ_A.getAcquire(seq, idx);
             if (s == ticket) break;
             Thread.onSpinWait();
         }
 
+        // Store payload with release semantics (write fence before publishing)
         VH_IN_A.setRelease(inArr, idx, in);
-        corrArr[idx] = corrId;
+        VH_CORR_A.setRelease(corrArr, idx, corrId); // FIX: use VarHandle to avoid races
 
         if (tag == TAG_SUCCESS) {
             VH_OUT_A.setRelease(outArr, idx, out);
@@ -106,16 +127,19 @@ public final class MpscRing<FR, In, Out> implements IMpscRing<FR, In, Out> {
         }
         VH_TAG_A.setRelease(tagArr, idx, tag);
 
-        // publish
+        // Publish: advance the sequence so the consumer can see this slot as ready
         VH_SEQ_A.setRelease(seq, idx, ticket + 1L);
         return true;
     }
 
-    // ---- consumer ----
+    // ---------------------------------------------------------------------
+    // Consumer
+    // ---------------------------------------------------------------------
 
     @Override
     public int drain(BiConsumer<In, Out> onCompleteOrFailed, Handler<FR, In, Out> handler) {
         int n = 0;
+        // Drain greedily in this call; caller controls polling cadence
         while (pollOnceInternal(onCompleteOrFailed, handler)) n++;
         return n;
     }
@@ -130,7 +154,8 @@ public final class MpscRing<FR, In, Out> implements IMpscRing<FR, In, Out> {
 
         @SuppressWarnings("unchecked")
         In in = (In) VH_IN_A.getAcquire(inArr, idx);
-        String corrId = corrArr[idx];
+        String corrId = (String) VH_CORR_A.getAcquire(corrArr, idx); // FIX: acquire
+
         byte tag = (byte) VH_TAG_A.getAcquire(tagArr, idx);
 
         if (tag == TAG_SUCCESS) {
@@ -143,13 +168,14 @@ public final class MpscRing<FR, In, Out> implements IMpscRing<FR, In, Out> {
             handler.onFailure(null, onCompleteOrFailed, in, corrId, err);
         }
 
-        // clear slot
+        // Clear slot (help GC and prepare for the next producer cycle)
         VH_IN_A.setRelease(inArr, idx, null);
         VH_OUT_A.setRelease(outArr, idx, null);
         VH_ERR_A.setRelease(errArr, idx, null);
         VH_TAG_A.setRelease(tagArr, idx, TAG_EMPTY);
+        VH_CORR_A.setRelease(corrArr, idx, null); // FIX: clear corrId with release
 
-        // move sequence forward for producers
+        // Move sequence forward for producers; set to next ticket for this slot
         VH_SEQ_A.setRelease(seq, idx, head + capacity);
         head++;
         return true;

@@ -7,7 +7,6 @@ import org.junit.jupiter.api.Test;
 import java.util.*;
 import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicInteger;
-import java.util.concurrent.atomic.AtomicLong;
 import java.util.function.BiConsumer;
 
 import static org.junit.jupiter.api.Assertions.*;
@@ -17,6 +16,8 @@ import static org.junit.jupiter.api.Assertions.*;
  * 1) parallel success with many keys (fast)
  * 2) parallel mixed success/failure (fast)
  * 3) serial timeouts (only care about eviction when lane is FULL)
+ *
+ * NOTE: drain() is called ONLY on the test thread (the operator), by design.
  */
 public class OrderPreservingAsyncExecutorStressTest {
 
@@ -82,13 +83,14 @@ public class OrderPreservingAsyncExecutorStressTest {
     }
 
     static OrderPreservingAsyncExecutorConfig<String,String,String> cfg(
+            Correlator<String> correlator,
             FailureAdapter<String,String> fa,
             FutureRecordTypeClass<String,String,String> fr,
             int laneCount, int laneDepth, int maxInFlight, int executorThreads,
             int admissionCycles, long timeoutMs) {
         return new OrderPreservingAsyncExecutorConfig<>(
                 laneCount, laneDepth, maxInFlight, executorThreads, timeoutMs,
-                new DummyCorrelator(), fa, fr, com.hcltech.rmg.common.ITimeService.real);
+                correlator, fa, fr, com.hcltech.rmg.common.ITimeService.real);
     }
 
     private ExecutorService threadPool;
@@ -99,12 +101,31 @@ public class OrderPreservingAsyncExecutorStressTest {
     @BeforeEach
     void setup() {
         threadPool = Executors.newFixedThreadPool(Math.max(4, Runtime.getRuntime().availableProcessors() * 2));
-        ring = new MpscRing<>(4096);
+        // Slightly larger ring helps when the operator thread is momentarily preempted
+        ring = new MpscRing<>(16_384);
     }
 
     @AfterEach
     void tearDown() {
         threadPool.shutdownNow();
+    }
+
+    /** Single-thread operator drain loop with soft timeout + periodic yielding. */
+    private void drainUntil(OrderPreservingAsyncExecutor<String,String,String> exec,
+                            RecordingFutureRecord rec,
+                            long timeoutMillis) throws InterruptedException {
+        final long deadline = System.nanoTime() + TimeUnit.MILLISECONDS.toNanos(timeoutMillis);
+        long iter = 0;
+        while (rec.latch.getCount() > 0) {
+            exec.drain("FR-IGNORED", NOOP_HOOK); // FR not on ring; ignored
+            // tiny spin; occasionally yield so producers can run
+            if ((++iter & 0xFFFF) == 0) {
+                Thread.yield();
+            } else {
+                Thread.onSpinWait();
+            }
+            if (System.nanoTime() >= deadline) break;
+        }
     }
 
     // ---------------------------------------------------------------------
@@ -121,7 +142,10 @@ public class OrderPreservingAsyncExecutorStressTest {
         CountingPermit permits = new CountingPermit(MAX_INFLIGHT);
         DummyFailureAdapter failure = new DummyFailureAdapter();
         RecordingFutureRecord futureRec = new RecordingFutureRecord(TOTAL);
-        ILanes<String> lanes = new Lanes<>(LANE_COUNT, LANE_DEPTH, new DummyCorrelator());
+
+        // IMPORTANT: share the SAME correlator instance between Lanes and Config
+        Correlator<String> correlator = new DummyCorrelator();
+        ILanes<String> lanes = new Lanes<>(LANE_COUNT, LANE_DEPTH, correlator);
 
         OrderPreservingAsyncExecutor.UserFnPort<String,String,String> userFn = (tc, in, corrId, c) ->
                 threadPool.submit(() -> {
@@ -130,22 +154,27 @@ public class OrderPreservingAsyncExecutorStressTest {
                     c.success(in, corrId, "OUT:" + in);
                 });
 
-        var exec = new OrderPreservingAsyncExecutor<>(cfg(failure,futureRec,
+        var exec = new OrderPreservingAsyncExecutor<>(cfg(correlator, failure, futureRec,
                 LANE_COUNT, LANE_DEPTH, MAX_INFLIGHT, 8, 8, 200),
                 lanes, permits, ring, threadPool, futureRec, LANE_COUNT, userFn);
 
         for (int i = 0; i < TOTAL; i++) {
             String key = "K" + (i % KEYS);
-            exec.add(key, "FR-" + i, NOOP_HOOK);
+            exec.add(key, "FR-" + i, NOOP_HOOK);  // add() calls drain() inline too, still same thread
         }
 
-        while (futureRec.latch.getCount() > 0) {
-            exec.drain("FR-IGNORED", NOOP_HOOK); // FR not on ring; value not asserted in this test
-            Thread.sleep(1);
+        drainUntil(exec, futureRec, 60_000);
+
+        if (futureRec.latch.getCount() != 0) {
+            System.err.println("EXEC DIAG (timeout): " + exec.diagnostics());
         }
 
-        assertEquals(TOTAL, futureRec.completedFr.size(), "all items must complete");
-        assertEquals(permits.acquired.get(), permits.released.get(), "permits must balance");
+        assertEquals(0, futureRec.latch.getCount(),
+                "Timed out waiting for callbacks. " + exec.diagnostics());
+        assertEquals(TOTAL, futureRec.completedFr.size(),
+                "all items must complete. " + exec.diagnostics());
+        assertEquals(permits.acquired.get(), permits.released.get(),
+                "permits must balance. " + exec.diagnostics());
     }
 
     // ---------------------------------------------------------------------
@@ -162,7 +191,9 @@ public class OrderPreservingAsyncExecutorStressTest {
         CountingPermit permits = new CountingPermit(MAX_INFLIGHT);
         DummyFailureAdapter failure = new DummyFailureAdapter();
         RecordingFutureRecord futureRec = new RecordingFutureRecord(TOTAL);
-        ILanes<String> lanes = new Lanes<>(LANE_COUNT, LANE_DEPTH, new DummyCorrelator());
+
+        Correlator<String> correlator = new DummyCorrelator();
+        ILanes<String> lanes = new Lanes<>(LANE_COUNT, LANE_DEPTH, correlator);
 
         OrderPreservingAsyncExecutor.UserFnPort<String,String,String> userFn = (tc, in, corrId, c) ->
                 threadPool.submit(() -> {
@@ -174,7 +205,7 @@ public class OrderPreservingAsyncExecutorStressTest {
                         c.success(in, corrId, "OUT:" + in);
                 });
 
-        var exec = new OrderPreservingAsyncExecutor<>(cfg(failure,futureRec,
+        var exec = new OrderPreservingAsyncExecutor<>(cfg(correlator, failure, futureRec,
                 LANE_COUNT, LANE_DEPTH, MAX_INFLIGHT, 8, 8, 200),
                 lanes, permits, ring, threadPool, futureRec, LANE_COUNT, userFn);
 
@@ -183,16 +214,20 @@ public class OrderPreservingAsyncExecutorStressTest {
             exec.add(key, "FR-" + i, NOOP_HOOK);
         }
 
-        while (futureRec.latch.getCount() > 0) {
-            exec.drain("FR-IGNORED", NOOP_HOOK);
-            Thread.sleep(1);
+        drainUntil(exec, futureRec, 60_000);
+
+        if (futureRec.latch.getCount() != 0) {
+            System.err.println("EXEC DIAG (timeout): " + exec.diagnostics());
         }
 
-        // accounted for (timeouts may be zero; we only time out to avoid blocking)
-        assertEquals(TOTAL,
-                futureRec.completedFr.size() + futureRec.failedFr.size() + futureRec.timedOutFr.size(),
-                "every item must complete or fail");
-        assertEquals(permits.acquired.get(), permits.released.get(), "permits must balance");
+        int accounted = futureRec.completedFr.size() + futureRec.failedFr.size() + futureRec.timedOutFr.size();
+
+        assertEquals(0, futureRec.latch.getCount(),
+                "Timed out waiting for callbacks. " + exec.diagnostics());
+        assertEquals(TOTAL, accounted,
+                "every item must complete or fail. " + exec.diagnostics());
+        assertEquals(permits.acquired.get(), permits.released.get(),
+                "permits must balance. " + exec.diagnostics());
     }
 
     // ---------------------------------------------------------------------
@@ -207,35 +242,41 @@ public class OrderPreservingAsyncExecutorStressTest {
         CountingPermit permits = new CountingPermit(1);
         DummyFailureAdapter failure = new DummyFailureAdapter();
         RecordingFutureRecord futureRec = new RecordingFutureRecord(N); // count outcomes if any
-        ILanes<String> lanes = new Lanes<>(1, 1, new DummyCorrelator());
+
+        Correlator<String> correlator = new DummyCorrelator();
+        ILanes<String> lanes = new Lanes<>(1, 1, correlator);
 
         // never completes -> the only way to keep making space is eviction when full
         OrderPreservingAsyncExecutor.UserFnPort<String,String,String> userFn =
                 (tc, in, corrId, c) -> { /* no-op */ };
 
-        var exec = new OrderPreservingAsyncExecutor<>(cfg(failure,futureRec,
+        var exec = new OrderPreservingAsyncExecutor<>(cfg(correlator, failure, futureRec,
                 1,1,1,1,8, TIMEOUT_MS),
                 lanes, permits, ring, threadPool, futureRec, 1, userFn);
 
         // Seed a head
         exec.add("K", "FR-H", NOOP_HOOK);
 
-        // Repeatedly try to add after sleeping past the timeout. We don't assert that
-        // every cycle produces a timeout; we only care that the executor remains unblocked.
         long start = System.nanoTime();
         for (int i = 0; i < N; i++) {
             Thread.sleep(TIMEOUT_MS + 20); // cushion over timer granularity
             exec.add("K", "FR-" + i, NOOP_HOOK); // if lane full & head expired, this unblocks by evicting
-            exec.drain("FR-IGNORED", NOOP_HOOK);
+            exec.drain("FR-IGNORED", NOOP_HOOK); // operator thread drains
         }
         long elapsedMs = TimeUnit.NANOSECONDS.toMillis(System.nanoTime() - start);
 
+        if (!(elapsedMs < 10_000)) {
+            System.err.println("EXEC DIAG (slow progress): " + exec.diagnostics());
+        }
+
         // Progress property: the loop completed in a reasonable amount of time
-        // (i.e., adds did not block indefinitely on a full lane).
-        assertTrue(elapsedMs < 10_000, "executor should not block under full-lane eviction policy");
+        assertTrue(elapsedMs < 10_000,
+                "executor should not block under full-lane eviction policy. " + exec.diagnostics());
 
         // Permit accounting sanity: at most one outstanding head in this scenario.
-        assertTrue(permits.released.get() <= permits.acquired.get(), "permits must not leak");
-        assertTrue(permits.acquired.get() - permits.released.get() <= 1, "at most one in-flight head");
+        assertTrue(permits.released.get() <= permits.acquired.get(),
+                "permits must not leak. " + exec.diagnostics());
+        assertTrue(permits.acquired.get() - permits.released.get() <= 1,
+                "at most one in-flight head. " + exec.diagnostics());
     }
 }

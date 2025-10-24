@@ -3,7 +3,6 @@ package ai_worker.domain;
 import com.hcltech.rmg.config.config.RootConfig;
 import com.hcltech.rmg.config.configs.Configs;
 import com.hcltech.rmg.flinkadapters.FlinkHelper;
-import com.hcltech.rmg.shared_worker.FirstHitJobKiller;
 import org.apache.flink.api.common.ExecutionConfig;
 import org.apache.flink.api.common.JobID;
 import org.apache.flink.configuration.Configuration;
@@ -11,7 +10,6 @@ import org.apache.flink.core.execution.JobClient;
 import org.apache.flink.streaming.api.environment.StreamExecutionEnvironment;
 import org.springframework.stereotype.Component;
 
-import java.time.Duration;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
@@ -64,8 +62,6 @@ public class LocalFlinkJobAdapter implements FlinkJobPort {
         if (client == null) {
             throw new IllegalArgumentException("No such running job: " + jobId);
         }
-        new FirstHitJobKiller(client, firstFailureAtomic, Duration.ofMillis(10)).start();
-
     }
 
     @Override

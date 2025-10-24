@@ -7,10 +7,10 @@ import java.util.Objects;
  * Uses a Correlator to route items: index = correlator.laneHash(t) & (laneCount - 1).
  * Single-threaded usage only (operator thread).
  */
-public final class Lanes< T> implements ILanes< T>, ILanesTestHooks< T> {
+public final class Lanes<T> implements ILanes<T>, ILanesTestHooks<T> {
 
     private final Correlator<T> correlator;
-    private final ILane< T>[] lanes;
+    private final ILane<T>[] lanes;
     private final int laneCount;
     private final int laneMask;
     private final int laneDepth;
@@ -27,7 +27,7 @@ public final class Lanes< T> implements ILanes< T>, ILanesTestHooks< T> {
         this.laneMask = laneCount - 1;
         this.laneDepth = laneDepth;
 
-        ILane< T>[] arr = (ILane< T>[]) new ILane[laneCount];
+        ILane<T>[] arr = (ILane<T>[]) new ILane[laneCount];
         for (int i = 0; i < laneCount; i++) {
             arr[i] = new Lane<>(laneDepth);
         }
@@ -37,30 +37,18 @@ public final class Lanes< T> implements ILanes< T>, ILanesTestHooks< T> {
     // ------------ ILanes (prod) ------------
 
     @Override
-    public ILane< T> lane(T t) {
+    public ILane<T> lane(T t) {
         int idx = correlator.laneHash(t) & laneMask;
         return lanes[idx];
     }
 
     // ------------ ILanesTestHooks (tests) ------------
 
-    @Override
-    public ILane< T> _laneAt(int index) {
-        return lanes[index];
-    }
+    @Override public ILane<T> _laneAt(int index) { return lanes[index]; }
 
-    @Override
-    public int _laneMask() {
-        return laneMask;
-    }
+    @Override public int _laneMask() { return laneMask; }
 
-    @Override
-    public int _laneDepth() {
-        return laneDepth;
-    }
+    @Override public int _laneDepth() { return laneDepth; }
 
-    @Override
-    public int _laneCount() {
-        return laneCount;
-    }
+    @Override public int _laneCount() { return laneCount; }
 }

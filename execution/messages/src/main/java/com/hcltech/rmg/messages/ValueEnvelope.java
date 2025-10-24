@@ -51,7 +51,8 @@ public final class ValueEnvelope<CepState, Msg> implements Envelope<CepState, Ms
         if (event == null) return this;
         var newCepState = cepStateTypeClass.processState(cepState, event);
         cepStateModifications.add(event);
-        return new ValueEnvelope<>(header, data, newCepState, cepStateModifications);
+        setCepState(newCepState);
+        return this;
 
     }
 

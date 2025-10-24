@@ -49,6 +49,7 @@ public final class Lane<T> implements ILane<T>, ILaneTestHooks<T> {
     public boolean popHead(Consumer<T> consumer) {
         if (isEmpty()) return false;
         int i = headIdx;
+        consumer.accept(values[i]);           // ensure consumer sees the head
         clearSlot(i);
         return true;
     }
@@ -64,61 +65,29 @@ public final class Lane<T> implements ILane<T>, ILaneTestHooks<T> {
 
     private void clearSlot(int i) {
         values[i] = null;
+        corrId[i] = null;                     // reduce retention
+        startedAtNanos[i] = 0L;               // reduce retention
         headIdx = (headIdx + 1) & mask;
         count--;
     }
 
     // ------------------------------------------------------------------
-    @Override
-    public T headT() {
-        return values[headIdx];
-    }
+    @Override public T headT() { return values[headIdx]; }
 
-    @Override
-    public String headCorrId() {
-        return corrId[headIdx];
-    }
+    @Override public String headCorrId() { return corrId[headIdx]; }
 
-    @Override
-    public long headStartedAtNanos() {
-        return startedAtNanos[headIdx];
-    }
+    @Override public long headStartedAtNanos() { return startedAtNanos[headIdx]; }
 
-    @Override
-    public boolean isEmpty() {
-        return count == 0;
-    }
+    @Override public boolean isEmpty() { return count == 0; }
 
-    @Override
-    public boolean isFull() {
-        return count == depth;
-    }
+    @Override public boolean isFull() { return count == depth; }
 
     // ---- test hooks ----
-    @Override
-    public int _headIdxForTest() {
-        return headIdx;
-    }
-
-    @Override
-    public int _tailIdxForTest() {
-        return tailIdx;
-    }
-
-    @Override
-    public int _countForTest() {
-        return count;
-    }
-
-    @Override
-    public int _maskForTest() {
-        return mask;
-    }
-
-    @Override
-    public int _depthForTest() {
-        return depth;
-    }
+    @Override public int _headIdxForTest() { return headIdx; }
+    @Override public int _tailIdxForTest() { return tailIdx; }
+    @Override public int _countForTest()   { return count; }
+    @Override public int _maskForTest()    { return mask; }
+    @Override public int _depthForTest()   { return depth; }
 
     @Override
     public boolean _containsForTest(T t) {

@@ -10,6 +10,7 @@ import com.hcltech.rmg.cepstate.CepStateTypeClass;
 import com.hcltech.rmg.common.ITimeService;
 import com.hcltech.rmg.common.async.OrderPreservingAsyncExecutor;
 import com.hcltech.rmg.common.copy.DeepCopy;
+import com.hcltech.rmg.common.function.Callback;
 import com.hcltech.rmg.flink_metrics.FlinkMetricsParams;
 import com.hcltech.rmg.messages.AiFailureEnvelopeFactory;
 import com.hcltech.rmg.messages.Envelope;
@@ -28,22 +29,32 @@ import java.util.function.Function;
 
 /**
  * Keyed operator that keeps CEP state and runs the OrderPreservingAsyncExecutor
- * in the same operator (no AsyncFunction). Completions are drained on the operator
+ * inside the operator (no AsyncFunction). Completions are drained on the operator
  * thread and emitted directly to the Collector (no retention).
- * <p>
- * K   : Flink key type (String)
+ *
+ * K   : String
  * In  : Envelope<CepState, Msg>
  * Out : Envelope<CepState, Msg>
  */
 public class EnvelopeAsyncProcessingFunction<ESC, CepState, Msg, Schema>
-        extends AbstractEnvelopeAsyncProcessingFunction<ESC, CepState, Msg, Schema, RuntimeContext, FlinkMetricsParams> {
-
+        extends AbstractEnvelopeAsyncProcessingFunction<
+        ESC, CepState, Msg, Schema, RuntimeContext, FlinkMetricsParams> {
 
     private final String module;
     private final boolean rememberBizlogicInput;
-    private ParseMessagePipelineStep<ESC, CepState, Msg, Schema, RuntimeContext, Output<StreamRecord<Envelope<CepState, Msg>>>, FlinkMetricsParams> parser;
-    private EnrichmentPipelineStep<ESC, CepState, Msg, Schema, RuntimeContext, Output<StreamRecord<Envelope<CepState, Msg>>>, FlinkMetricsParams> enrichmentPipelineStep;
-    private BizLogicPipelineStep<ESC, CepState, Msg, Schema, RuntimeContext, Output<StreamRecord<Envelope<CepState, Msg>>>, FlinkMetricsParams> bizLogic;
+
+    private ParseMessagePipelineStep<
+            ESC, CepState, Msg, Schema, RuntimeContext,
+            Output<StreamRecord<Envelope<CepState, Msg>>>, FlinkMetricsParams> parser;
+
+    private EnrichmentPipelineStep<
+            ESC, CepState, Msg, Schema, RuntimeContext,
+            Output<StreamRecord<Envelope<CepState, Msg>>>, FlinkMetricsParams> enrichmentPipelineStep;
+
+    private BizLogicPipelineStep<
+            ESC, CepState, Msg, Schema, RuntimeContext,
+            Output<StreamRecord<Envelope<CepState, Msg>>>, FlinkMetricsParams> bizLogic;
+
     private com.hcltech.rmg.metrics.Metrics metrics;
     private EnvelopeMetrics<Envelope<?, ?>> envelopeMetrics;
     private ITimeService timeService;
@@ -54,7 +65,12 @@ public class EnvelopeAsyncProcessingFunction<ESC, CepState, Msg, Schema>
     private DeepCopy<CepState> cesStateDeepCopy;
     private Function<Envelope<CepState, Msg>, Envelope<CepState, Msg>> afterParse;
 
-    public EnvelopeAsyncProcessingFunction(AppContainerDefn appContainerDefn, String module, boolean rememberBizlogicInput) {
+    public EnvelopeAsyncProcessingFunction(
+            AppContainerDefn<
+                    ESC, CepState, Msg, Schema, RuntimeContext,
+                    Output<StreamRecord<Envelope<CepState, Msg>>>, FlinkMetricsParams> appContainerDefn,
+            String module,
+            boolean rememberBizlogicInput) {
         super(appContainerDefn);
         this.module = module;
         this.rememberBizlogicInput = rememberBizlogicInput;
@@ -70,7 +86,6 @@ public class EnvelopeAsyncProcessingFunction<ESC, CepState, Msg, Schema>
         super.processElement(record);
     }
 
-
     @Override
     protected void setKey(Envelope<CepState, Msg> in, Envelope<CepState, Msg> out) {
         if (out instanceof ValueEnvelope<CepState, Msg> veOut) {
@@ -79,56 +94,104 @@ public class EnvelopeAsyncProcessingFunction<ESC, CepState, Msg, Schema>
         }
     }
 
-    /**
-     * Note that this must be called inside an open method of a flink rich thing
-     */
     @Override
-    protected OrderPreservingAsyncExecutor.UserFnPort<Envelope<CepState, Msg>, Envelope<CepState, Msg>, Output<StreamRecord<Envelope<CepState, Msg>>>> createUserFnPort(AppContainer<ESC, CepState, Msg, Schema, RuntimeContext, Output<StreamRecord<Envelope<CepState, Msg>>>, FlinkMetricsParams> container) {
+    protected OrderPreservingAsyncExecutor.UserFnPort<
+            Envelope<CepState, Msg>, Envelope<CepState, Msg>,
+            Output<StreamRecord<Envelope<CepState, Msg>>>>
+    createUserFnPort(AppContainer<
+            ESC, CepState, Msg, Schema, RuntimeContext,
+            Output<StreamRecord<Envelope<CepState, Msg>>>, FlinkMetricsParams> container) {
+
         return (frTypeClass, env, corrId, completion) -> {
             Objects.requireNonNull(cepEventLog, "MakeEmptyValueEnvelopeWithCepStateFunction not opened");
-            if (env instanceof ValueEnvelope<CepState, Msg> ve) {
 
-                long start = timeService.currentTimeNanos();
-                var parsed = parser.parse(env);
+            final long start = timeService.currentTimeNanos();
+            final Envelope<CepState, Msg> parsed = parser.parse(env);
 
-                var afterEnrichment = enrichmentPipelineStep.process(parsed);
-                if (rememberBizlogicInput) {
-                    // Deep copy cep state and msg to store in cargo - used for AI pipelines to compare input vs output
-                    var cepStateCopy = cesStateDeepCopy.copy(afterEnrichment.valueEnvelope().cepState());
-                    var msgCopy = msgDeepCopy.copy(afterEnrichment.valueEnvelope().data());
-                    EnvelopeHeader<CepState> header = afterEnrichment.valueEnvelope().header();
-                    var cargo = new HashMap<>(header.cargo());
-                    cargo.put(AiFailureEnvelopeFactory.BIZLOGIC_INPUT_CEP_STATE_CARGO_KEY, cepStateCopy);
-                    cargo.put(AiFailureEnvelopeFactory.BIZLOGIC_INPUT_MSG_CARGO_KEY, msgCopy);
-                    var newHeader = header.withCargo(cargo);
-                    afterEnrichment.valueEnvelope().setHeader(newHeader);
+            if (!(parsed instanceof ValueEnvelope)) {
+                // Passthrough for non-ValueEnvelope
+                completion.success(env, corrId, parsed);
+                return;
+            }
+
+            @SuppressWarnings("unchecked")
+            final ValueEnvelope<CepState, Msg> veParsed = (ValueEnvelope<CepState, Msg>) parsed;
+
+            // Enrichment (async-shaped)
+            enrichmentPipelineStep.call(veParsed, new Callback<>() {
+                @Override
+                public void success(Envelope<CepState, Msg> afterEnrichmentEnv) {
+                    try {
+                        // afterEnrichmentEnv should be a ValueEnvelope in our pipeline
+                        if (rememberBizlogicInput && afterEnrichmentEnv instanceof ValueEnvelope) {
+                            @SuppressWarnings("unchecked")
+                            ValueEnvelope<CepState, Msg> veEnriched =
+                                    (ValueEnvelope<CepState, Msg>) afterEnrichmentEnv;
+                            EnvelopeHeader<CepState> header = veEnriched.header();
+                            var cargo = new HashMap<>(header.cargo());
+                            cargo.put(AiFailureEnvelopeFactory.BIZLOGIC_INPUT_CEP_STATE_CARGO_KEY,
+                                    cesStateDeepCopy.copy(veEnriched.cepState()));
+                            cargo.put(AiFailureEnvelopeFactory.BIZLOGIC_INPUT_MSG_CARGO_KEY,
+                                    msgDeepCopy.copy(veEnriched.data()));
+                            veEnriched.setHeader(header.withCargo(cargo));
+                        }
+
+                        // BizLogic (async-shaped)
+                        bizLogic.call(afterEnrichmentEnv, new Callback<>() {
+                            @Override
+                            public void success(Envelope<CepState, Msg> afterBizLogicEnv) {
+                                try {
+                                    envelopeMetrics.addToMetricsAtEnd(afterBizLogicEnv);
+                                    long duration = timeService.currentTimeNanos() - start;
+                                    metrics.histogram("NormalPipelineFunction.asyncInvoke.millis", duration);
+
+                                    if (afterBizLogicEnv instanceof ValueEnvelope) {
+                                        @SuppressWarnings("unchecked")
+                                        ValueEnvelope<CepState, Msg> veOut =
+                                                (ValueEnvelope<CepState, Msg>) afterBizLogicEnv;
+                                        veOut.setDurationNanos(duration);
+                                        // Append CEP mods before emitting
+                                        var mods = veOut.cepStateModifications();
+                                        if (mods != null) {
+                                            cepEventLog.append(mods);
+                                        }
+                                    }
+
+                                    completion.success(env, corrId, afterBizLogicEnv);
+                                } catch (Throwable t) {
+                                    completion.failure(env, corrId, t);
+                                }
+                            }
+
+                            @Override
+                            public void failure(Throwable error) {
+                                completion.failure(env, corrId, error);
+                            }
+                        });
+
+                    } catch (Throwable t) {
+                        completion.failure(env, corrId, t);
+                    }
                 }
 
-                var afterBizLogic = bizLogic.process(afterEnrichment);
-                envelopeMetrics.addToMetricsAtEnd(afterBizLogic);
-                long finish = timeService.currentTimeNanos();
-                long duration = finish - start;
-                metrics.histogram("NormalPipelineFunction.asyncInvoke.millis", duration);
-                afterBizLogic.valueEnvelope().setDurationNanos(duration);
-                var updated = afterBizLogic.map(e -> {
-                    cepEventLog.append(e.cepStateModifications());
-                    return e;
-                });
-                completion.success(env, corrId, updated);
-            } else {
-                completion.success(env, corrId, env);
-
-            }
+                @Override
+                public void failure(Throwable error) {
+                    completion.failure(env, corrId, error);
+                }
+            });
         };
     }
 
-
     @Override
-    protected void protectedSetupInOpen(AppContainer<ESC, CepState, Msg, Schema, RuntimeContext, Output<StreamRecord<Envelope<CepState, Msg>>>, FlinkMetricsParams> container) {
+    protected void protectedSetupInOpen(AppContainer<
+            ESC, CepState, Msg, Schema, RuntimeContext,
+            Output<StreamRecord<Envelope<CepState, Msg>>>, FlinkMetricsParams> container) {
+
         this.parser = new ParseMessagePipelineStep<>(container);
         this.afterParse = container.afterParse();
         this.enrichmentPipelineStep = new EnrichmentPipelineStep<>(container, module);
         this.bizLogic = new BizLogicPipelineStep<>(container, null, module);
+
         var metricsFactory = container.metricsFactory();
         var params = FlinkMetricsParams.fromRuntime(getRuntimeContext(), getClass());
         this.metrics = metricsFactory.create(params);
@@ -140,6 +203,4 @@ public class EnvelopeAsyncProcessingFunction<ESC, CepState, Msg, Schema>
         this.cesStateDeepCopy = container.deepCopyCepState();
         this.msgDeepCopy = container.deepCopyMsg();
     }
-
 }
-
