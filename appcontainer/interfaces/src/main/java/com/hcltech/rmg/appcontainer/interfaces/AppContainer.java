@@ -59,6 +59,9 @@ public record AppContainer<EventSourceConfig, CepState, Msg, Schema, FlinkRT, Fl
         DeepCopy<CepState> deepCopyCepState,
         AiFailureEnvelopeFactory<CepState, Msg> aiFailureEnvelopeFactory,
 
+        // RocksDB path for state backend
+        String rocksDBPath,
+
         //metrics
         MetricsFactory<MetricParam> metricsFactory,
 
