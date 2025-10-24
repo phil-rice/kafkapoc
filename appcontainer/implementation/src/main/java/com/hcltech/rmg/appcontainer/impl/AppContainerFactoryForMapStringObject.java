@@ -119,6 +119,23 @@ public final class AppContainerFactoryForMapStringObject implements IAppContaine
                     "config/prod/",
                     "/opt/flink-rocksdb-prod",
                     v -> v
+            );  case "dev" -> basic(
+                    id,
+                    null,//topic from system properties
+                    ITimeService.real,
+                    IUuidGenerator.defaultGenerator(),
+                    "config/root-prod.json",
+                    30_000,
+                    RootConfigLoader::fromClasspath,
+                    ConfigsBuilder::buildFromClasspath,
+                    "noCelCondition",
+                    ParameterExtractor.defaultParameterExtractor(defaultParameters, Map.of(), Map.of(
+                            "productType", List.of("msg", "productType"),
+                            "company", List.of("msg", "company"))),
+                    IEventTypeExtractor.fromPathForMapStringObject(List.of("msg", "eventType")),
+                    IDomainTypeExtractor.fixed("parcel"),
+                    "config/prod/",
+                    v -> v
             );
             case "ai" -> basic(
                     id,
@@ -224,7 +241,7 @@ public final class AppContainerFactoryForMapStringObject implements IAppContaine
                 ).flatMap(configs ->
                         XmlTypeClass.loadOptionalSchema(xml, root.xmlSchemaPath()).flatMap(schemaMap -> {
                             Class<Map<String, Object>> msgClass = (Class) Map.class;
-                            AspectExecutor<EnrichmentWithDependencies, ValueEnvelope<Map<String, Object>, Map<String, Object>>, CepEvent> oneEnrichmentExecutor = new EnrichmentExecutor<>(msgTypeClass);
+                            AspectExecutor<EnrichmentWithDependencies, ValueEnvelope<Map<String, Object>, Map<String, Object>>, CepEvent> oneEnrichmentExecutor = new EnrichmentExecutor<>(cepStateTypeClass,msgTypeClass);
                             var bizLogicExecutor = new BizLogicExecutor<Map<String, Object>, Map<String, Object>>(configs, CelRuleBuilders.newRuleBuilder, msgClass);
 
                             return IEnrichmentAspectExecutor.<Map<String, Object>, Map<String, Object>>create(cepStateTypeClass, configs, oneEnrichmentExecutor).map(

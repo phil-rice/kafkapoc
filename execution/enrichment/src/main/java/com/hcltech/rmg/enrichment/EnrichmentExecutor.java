@@ -1,6 +1,8 @@
 package com.hcltech.rmg.enrichment;
 
 import com.hcltech.rmg.cepstate.CepEvent;
+import com.hcltech.rmg.cepstate.CepStateTypeClass;
+import com.hcltech.rmg.config.enrich.CsvEnrichment;
 import com.hcltech.rmg.config.enrich.EnrichmentWithDependencies;
 import com.hcltech.rmg.config.enrich.FixedEnrichment;
 import com.hcltech.rmg.config.enrich.MapLookupEnrichment;
@@ -16,9 +18,10 @@ public class EnrichmentExecutor<CepState, Msg> implements AspectExecutor<Enrichm
     AspectExecutorRepository<EnrichmentWithDependencies, ValueEnvelope<CepState, Msg>, CepEvent> aspectRepository = new AspectExecutorRepository<>();
 
 
-    public EnrichmentExecutor(MsgTypeClass<Msg, List<String>> msgTypeClass) {
+    public EnrichmentExecutor( CepStateTypeClass<CepState> cepStateTypeClass,MsgTypeClass<Msg, List<String>> msgTypeClass) {
         aspectRepository.register(MapLookupEnrichment.class, new MapLookupEnrichmentExecutor<CepState, Msg>(msgTypeClass));
         aspectRepository.register(FixedEnrichment.class, new FixedEnrichmentExecutor<>());
+        aspectRepository.register(CsvEnrichment.class, new CsvEnrichmentExecutor<>(cepStateTypeClass, msgTypeClass));
         this.executor = aspectRepository.build();
     }
 

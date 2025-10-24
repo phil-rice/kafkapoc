@@ -20,6 +20,16 @@
               "value":{"addedValue": "valueAdded"}
             },
             {
+              "type": "csv",
+              "inputs": [["add", "line1"], ["add", "postcode"]],
+              "output": ["postcode_details"],
+              "inputColumns": ["add_line1", "postcode"],
+              "outputColumns": ["po_suffix"],
+              "value":{"addedValue": "valueAdded"},
+              "keyDelimiter": ":",
+              "csvFileName": "csvs/postcode_lookup.csv"
+            },
+            {
               "type": "lookup",
               "inputs": [["inp","line1"], ["inp","line2"], ["inp","postcode"]],
               "output": ["destination"],

@@ -10,7 +10,8 @@ import java.util.List;
         @JsonSubTypes.Type(value = MapLookupEnrichment.class, name = "lookup"),
         @JsonSubTypes.Type(value = CompositeExecutor.class, name = "composite"),
         @JsonSubTypes.Type(value = FixedEnrichment.class, name = "fixed"),
+        @JsonSubTypes.Type(value = CsvEnrichment.class, name = "csv"),
 })
-public sealed interface EnrichmentAspect permits MapLookupEnrichment, CompositeExecutor, FixedEnrichment {
+public sealed interface EnrichmentAspect permits MapLookupEnrichment, CompositeExecutor, FixedEnrichment,CsvEnrichment {
     List<EnrichmentWithDependencies> asDependencies();
 }

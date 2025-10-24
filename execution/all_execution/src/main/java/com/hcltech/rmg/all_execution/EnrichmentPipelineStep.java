@@ -1,52 +1,26 @@
 package com.hcltech.rmg.all_execution;
 
 import com.hcltech.rmg.appcontainer.interfaces.AppContainer;
-import com.hcltech.rmg.cepstate.CepEventLog;
-import com.hcltech.rmg.config.aspect.AspectMap;
 import com.hcltech.rmg.config.config.Config;
 import com.hcltech.rmg.enrichment.IEnrichmentAspectExecutor;
-import com.hcltech.rmg.execution.bizlogic.BizLogicExecutor;
-import com.hcltech.rmg.messages.*;
-import com.hcltech.rmg.parameters.Parameters;
-import com.hcltech.rmg.xml.XmlTypeClass;
+import com.hcltech.rmg.messages.Envelope;
+import com.hcltech.rmg.messages.ValueEnvelope;
 
 import java.util.Map;
-import java.util.function.Supplier;
 
-public class EnrichmentPipelineStep<ESC, CepState, Msg, Schema,FlinkRT, FlinkFR,MetricParam> {
+public class EnrichmentPipelineStep<ESC, CepState, Msg, Schema, FlinkRT, FlinkFR, MetricParam> {
 
     private final IEnrichmentAspectExecutor<CepState, Msg> enrichmentExecutor;
-    private final BizLogicExecutor<CepState, Msg> bizLogic;
     private final Map<String, Config> keyToConfigMap;
-    private final String module;
-    private final XmlTypeClass<Msg, Schema> xmlTypeClass;
-    private final IDomainTypeExtractor<Msg> domainTypeExtractor;
-    private final IEventTypeExtractor<Msg> eventTypeExtractor;
-    private final Schema schema;
 
-    public EnrichmentPipelineStep(AppContainer<ESC, CepState, Msg, Schema,FlinkRT, FlinkFR,MetricParam> container, String module) {
-        this.module = module;
+
+    public EnrichmentPipelineStep(AppContainer<ESC, CepState, Msg, Schema, FlinkRT, FlinkFR, MetricParam> container, String module) {
         this.keyToConfigMap = container.keyToConfigMap();
         this.enrichmentExecutor = container.enrichmentExecutor();
-        this.bizLogic = container.bizLogic();
-        this.xmlTypeClass = container
-                .xml();
-        this.domainTypeExtractor = container.domainTypeExtractor();
-        this.eventTypeExtractor = container.eventTypeExtractor();
-        this.schema = container.nameToSchemaMap().get(container.rootConfig().xmlSchemaPath());
-        if (this.schema == null)
-            throw new IllegalStateException("Schema not found for: " + container.rootConfig().xmlSchemaPath() + " Legal values: " + container.nameToSchemaMap().keySet());
     }
 
     public Envelope<CepState, Msg> process(Envelope<CepState, Msg> envelope) {
         if (envelope instanceof ValueEnvelope<CepState, Msg> valueEnvelope) {
-            Parameters parameters = valueEnvelope.header().parameters();
-            String parameterKey = parameters.key();
-            String fullKey = valueEnvelope.keyForModule(module);
-            var config = keyToConfigMap.get(parameterKey);
-            AspectMap aspectMap = config.behaviorConfig().events().get(valueEnvelope.header().eventType());
-            if (aspectMap == null) return valueEnvelope;
-            var bizLogicConfig = aspectMap.bizlogic().get(module);
             return valueEnvelope.map(enrichmentExecutor::execute);
         }
         return envelope;
