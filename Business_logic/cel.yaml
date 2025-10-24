@@ -1,0 +1,612 @@
+# Royal Mail Group - Parcel Tracking Event Processing Rules
+# CEL (Common Expression Language) Business Logic
+# Version: 2.1.0
+# Last Updated: 2025-01-31
+{
+  "events": {
+    "EVDAV": {
+      "description": "Delivery Available - Parcel delivered or attempted",
+      "bizlogic": {
+        "tracking": {
+          "type": "cel",
+          "cel": "{'status': input.eventReason == '22' ? 'DELIVERED' : 'DELIVERY_ATTEMPTED', 'trackingNumber': input.UPUTrackingNumber, 'timestamp': input.eventTimestamp, 'location': input.siteId + '-' + input.functionalLocationId, 'deliveryType': input.requiredAtDeliveryCode == 'S' ? 'SIGNATURE' : 'SAFE_PLACE', 'address': enrichment.address_details.add_line1 + ', ' + enrichment.address_details.city + ', ' + enrichment.address_details.postcode}"
+        },
+        "notification": {
+          "type": "cel",
+          "cel": "{'template': input.eventReason == '22' ? 'DELIVERY_CONFIRMATION' : 'DELIVERY_ATTEMPTED', 'recipient': input.RECIPIENT_EMAILID, 'trackingNumber': input.UPUTrackingNumber, 'deliveryAddress': enrichment.address_details.add_line1 + ', ' + enrichment.address_details.city, 'deliveryTime': input.eventTimestamp, 'requiresSignature': input.requiredAtDeliveryCode == 'S'}"
+        },
+        "billing": {
+          "type": "cel",
+          "cel": "input.eventReason == '22' ? {'action': 'COMPLETE_DELIVERY', 'trackingNumber': input.UPUTrackingNumber, 'productId': input.productId, 'pricePaid': input.pricePaid, 'weight': input.mailPieceWeight, 'deliveryStatus': 'COMPLETED'} : {}"
+        }
+      },
+      "enrichment": {
+        "tracking": {
+          "type": "composite",
+          "enrichers": [
+            {
+              "type": "csv",
+              "inputs": [["postcode"]],
+              "output": ["address_details"],
+              "inputColumns": ["postcode"],
+              "outputColumns": ["add_line1", "add_line2", "city", "county", "country", "pincode"],
+              "keyDelimiter": ":",
+              "csvFileName": "csvs/address_lookup.csv"
+            },
+            {
+              "type": "csv",
+              "inputs": [["enrichment", "address_details", "add_line1"], ["enrichment", "address_details", "postcode"]],
+              "output": ["postcode_details"],
+              "inputColumns": ["add_line1", "postcode"],
+              "outputColumns": ["po_suffix"],
+              "keyDelimiter": ":",
+              "csvFileName": "csvs/postcode_lookup.csv"
+            },
+            {
+              "type": "fixed",
+              "inputs": [],
+              "output": ["delivery_metadata"],
+              "value": {
+                "eventType": "DELIVERY",
+                "priority": "HIGH",
+                "requiresTracking": true
+              }
+            }
+          ]
+        },
+        "notification": {
+          "type": "composite",
+          "enrichers": [
+            {
+              "type": "csv",
+              "inputs": [["postcode"]],
+              "output": ["address_details"],
+              "inputColumns": ["postcode"],
+              "outputColumns": ["add_line1", "add_line2", "city", "county", "country", "pincode"],
+              "keyDelimiter": ":",
+              "csvFileName": "csvs/address_lookup.csv"
+            },
+            {
+              "type": "fixed",
+              "inputs": [],
+              "output": ["notification_config"],
+              "value": {
+                "enableEmail": true,
+                "enableSMS": true,
+                "notificationType": "DELIVERY_UPDATE"
+              }
+            }
+          ]
+        },
+        "billing": {
+          "type": "composite",
+          "enrichers": [
+            {
+              "type": "fixed",
+              "inputs": [],
+              "output": ["billing_config"],
+              "value": {
+                "billingEvent": "DELIVERY_COMPLETED",
+                "chargeType": "STANDARD"
+              }
+            }
+          ]
+        }
+      }
+    },
+    "EVIMC": {
+      "description": "In Mail Center - Parcel in transit at mail processing center",
+      "bizlogic": {
+        "tracking": {
+          "type": "cel",
+          "cel": "{'status': input.functionalLocationId >= 300 ? 'OUT_FOR_DELIVERY' : 'IN_TRANSIT', 'trackingNumber': input.UPUTrackingNumber, 'timestamp': input.eventTimestamp, 'location': 'MAIL_CENTER_' + input.siteId, 'functionalLocation': input.functionalLocationId, 'estimatedDelivery': input.eventTimestamp + 'P2D', 'currentHub': enrichment.hub_details.hubName}"
+        },
+        "notification": {
+          "type": "cel",
+          "cel": "input.functionalLocationId >= 300 ? {'template': 'OUT_FOR_DELIVERY', 'recipient': input.RECIPIENT_EMAILID, 'trackingNumber': input.UPUTrackingNumber, 'deliveryAddress': enrichment.address_details.city + ' Delivery Office', 'estimatedDelivery': 'Tomorrow'} : {'template': 'IN_TRANSIT', 'recipient': input.RECIPIENT_EMAILID, 'trackingNumber': input.UPUTrackingNumber, 'currentLocation': 'Mail Center', 'estimatedDelivery': '2 days'}"
+        }
+      },
+      "enrichment": {
+        "tracking": {
+          "type": "composite",
+          "enrichers": [
+            {
+              "type": "csv",
+              "inputs": [["postcode"]],
+              "output": ["address_details"],
+              "inputColumns": ["postcode"],
+              "outputColumns": ["add_line1", "add_line2", "city", "county", "country", "pincode"],
+              "keyDelimiter": ":",
+              "csvFileName": "csvs/address_lookup.csv"
+            },
+            {
+              "type": "lookup",
+              "inputs": [["siteId"]],
+              "output": ["hub_details"],
+              "lookup": {
+                "000196": {"hubName": "London Mail Center", "region": "SOUTH_EAST", "capacity": "HIGH"},
+                "000159": {"hubName": "Birmingham Mail Center", "region": "MIDLANDS", "capacity": "MEDIUM"},
+                "000001": {"hubName": "Glasgow Mail Center", "region": "SCOTLAND", "capacity": "MEDIUM"},
+                "000002": {"hubName": "Manchester Mail Center", "region": "NORTH_WEST", "capacity": "HIGH"},
+                "000003": {"hubName": "Edinburgh Mail Center", "region": "SCOTLAND", "capacity": "MEDIUM"}
+              }
+            },
+            {
+              "type": "lookup",
+              "inputs": [["functionalLocationId"]],
+              "output": ["facility_type"],
+              "lookup": {
+                "71": {"type": "MAIL_CENTER", "processingType": "SORTING"},
+                "72": {"type": "MAIL_CENTER", "processingType": "SORTING"},
+                "73": {"type": "MAIL_CENTER", "processingType": "SORTING"},
+                "74": {"type": "MAIL_CENTER", "processingType": "SORTING"},
+                "75": {"type": "MAIL_CENTER", "processingType": "SORTING"},
+                "300": {"type": "DELIVERY_OFFICE", "processingType": "OUT_FOR_DELIVERY"},
+                "374": {"type": "DELIVERY_OFFICE", "processingType": "OUT_FOR_DELIVERY"}
+              }
+            }
+          ]
+        },
+        "notification": {
+          "type": "composite",
+          "enrichers": [
+            {
+              "type": "csv",
+              "inputs": [["postcode"]],
+              "output": ["address_details"],
+              "inputColumns": ["postcode"],
+              "outputColumns": ["add_line1", "add_line2", "city", "county", "country", "pincode"],
+              "keyDelimiter": ":",
+              "csvFileName": "csvs/address_lookup.csv"
+            }
+          ]
+        }
+      }
+    },
+    "EVCOL": {
+      "description": "Collection - Parcel collected from customer",
+      "bizlogic": {
+        "tracking": {
+          "type": "cel",
+          "cel": "{'status': 'COLLECTED', 'trackingNumber': input.UPUTrackingNumber, 'timestamp': input.eventTimestamp, 'collectionPoint': input.siteId, 'collectionAddress': enrichment.address_details.add_line1 + ', ' + enrichment.address_details.city}"
+        },
+        "notification": {
+          "type": "cel",
+          "cel": "{'template': 'COLLECTION_CONFIRMATION', 'recipient': input.RECIPIENT_EMAILID, 'trackingNumber': input.UPUTrackingNumber, 'collectionTime': input.eventTimestamp, 'estimatedDelivery': input.eventTimestamp + 'P3D'}"
+        },
+        "billing": {
+          "type": "cel",
+          "cel": "{'action': 'RECORD_COLLECTION', 'trackingNumber': input.UPUTrackingNumber, 'productId': input.productId, 'pricePaid': input.pricePaid, 'weight': input.mailPieceWeight, 'surcharge': input.mailPieceWeight > 10 ? (input.mailPieceWeight - 10) * 2.5 : 0}"
+        }
+      },
+      "enrichment": {
+        "tracking": {
+          "type": "composite",
+          "enrichers": [
+            {
+              "type": "csv",
+              "inputs": [["postcode"]],
+              "output": ["address_details"],
+              "inputColumns": ["postcode"],
+              "outputColumns": ["add_line1", "add_line2", "city", "county", "country", "pincode"],
+              "keyDelimiter": ":",
+              "csvFileName": "csvs/address_lookup.csv"
+            }
+          ]
+        },
+        "notification": {
+          "type": "composite",
+          "enrichers": [
+            {
+              "type": "csv",
+              "inputs": [["postcode"]],
+              "output": ["address_details"],
+              "inputColumns": ["postcode"],
+              "outputColumns": ["add_line1", "add_line2", "city", "county", "country", "pincode"],
+              "keyDelimiter": ":",
+              "csvFileName": "csvs/address_lookup.csv"
+            }
+          ]
+        },
+        "billing": {
+          "type": "composite",
+          "enrichers": [
+            {
+              "type": "fixed",
+              "inputs": [],
+              "output": ["billing_rules"],
+              "value": {
+                "baseWeightLimit": 10,
+                "surchargePerKg": 2.5,
+                "collectionFee": 0
+              }
+            }
+          ]
+        }
+      }
+    },
+    "EVHPO": {
+      "description": "Held at Post Office - Parcel ready for customer collection",
+      "bizlogic": {
+        "tracking": {
+          "type": "cel",
+          "cel": "{'status': 'HELD_AT_POST_OFFICE', 'trackingNumber': input.UPUTrackingNumber, 'timestamp': input.eventTimestamp, 'holdLocation': enrichment.address_details.city + ' Post Office', 'siteId': input.siteId, 'availableUntil': input.eventTimestamp + 'P7D'}"
+        },
+        "notification": {
+          "type": "cel",
+          "cel": "{'template': 'READY_FOR_COLLECTION', 'recipient': input.RECIPIENT_EMAILID, 'trackingNumber': input.UPUTrackingNumber, 'postOfficeLocation': enrichment.address_details.city + ' Post Office', 'postOfficeAddress': enrichment.address_details.add_line1, 'availableUntil': '7 days', 'openingHours': '9am - 5:30pm Monday to Saturday'}"
+        }
+      },
+      "enrichment": {
+        "tracking": {
+          "type": "composite",
+          "enrichers": [
+            {
+              "type": "csv",
+              "inputs": [["postcode"]],
+              "output": ["address_details"],
+              "inputColumns": ["postcode"],
+              "outputColumns": ["add_line1", "add_line2", "city", "county", "country", "pincode"],
+              "keyDelimiter": ":",
+              "csvFileName": "csvs/address_lookup.csv"
+            },
+            {
+              "type": "fixed",
+              "inputs": [],
+              "output": ["hold_config"],
+              "value": {
+                "holdDuration": "7 days",
+                "collectionRequired": true
+              }
+            }
+          ]
+        },
+        "notification": {
+          "type": "composite",
+          "enrichers": [
+            {
+              "type": "csv",
+              "inputs": [["postcode"]],
+              "output": ["address_details"],
+              "inputColumns": ["postcode"],
+              "outputColumns": ["add_line1", "add_line2", "city", "county", "country", "pincode"],
+              "keyDelimiter": ":",
+              "csvFileName": "csvs/address_lookup.csv"
+            }
+          ]
+        }
+      }
+    },
+    "EVDMG": {
+      "description": "Damaged - Parcel damaged during transit",
+      "bizlogic": {
+        "tracking": {
+          "type": "cel",
+          "cel": "{'status': 'EXCEPTION_DAMAGED', 'trackingNumber': input.UPUTrackingNumber, 'timestamp': input.eventTimestamp, 'exceptionType': 'ITEM_DAMAGED', 'location': input.siteId}"
+        },
+        "notification": {
+          "type": "cel",
+          "cel": "{'template': 'DAMAGE_NOTIFICATION', 'recipient': input.RECIPIENT_EMAILID, 'trackingNumber': input.UPUTrackingNumber, 'claimProcess': 'Please contact customer service at 0345 774 0740', 'incidentNumber': input.trackEventId}"
+        },
+        "error": {
+          "type": "cel",
+          "cel": "{'errorCode': 'DMG_001', 'severity': 'HIGH', 'trackingNumber': input.UPUTrackingNumber, 'errorMessage': 'Item damaged during transit', 'requiresInvestigation': true, 'location': input.siteId}"
+        }
+      },
+      "enrichment": {
+        "tracking": {
+          "type": "composite",
+          "enrichers": [
+            {
+              "type": "fixed",
+              "inputs": [],
+              "output": ["exception_metadata"],
+              "value": {
+                "exceptionCategory": "DAMAGE",
+                "requiresCompensation": true,
+                "priority": "HIGH"
+              }
+            }
+          ]
+        },
+        "notification": {
+          "type": "composite",
+          "enrichers": [
+            {
+              "type": "fixed",
+              "inputs": [],
+              "output": ["support_info"],
+              "value": {
+                "supportPhone": "0345 774 0740",
+                "supportEmail": "customer.services@royalmail.com",
+                "claimsUrl": "https://www.royalmail.com/claims"
+              }
+            }
+          ]
+        },
+        "error": {
+          "type": "composite",
+          "enrichers": [
+            {
+              "type": "fixed",
+              "inputs": [],
+              "output": ["error_handling"],
+              "value": {
+                "autoEscalate": true,
+                "notifyManagement": true,
+                "investigationRequired": true
+              }
+            }
+          ]
+        }
+      }
+    },
+    "EVRET": {
+      "description": "Return - Parcel being returned to sender",
+      "bizlogic": {
+        "tracking": {
+          "type": "cel",
+          "cel": "{'status': 'RETURN_TO_SENDER', 'trackingNumber': input.UPUTrackingNumber, 'timestamp': input.eventTimestamp, 'returnReason': input.eventReason == '01' ? 'ADDRESS_NOT_FOUND' : input.eventReason == '02' ? 'REFUSED_BY_RECIPIENT' : 'OTHER', 'location': input.siteId}"
+        },
+        "notification": {
+          "type": "cel",
+          "cel": "{'template': 'RETURN_TO_SENDER', 'recipient': input.RECIPIENT_EMAILID, 'trackingNumber': input.UPUTrackingNumber, 'returnReason': input.eventReason == '01' ? 'Address could not be found' : input.eventReason == '02' ? 'Refused by recipient' : 'Unable to deliver', 'estimatedReturn': input.eventTimestamp + 'P5D'}"
+        },
+        "billing": {
+          "type": "cel",
+          "cel": "{'action': 'PROCESS_RETURN', 'trackingNumber': input.UPUTrackingNumber, 'returnFee': 5.50, 'refundAmount': input.pricePaid - 5.50}"
+        }
+      },
+      "enrichment": {
+        "tracking": {
+          "type": "composite",
+          "enrichers": [
+            {
+              "type": "csv",
+              "inputs": [["postcode"]],
+              "output": ["address_details"],
+              "inputColumns": ["postcode"],
+              "outputColumns": ["add_line1", "add_line2", "city", "county", "country", "pincode"],
+              "keyDelimiter": ":",
+              "csvFileName": "csvs/address_lookup.csv"
+            },
+            {
+              "type": "lookup",
+              "inputs": [["eventReason"]],
+              "output": ["return_reason_details"],
+              "lookup": {
+                "01": {"reason": "ADDRESS_NOT_FOUND", "description": "Delivery address could not be located"},
+                "02": {"reason": "REFUSED_BY_RECIPIENT", "description": "Recipient refused to accept the parcel"},
+                "03": {"reason": "UNCLAIMED", "description": "Parcel not collected within holding period"},
+                "04": {"reason": "DAMAGED", "description": "Item damaged and undeliverable"}
+              }
+            }
+          ]
+        },
+        "notification": {
+          "type": "composite",
+          "enrichers": [
+            {
+              "type": "csv",
+              "inputs": [["postcode"]],
+              "output": ["address_details"],
+              "inputColumns": ["postcode"],
+              "outputColumns": ["add_line1", "add_line2", "city", "county", "country", "pincode"],
+              "keyDelimiter": ":",
+              "csvFileName": "csvs/address_lookup.csv"
+            }
+          ]
+        },
+        "billing": {
+          "type": "composite",
+          "enrichers": [
+            {
+              "type": "fixed",
+              "inputs": [],
+              "output": ["return_fees"],
+              "value": {
+                "returnHandlingFee": 5.50,
+                "refundProcessingDays": 10
+              }
+            }
+          ]
+        }
+      }
+    },
+    "EVGPD": {
+      "description": "GPS Delivery - Parcel delivered with GPS verification",
+      "bizlogic": {
+        "tracking": {
+          "type": "cel",
+          "cel": "{'status': 'DELIVERED_GPS_VERIFIED', 'trackingNumber': input.UPUTrackingNumber, 'timestamp': input.eventTimestamp, 'location': input.siteId, 'gpsCoordinates': 'lat:' + input.scanLocation.latitude + ',lon:' + input.scanLocation.longitude, 'deliveryProof': 'GPS_VERIFIED', 'address': enrichment.address_details.add_line1 + ', ' + enrichment.address_details.city}"
+        },
+        "notification": {
+          "type": "cel",
+          "cel": "{'template': 'DELIVERY_CONFIRMATION_GPS', 'recipient': input.RECIPIENT_EMAILID, 'trackingNumber': input.UPUTrackingNumber, 'deliveryTime': input.eventTimestamp, 'deliveryAddress': enrichment.address_details.add_line1 + ', ' + enrichment.address_details.postcode, 'proofType': 'GPS Location Verified'}"
+        },
+        "billing": {
+          "type": "cel",
+          "cel": "{'action': 'COMPLETE_DELIVERY', 'trackingNumber': input.UPUTrackingNumber, 'productId': input.productId, 'pricePaid': input.pricePaid, 'deliveryStatus': 'COMPLETED_GPS_VERIFIED'}"
+        }
+      },
+      "enrichment": {
+        "tracking": {
+          "type": "composite",
+          "enrichers": [
+            {
+              "type": "csv",
+              "inputs": [["postcode"]],
+              "output": ["address_details"],
+              "inputColumns": ["postcode"],
+              "outputColumns": ["add_line1", "add_line2", "city", "county", "country", "pincode"],
+              "keyDelimiter": ":",
+              "csvFileName": "csvs/address_lookup.csv"
+            },
+            {
+              "type": "fixed",
+              "inputs": [],
+              "output": ["gps_metadata"],
+              "value": {
+                "verificationMethod": "GPS",
+                "accuracyLevel": "HIGH",
+                "proofOfDelivery": true
+              }
+            }
+          ]
+        },
+        "notification": {
+          "type": "composite",
+          "enrichers": [
+            {
+              "type": "csv",
+              "inputs": [["postcode"]],
+              "output": ["address_details"],
+              "inputColumns": ["postcode"],
+              "outputColumns": ["add_line1", "add_line2", "city", "county", "country", "pincode"],
+              "keyDelimiter": ":",
+              "csvFileName": "csvs/address_lookup.csv"
+            }
+          ]
+        },
+        "billing": {
+          "type": "composite",
+          "enrichers": [
+            {
+              "type": "fixed",
+              "inputs": [],
+              "output": ["billing_config"],
+              "value": {
+                "billingEvent": "DELIVERY_COMPLETED",
+                "verificationFee": 0,
+                "includeGPSProof": true
+              }
+            }
+          ]
+        }
+      }
+    },
+    "EVOUT": {
+      "description": "Out for Delivery - Parcel on delivery vehicle",
+      "bizlogic": {
+        "tracking": {
+          "type": "cel",
+          "cel": "{'status': 'OUT_FOR_DELIVERY', 'trackingNumber': input.UPUTrackingNumber, 'timestamp': input.eventTimestamp, 'deliveryOffice': enrichment.address_details.city + ' Delivery Office', 'estimatedDelivery': 'Today by 5pm', 'deviceId': input.deviceId}"
+        },
+        "notification": {
+          "type": "cel",
+          "cel": "{'template': 'OUT_FOR_DELIVERY_TODAY', 'recipient': input.RECIPIENT_EMAILID, 'trackingNumber': input.UPUTrackingNumber, 'estimatedDeliveryTime': 'Today by 5pm', 'deliveryAddress': enrichment.address_details.add_line1 + ', ' + enrichment.address_details.postcode, 'trackingLink': 'https://track.royalmail.com/' + input.UPUTrackingNumber}"
+        }
+      },
+      "enrichment": {
+        "tracking": {
+          "type": "composite",
+          "enrichers": [
+            {
+              "type": "csv",
+              "inputs": [["postcode"]],
+              "output": ["address_details"],
+              "inputColumns": ["postcode"],
+              "outputColumns": ["add_line1", "add_line2", "city", "county", "country", "pincode"],
+              "keyDelimiter": ":",
+              "csvFileName": "csvs/address_lookup.csv"
+            },
+            {
+              "type": "csv",
+              "inputs": [["enrichment", "address_details", "add_line1"], ["enrichment", "address_details", "postcode"]],
+              "output": ["delivery_zone"],
+              "inputColumns": ["add_line1", "postcode"],
+              "outputColumns": ["po_suffix"],
+              "keyDelimiter": ":",
+              "csvFileName": "csvs/postcode_lookup.csv"
+            }
+          ]
+        },
+        "notification": {
+          "type": "composite",
+          "enrichers": [
+            {
+              "type": "csv",
+              "inputs": [["postcode"]],
+              "output": ["address_details"],
+              "inputColumns": ["postcode"],
+              "outputColumns": ["add_line1", "add_line2", "city", "county", "country", "pincode"],
+              "keyDelimiter": ":",
+              "csvFileName": "csvs/address_lookup.csv"
+            },
+            {
+              "type": "fixed",
+              "inputs": [],
+              "output": ["notification_priority"],
+              "value": {
+                "priority": "HIGH",
+                "sendImmediate": true,
+                "channels": ["EMAIL", "SMS"]
+              }
+            }
+          ]
+        }
+      }
+    }
+  },
+  "defaultEvent": {
+    "description": "Default handling for unrecognized event codes",
+    "bizlogic": {
+      "tracking": {
+        "type": "cel",
+        "cel": "{'status': 'PROCESSING', 'trackingNumber': input.UPUTrackingNumber, 'timestamp': input.eventTimestamp, 'eventCode': input.trackedEventCode, 'location': input.siteId}"
+      },
+      "other": {
+        "type": "cel",
+        "cel": "{'action': 'LOG_UNKNOWN_EVENT', 'trackingNumber': input.UPUTrackingNumber, 'eventCode': input.trackedEventCode, 'eventReason': input.eventReason, 'requiresInvestigation': true}"
+      }
+    },
+    "enrichment": {
+      "tracking": {
+        "type": "composite",
+        "enrichers": [
+          {
+            "type": "fixed",
+            "inputs": [],
+            "output": ["default_metadata"],
+            "value": {
+              "eventCategory": "UNKNOWN",
+              "requiresManualReview": true
+            }
+          }
+        ]
+      },
+      "other": {
+        "type": "composite",
+        "enrichers": [
+          {
+            "type": "fixed",
+            "inputs": [],
+            "output": ["logging_config"],
+            "value": {
+              "logLevel": "WARNING",
+              "alertTeam": true
+            }
+          }
+        ]
+      }
+    }
+  },
+  "config": {
+    "version": "2.1.0",
+    "ruleEvaluationMode": "FIRST_MATCH",
+    "enableEnrichment": true,
+    "csvBasePath": "csvs/",
+    "outputRouting": {
+      "tracking": "kafka://tracking-topic",
+      "notification": "kafka://notification-topic",
+      "billing": "kafka://billing-topic",
+      "error": "kafka://error-topic",
+      "retry": "kafka://retry-topic",
+      "other": "kafka://other-topic"
+    },
+    "csvFiles": {
+      "address_lookup": "csvs/address_lookup.csv",
+      "postcode_lookup": "csvs/postcode_lookup.csv"
+    }
+  }
+}
