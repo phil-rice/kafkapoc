@@ -4,11 +4,11 @@
       "bizlogic": {
         "notification": {
           "type": "cel",
-          "cel": "{'template': 'ACCEPTANCE_CONFIRMATION', 'channel': input.serviceType == 'TRACKED24' ? 'email' : 'sms', 'recipient': input.senderEmail}"
+          "cel": "{'template': 'ACCEPTANCE_CONFIRMATION', 'channel': 'email', 'recipient': 'user005184@example.com', 'status': 'SUCCESS'}"
         },
         "tracking": {
           "type": "cel",
-          "cel": "{'status': 'ACCEPTED', 'location': input.acceptanceOffice, 'timestamp': input.eventTime, 'nextStep': 'IN_TRANSIT'}"
+          "cel": "{'status': 'ACCEPTED', 'location': '000368', 'timestamp': manualScan.scanTimestamp, 'barcode': 'YA665918463GB'}"
         }
       },
       "enrichment": {
@@ -20,16 +20,6 @@
               "inputs": [],
               "output": ["serviceDefaults"],
               "value": {"acceptanceWindow": "2_hours", "cutoffTime": "17:00"}
-            },
-            {
-              "type": "csv",
-              "inputs": [["sender", "postcode"], ["receiver", "postcode"]],
-              "output": ["route_details"],
-              "inputColumns": ["origin_postcode", "destination_postcode"],
-              "outputColumns": ["expected_days", "route_code", "sorting_hub"],
-              "value": {"routeType": "standard"},
-              "keyDelimiter": ":",
-              "csvFileName": "csvs/routing_matrix.csv"
             },
             {
               "type": "lookup",
@@ -79,16 +69,6 @@
               "inputs": [],
               "output": ["transitDefaults"],
               "value": {"updateFrequency": "hub_scan_only", "internalProcess": true}
-            },
-            {
-              "type": "csv",
-              "inputs": [["hub", "code"]],
-              "output": ["hub_info"],
-              "inputColumns": ["hub_code"],
-              "outputColumns": ["hub_name", "region", "capacity"],
-              "value": {"hubType": "sorting"},
-              "keyDelimiter": ":",
-              "csvFileName": "csvs/mail_centres.csv"
             },
             {
               "type": "lookup",
@@ -142,16 +122,6 @@
               "inputs": [],
               "output": ["deliveryDefaults"],
               "value": {"safePlace": "enabled", "neighbourDelivery": "allowed", "photoProof": "required"}
-            },
-            {
-              "type": "csv",
-              "inputs": [["delivery", "postcode"], ["delivery", "roundCode"]],
-              "output": ["delivery_route"],
-              "inputColumns": ["postcode", "round_code"],
-              "outputColumns": ["postman_id", "van_reg", "depot_code", "usual_time"],
-              "value": {"deliveryType": "standard"},
-              "keyDelimiter": ":",
-              "csvFileName": "csvs/delivery_rounds.csv"
             },
             {
               "type": "lookup",
@@ -209,16 +179,6 @@
               "inputs": [],
               "output": ["completionDefaults"],
               "value": {"feedbackUrl": "https://royalmail.com/feedback", "retentionDays": 90, "proofRequired": true}
-            },
-            {
-              "type": "csv",
-              "inputs": [["delivery", "postmanId"], ["delivery", "depotCode"]],
-              "output": ["performance_metrics"],
-              "inputColumns": ["postman_id", "depot_code"],
-              "outputColumns": ["success_rate", "avg_time", "customer_rating"],
-              "value": {"metricsType": "delivery"},
-              "keyDelimiter": ":",
-              "csvFileName": "csvs/postman_performance.csv"
             },
             {
               "type": "lookup",

@@ -8,15 +8,14 @@ import com.hcltech.rmg.appcontainer.interfaces.IAppContainerFactory;
 import com.hcltech.rmg.common.ITimeService;
 import com.hcltech.rmg.flink_metrics.FlinkMetricsParams;
 import com.hcltech.rmg.messages.Envelope;
-import com.hcltech.rmg.metrics.EnvelopeMetrics;
+import com.hcltech.rmg.common.metrics.EnvelopeMetrics;
 import com.hcltech.rmg.metrics.EnvelopeMetricsTC;
-import com.hcltech.rmg.metrics.Metrics;
+import com.hcltech.rmg.common.metrics.Metrics;
 import org.apache.flink.api.common.functions.OpenContext;
 import org.apache.flink.streaming.api.functions.async.ResultFuture;
 import org.apache.flink.streaming.api.functions.async.RichAsyncFunction;
 
 import java.util.List;
-import java.util.concurrent.atomic.AtomicLong;
 
 
 public class NormalPipelineFunction<MSC, CepState, Msg, RT, FR,Schema> extends RichAsyncFunction<Envelope<CepState, Msg>, Envelope<CepState, Msg>> {

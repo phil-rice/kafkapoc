@@ -15,19 +15,18 @@
     <packaging>jar</packaging>
 
     <dependencies>
-        <!-- Hex port -->
-        <dependency>
-            <groupId>com.hcltech.rmg</groupId>
-            <artifactId>metrics</artifactId>
-            <version>${project.version}</version>
-        </dependency>
+
 
         <!-- OTel API at compile time; agent provides SDK/exporter in prod -->
         <dependency>
             <groupId>io.opentelemetry</groupId>
             <artifactId>opentelemetry-api</artifactId>
         </dependency>
-
+        <dependency>
+            <groupId>com.hcltech.rmg</groupId>
+            <artifactId>common</artifactId>
+            <version>${project.version}</version>
+        </dependency>
         <!-- === Test deps === -->
         <!-- In-memory OTel SDK for assertions -->
         <dependency>

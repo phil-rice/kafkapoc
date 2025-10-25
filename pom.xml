@@ -36,7 +36,7 @@
         <module>kafka/kafkaconfig</module>
         <module>kafka/kafka</module>
 
-        <module>metrics/metrics</module>
+
         <module>metrics/envelope</module>
         <module>metrics/flink</module>
         <module>metrics/opentelemetry</module>

@@ -8,7 +8,7 @@ import java.util.function.Consumer;
  * Array-backed, power-of-two circular lane.
  * Single-threaded: operator thread only.
  */
-public final class Lane<T> implements ILane<T>, ILaneTestHooks<T> {
+public final class Lane<T> implements ILane<T>, ILaneTestHooks<T>  {
 
     private final int depth;
     private final int mask;
@@ -134,4 +134,5 @@ public final class Lane<T> implements ILane<T>, ILaneTestHooks<T> {
         this.tailIdx = tailIdx & mask;
         this.count = count;
     }
+
 }

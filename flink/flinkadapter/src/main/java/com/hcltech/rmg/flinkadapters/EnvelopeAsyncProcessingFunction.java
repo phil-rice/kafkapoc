@@ -10,12 +10,13 @@ import com.hcltech.rmg.cepstate.CepStateTypeClass;
 import com.hcltech.rmg.common.ITimeService;
 import com.hcltech.rmg.common.async.OrderPreservingAsyncExecutor;
 import com.hcltech.rmg.common.copy.DeepCopy;
+import com.hcltech.rmg.common.metrics.Metrics;
 import com.hcltech.rmg.flink_metrics.FlinkMetricsParams;
 import com.hcltech.rmg.messages.AiFailureEnvelopeFactory;
 import com.hcltech.rmg.messages.Envelope;
 import com.hcltech.rmg.messages.EnvelopeHeader;
 import com.hcltech.rmg.messages.ValueEnvelope;
-import com.hcltech.rmg.metrics.EnvelopeMetrics;
+import com.hcltech.rmg.common.metrics.EnvelopeMetrics;
 import com.hcltech.rmg.metrics.EnvelopeMetricsTC;
 import org.apache.flink.api.common.functions.RuntimeContext;
 import org.apache.flink.streaming.api.operators.Output;
@@ -44,7 +45,7 @@ public class EnvelopeAsyncProcessingFunction<ESC, CepState, Msg, Schema>
     private ParseMessagePipelineStep<ESC, CepState, Msg, Schema, RuntimeContext, Output<StreamRecord<Envelope<CepState, Msg>>>, FlinkMetricsParams> parser;
     private EnrichmentPipelineStep<ESC, CepState, Msg, Schema, RuntimeContext, Output<StreamRecord<Envelope<CepState, Msg>>>, FlinkMetricsParams> enrichmentPipelineStep;
     private BizLogicPipelineStep<ESC, CepState, Msg, Schema, RuntimeContext, Output<StreamRecord<Envelope<CepState, Msg>>>, FlinkMetricsParams> bizLogic;
-    private com.hcltech.rmg.metrics.Metrics metrics;
+    private Metrics metrics;
     private EnvelopeMetrics<Envelope<?, ?>> envelopeMetrics;
     private ITimeService timeService;
     private CepStateTypeClass<CepState> cepStateTypeClass;
@@ -110,11 +111,8 @@ public class EnvelopeAsyncProcessingFunction<ESC, CepState, Msg, Schema>
                 long duration = finish - start;
                 metrics.histogram("NormalPipelineFunction.asyncInvoke.millis", duration);
                 afterBizLogic.valueEnvelope().setDurationNanos(duration);
-                var updated = afterBizLogic.map(e -> {
-                    cepEventLog.append(e.cepStateModifications());
-                    return e;
-                });
-                completion.success(env, corrId, updated);
+
+                completion.success(env, corrId, afterBizLogic);
             } else {
                 completion.success(env, corrId, env);
 

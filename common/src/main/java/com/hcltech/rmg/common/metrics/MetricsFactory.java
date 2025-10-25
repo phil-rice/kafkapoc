@@ -1,4 +1,4 @@
-package com.hcltech.rmg.metrics;
+package com.hcltech.rmg.common.metrics;
 
 @FunctionalInterface
 public interface MetricsFactory<MetricsParams> {

@@ -3,11 +3,11 @@ package com.hcltech.rmg.common.async;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
 
 import java.util.*;
 import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicInteger;
-import java.util.concurrent.atomic.AtomicLong;
 import java.util.function.BiConsumer;
 
 import static org.junit.jupiter.api.Assertions.*;
@@ -110,6 +110,7 @@ public class OrderPreservingAsyncExecutorStressTest {
     // ---------------------------------------------------------------------
     // 1) Parallel success across many keys (fast)
     // ---------------------------------------------------------------------
+    @Timeout(30)
     @Test
     void stress_parallel_success_manyKeys() throws Exception {
         final int TOTAL = 5_000;
@@ -139,9 +140,26 @@ public class OrderPreservingAsyncExecutorStressTest {
             exec.add(key, "FR-" + i, NOOP_HOOK);
         }
 
+        final long deadline = System.nanoTime() + TimeUnit.SECONDS.toNanos(30);
+        final long diagAt   = deadline - TimeUnit.SECONDS.toNanos(5);
+        boolean diagDumped = false;
+
         while (futureRec.latch.getCount() > 0) {
-            exec.drain("FR-IGNORED", NOOP_HOOK); // FR not on ring; value not asserted in this test
+            exec.drain("FR-IGNORED", NOOP_HOOK);
             Thread.sleep(1);
+
+            long now = System.nanoTime();
+            if (!diagDumped && now >= diagAt) {
+                LaneDiagnostics d = exec.laneDiagnostics();
+                System.out.println("[DIAG success_manyKeys] remaining=" + futureRec.latch.getCount() + " " + d);
+                diagDumped = true;
+            }
+            if (now >= deadline) break;
+        }
+
+        if (futureRec.latch.getCount() > 0) {
+            LaneDiagnostics d = exec.laneDiagnostics();
+            fail("Timed out: remaining=" + futureRec.latch.getCount() + " " + d);
         }
 
         assertEquals(TOTAL, futureRec.completedFr.size(), "all items must complete");
@@ -151,6 +169,7 @@ public class OrderPreservingAsyncExecutorStressTest {
     // ---------------------------------------------------------------------
     // 2) Parallel mixed success/failure across many keys (fast)
     // ---------------------------------------------------------------------
+    @Timeout(30)
     @Test
     void stress_parallel_mixed_manyKeys() throws Exception {
         final int TOTAL = 5_000;
@@ -183,12 +202,36 @@ public class OrderPreservingAsyncExecutorStressTest {
             exec.add(key, "FR-" + i, NOOP_HOOK);
         }
 
+        final long deadline = System.nanoTime() + TimeUnit.SECONDS.toNanos(30);
+        final long diagAt   = deadline - TimeUnit.SECONDS.toNanos(5);
+        boolean diagDumped = false;
+
         while (futureRec.latch.getCount() > 0) {
             exec.drain("FR-IGNORED", NOOP_HOOK);
             Thread.sleep(1);
+
+            long now = System.nanoTime();
+            if (!diagDumped && now >= diagAt) {
+                LaneDiagnostics d = exec.laneDiagnostics();
+                System.out.println("[DIAG mixed_manyKeys] remaining=" + futureRec.latch.getCount()
+                        + " completed=" + futureRec.completedFr.size()
+                        + " failed=" + futureRec.failedFr.size()
+                        + " timedOut=" + futureRec.timedOutFr.size()
+                        + " " + d);
+                diagDumped = true;
+            }
+            if (now >= deadline) break;
         }
 
-        // accounted for (timeouts may be zero; we only time out to avoid blocking)
+        if (futureRec.latch.getCount() > 0) {
+            LaneDiagnostics d = exec.laneDiagnostics();
+            fail("Timed out: remaining=" + futureRec.latch.getCount()
+                    + " completed=" + futureRec.completedFr.size()
+                    + " failed=" + futureRec.failedFr.size()
+                    + " timedOut=" + futureRec.timedOutFr.size()
+                    + " " + d);
+        }
+
         assertEquals(TOTAL,
                 futureRec.completedFr.size() + futureRec.failedFr.size() + futureRec.timedOutFr.size(),
                 "every item must complete or fail");
@@ -196,45 +239,38 @@ public class OrderPreservingAsyncExecutorStressTest {
     }
 
     // ---------------------------------------------------------------------
-    // 3) Serial timeouts: we only care about eviction when lane is FULL.
-    //    Single lane (depth=1), never-completing userFn -> ensure at least one eviction happens.
+    // 3) Serial timeouts (lane depth = 1, never-completing userFn)
     // ---------------------------------------------------------------------
+    @Timeout(30)
     @Test
     void stress_serial_timeouts() throws Exception {
-        final int N = 300;       // many admissions to exercise eviction-on-full
+        final int N = 300;
         final long TIMEOUT_MS = 5L;
 
         CountingPermit permits = new CountingPermit(1);
         DummyFailureAdapter failure = new DummyFailureAdapter();
-        RecordingFutureRecord futureRec = new RecordingFutureRecord(N); // count outcomes if any
+        RecordingFutureRecord futureRec = new RecordingFutureRecord(N);
         ILanes<String> lanes = new Lanes<>(1, 1, new DummyCorrelator());
 
         // never completes -> the only way to keep making space is eviction when full
         OrderPreservingAsyncExecutor.UserFnPort<String,String,String> userFn =
-                (tc, in, corrId, c) -> { /* no-op */ };
+                (tc, in, corrId, c) -> { /* no completion -> stays in-flight until evicted */ };
 
         var exec = new OrderPreservingAsyncExecutor<>(cfg(failure,futureRec,
                 1,1,1,1,8, TIMEOUT_MS),
                 lanes, permits, ring, threadPool, futureRec, 1, userFn);
 
-        // Seed a head
         exec.add("K", "FR-H", NOOP_HOOK);
 
-        // Repeatedly try to add after sleeping past the timeout. We don't assert that
-        // every cycle produces a timeout; we only care that the executor remains unblocked.
         long start = System.nanoTime();
         for (int i = 0; i < N; i++) {
-            Thread.sleep(TIMEOUT_MS + 20); // cushion over timer granularity
-            exec.add("K", "FR-" + i, NOOP_HOOK); // if lane full & head expired, this unblocks by evicting
+            Thread.sleep(TIMEOUT_MS + 20);
+            exec.add("K", "FR-" + i, NOOP_HOOK);
             exec.drain("FR-IGNORED", NOOP_HOOK);
         }
         long elapsedMs = TimeUnit.NANOSECONDS.toMillis(System.nanoTime() - start);
 
-        // Progress property: the loop completed in a reasonable amount of time
-        // (i.e., adds did not block indefinitely on a full lane).
         assertTrue(elapsedMs < 10_000, "executor should not block under full-lane eviction policy");
-
-        // Permit accounting sanity: at most one outstanding head in this scenario.
         assertTrue(permits.released.get() <= permits.acquired.get(), "permits must not leak");
         assertTrue(permits.acquired.get() - permits.released.get() <= 1, "at most one in-flight head");
     }

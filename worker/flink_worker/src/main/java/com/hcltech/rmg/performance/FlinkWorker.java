@@ -11,16 +11,40 @@ import com.hcltech.rmg.kafka.KafkaTopics;
 import com.hcltech.rmg.kafka.ValueErrorRetryStreams;
 import com.hcltech.rmg.shared_worker.BuildPipeline;
 import com.hcltech.rmg.shared_worker.EnvelopeRouting;
+import org.apache.flink.configuration.CheckpointingOptions;
 import org.apache.flink.configuration.Configuration;
 import org.apache.flink.streaming.api.environment.StreamExecutionEnvironment;
 
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.Map;
 
 public final class FlinkWorker {
 
-
     public static void main(String[] args) throws Exception {
+        System.setProperty("java.io.tmpdir", "C:\\flink-tmp");
+        // print to confirm
+        System.out.println("tmpdir = " + System.getProperty("java.io.tmpdir"));
+        System.out.println("PATH = " + System.getenv("PATH"));
+        System.out.println("java.library.path = " + System.getProperty("java.library.path"));
+        // (your existing temp dir setup)
+        System.setProperty("java.io.tmpdir", "C:\\flink-tmp");
+
+        // --- Build local paths (portable across Win/*nix) ---
+        Path base       = Paths.get(System.getProperty("java.io.tmpdir"));           // e.g. C:\flink-tmp
+
+        // --- Flink Configuration (no YAML) ---
         Configuration conf = FlinkHelper.makeDefaultFlinkConfig();
+        // --- Local filesystem targets for checkpoints/savepoints ---
+        Path checkpoints = base.resolve("checkpoints");
+        Path savepoints  = base.resolve("savepoints");
+
+//        conf.set(StateBackendOptions.STATE_BACKEND, "rocksdb");
+        // Tell Flink we’re using filesystem checkpoint storage to a local path
+        conf.set(CheckpointingOptions.CHECKPOINT_STORAGE, "filesystem");
+        conf.set(CheckpointingOptions.CHECKPOINTS_DIRECTORY, checkpoints.toUri().toString()); // file:///C:/flink-tmp/checkpoints
+        conf.set(CheckpointingOptions.SAVEPOINT_DIRECTORY,   savepoints.toUri().toString());  // file:///C:/flink-tmp/savepoints
+
         StreamExecutionEnvironment env = StreamExecutionEnvironment.createLocalEnvironmentWithWebUI(conf);
         var appContainerDefn = AppContainerDefn.of(AppContainerFactoryForMapStringObject.class, "prod");
         var appContainer = IAppContainerFactory.resolve(appContainerDefn).valueOrThrow();

@@ -15,6 +15,5 @@ public interface IOrderPreservingAsyncExecutorForTests<In, Out, FR> extends IOrd
 
     ILanes<In>  lanes();
 
-    Executor executor();
 
 }

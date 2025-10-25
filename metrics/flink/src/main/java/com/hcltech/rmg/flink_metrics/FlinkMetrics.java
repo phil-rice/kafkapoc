@@ -1,6 +1,7 @@
 package com.hcltech.rmg.flink_metrics;
 
-import com.hcltech.rmg.metrics.Metrics;
+
+import com.hcltech.rmg.common.metrics.Metrics;
 import org.apache.flink.metrics.Counter;
 import org.apache.flink.metrics.Histogram;
 import org.apache.flink.metrics.MeterView;

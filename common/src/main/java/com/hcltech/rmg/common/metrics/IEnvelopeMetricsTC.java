@@ -1,4 +1,4 @@
-package com.hcltech.rmg.metrics;
+package com.hcltech.rmg.common.metrics;
 
 public interface IEnvelopeMetricsTC<E> {
     String metricName(E envelope);

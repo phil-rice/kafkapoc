@@ -8,4 +8,6 @@ public interface ILanes<T> {
 
     /** Route this item to its lane (hashing/typeclass is internal to the implementation). */
     ILane<T> lane(T t);
+
+    int count();
 }

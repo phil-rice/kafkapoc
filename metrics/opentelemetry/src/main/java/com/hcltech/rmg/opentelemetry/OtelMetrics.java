@@ -1,6 +1,6 @@
 package com.hcltech.rmg.opentelemetry;
 
-import com.hcltech.rmg.metrics.Metrics;
+import com.hcltech.rmg.common.metrics.Metrics;
 import io.opentelemetry.api.GlobalOpenTelemetry;
 import io.opentelemetry.api.metrics.LongCounter;
 import io.opentelemetry.api.metrics.LongHistogram;

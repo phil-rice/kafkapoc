@@ -14,11 +14,7 @@
     <name>metrics_envelope</name>
     <packaging>jar</packaging>
     <dependencies>
-        <dependency>
-            <groupId>com.hcltech.rmg</groupId>
-            <artifactId>metrics</artifactId>
-            <version>${project.version}</version>
-        </dependency>
+
         <dependency>
             <groupId>com.hcltech.rmg</groupId>
             <artifactId>messages</artifactId>

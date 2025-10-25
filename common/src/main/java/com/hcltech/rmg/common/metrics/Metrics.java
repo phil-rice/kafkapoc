@@ -1,4 +1,4 @@
-package com.hcltech.rmg.metrics;
+package com.hcltech.rmg.common.metrics;
 
 /**
  * Minimal façade for emitting numeric metrics.
@@ -15,4 +15,17 @@ public interface Metrics {
      * <p>Typical use: record durations or sizes in milliseconds/bytes.</p>
      */
     void histogram(String name, long value);
+
+     Metrics nullMetrics= new NullMetrics();
+}
+
+class NullMetrics implements Metrics {
+
+    @Override
+    public void increment(String name) {
+    }
+
+    @Override
+    public void histogram(String name, long value) {
+    }
 }
