@@ -1,6 +1,4 @@
 """
-generate_rm_full_dataset.py
-
 Generates:
  - Input MPEr scan XML files (4 scans per parcel)
  - Output notification XML files (1 per parcel-event containing 0..2 notificationSegment blocks)
@@ -381,7 +379,7 @@ def build_notification_segment(
 def generate_dataset(
     parcels,
     output_dir,
-    batch_size=100000,
+    batch_size,
     postcode_file="",
     seed=42,
     start_date=None,
@@ -425,9 +423,12 @@ def generate_dataset(
     combined_dir = os.path.join(output_dir, "combined")
     os.makedirs(combined_dir, exist_ok=True)
     combined_zip_idx = 1
-    combined_zip = ZipFile(os.path.join(combined_dir, f"test_combined_{combined_zip_idx:04d}.zip"), "w", ZIP_DEFLATED)
+    combined_zip = ZipFile(
+        os.path.join(combined_dir, f"test_combined_{combined_zip_idx:04d}.zip"),
+        "w",
+        ZIP_DEFLATED,
+    )
     written_combined = 0
-
 
     # Collections for postcode CSVs
     used_postcodes = set()
@@ -453,6 +454,7 @@ def generate_dataset(
         )
 
         for i in range(parcels):
+            print(f"{i} parcels generated so far...")  # 1 parcel = 4 events
             unique_item_id, acct = make_unique_item_id()
             upu = make_upu_tracking()
             category = choose_weighted(PRODUCT_CATEGORIES)
@@ -514,9 +516,8 @@ def generate_dataset(
             mp_input_xml = build_mailpiece_input_xml(
                 unique_item_id, upu, postcode, barcode_creation_date, product_id
             )
-            parcel_inputs = []   # collect stripped input MPE blocks
+            parcel_inputs = []  # collect stripped input MPE blocks
             parcel_outputs = []  # collect stripped output MPE blocks
-
 
             # Write 4 input scan XMLs (aux contact only in first scan)
             for idx, ev in enumerate(EVENT_FLOW, start=1):
@@ -600,7 +601,9 @@ def generate_dataset(
                     xml_out = (
                         OUTPUT_NS_HEADER + header + "".join(segments) + "</ptp:MPE>"
                     )
-                    parcel_outputs.append("<MPE>" + header + "".join(segments) + "</MPE>")
+                    parcel_outputs.append(
+                        "<MPE>" + header + "".join(segments) + "</MPE>"
+                    )
                     out_name = f"notify_{unique_item_id}_{ev}.xml"
                     out_zip.writestr(out_name, xml_out)
                     written_out += 1
@@ -629,8 +632,13 @@ def generate_dataset(
             if written_combined % batch_size == 0:
                 combined_zip.close()
                 combined_zip_idx += 1
-                combined_zip = ZipFile(os.path.join(combined_dir, f"test_combined_{combined_zip_idx:04d}.zip"), "w", ZIP_DEFLATED)
-
+                combined_zip = ZipFile(
+                    os.path.join(
+                        combined_dir, f"test_combined_{combined_zip_idx:04d}.zip"
+                    ),
+                    "w",
+                    ZIP_DEFLATED,
+                )
 
     # finalize zips
     in_zip.close()

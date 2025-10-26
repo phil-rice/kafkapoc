@@ -1,7 +1,0 @@
-.env
-test.py
-.DS_Store
-*.zip
-*.csv
-out/
-out_full/

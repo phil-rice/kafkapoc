@@ -1,0 +1,10 @@
+.env
+test.py
+.DS_Store
+*.zip
+*.csv
+*.db
+out/
+out_full/
+flat_inputs/
+replay_index_sqlite/
