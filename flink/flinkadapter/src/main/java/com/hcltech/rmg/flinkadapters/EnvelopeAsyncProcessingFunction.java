@@ -10,6 +10,7 @@ import com.hcltech.rmg.cepstate.CepStateTypeClass;
 import com.hcltech.rmg.common.ITimeService;
 import com.hcltech.rmg.common.async.OrderPreservingAsyncExecutor;
 import com.hcltech.rmg.common.copy.DeepCopy;
+import com.hcltech.rmg.common.function.Callback;
 import com.hcltech.rmg.common.metrics.Metrics;
 import com.hcltech.rmg.flink_metrics.FlinkMetricsParams;
 import com.hcltech.rmg.messages.AiFailureEnvelopeFactory;
@@ -20,6 +21,7 @@ import com.hcltech.rmg.common.metrics.EnvelopeMetrics;
 import com.hcltech.rmg.metrics.EnvelopeMetricsTC;
 import org.apache.flink.api.common.functions.RuntimeContext;
 import org.apache.flink.streaming.api.operators.Output;
+import org.apache.flink.streaming.api.operators.StreamingRuntimeContext;
 import org.apache.flink.streaming.runtime.streamrecord.StreamRecord;
 
 import java.util.HashMap;
@@ -65,8 +67,8 @@ public class EnvelopeAsyncProcessingFunction<ESC, CepState, Msg, Schema>
     public void processElement(StreamRecord<Envelope<CepState, Msg>> record) throws Exception {
         var env = record.getValue();
         if (env instanceof ValueEnvelope<CepState, Msg> ve) {
-            var cepState = cepEventLog.foldAll(cepStateTypeClass, cepStateTypeClass.createEmpty());
-            ve.setCepState(cepState);
+//            var cepState = cepEventLog.foldAll(cepStateTypeClass, cepStateTypeClass.createEmpty());
+            ve.setCepState((CepState) new HashMap<>());
         }
         super.processElement(record);
     }
@@ -75,8 +77,8 @@ public class EnvelopeAsyncProcessingFunction<ESC, CepState, Msg, Schema>
     @Override
     protected void setKey(Envelope<CepState, Msg> in, Envelope<CepState, Msg> out) {
         if (out instanceof ValueEnvelope<CepState, Msg> veOut) {
-            setCurrentKey(in.domainId());
-            this.cepEventLog.append(veOut.cepStateModifications());
+//            setCurrentKey(in.domainId());
+//            this.cepEventLog.append(veOut.cepStateModifications());
         }
     }
 
@@ -85,34 +87,53 @@ public class EnvelopeAsyncProcessingFunction<ESC, CepState, Msg, Schema>
      */
     @Override
     protected OrderPreservingAsyncExecutor.UserFnPort<Envelope<CepState, Msg>, Envelope<CepState, Msg>, Output<StreamRecord<Envelope<CepState, Msg>>>> createUserFnPort(AppContainer<ESC, CepState, Msg, Schema, RuntimeContext, Output<StreamRecord<Envelope<CepState, Msg>>>, FlinkMetricsParams> container) {
-        return (frTypeClass, env, corrId, completion) -> {
+        return (frTypeClass, laneId, env, corrId, completion) -> {
             Objects.requireNonNull(cepEventLog, "MakeEmptyValueEnvelopeWithCepStateFunction not opened");
             if (env instanceof ValueEnvelope<CepState, Msg> ve) {
-
                 long start = timeService.currentTimeNanos();
                 var parsed = parser.parse(env);
 
-                var afterEnrichment = enrichmentPipelineStep.process(parsed);
-                if (rememberBizlogicInput) {
-                    // Deep copy cep state and msg to store in cargo - used for AI pipelines to compare input vs output
-                    var cepStateCopy = cesStateDeepCopy.copy(afterEnrichment.valueEnvelope().cepState());
-                    var msgCopy = msgDeepCopy.copy(afterEnrichment.valueEnvelope().data());
-                    EnvelopeHeader<CepState> header = afterEnrichment.valueEnvelope().header();
-                    var cargo = new HashMap<>(header.cargo());
-                    cargo.put(AiFailureEnvelopeFactory.BIZLOGIC_INPUT_CEP_STATE_CARGO_KEY, cepStateCopy);
-                    cargo.put(AiFailureEnvelopeFactory.BIZLOGIC_INPUT_MSG_CARGO_KEY, msgCopy);
-                    var newHeader = header.withCargo(cargo);
-                    afterEnrichment.valueEnvelope().setHeader(newHeader);
-                }
+                enrichmentPipelineStep.process(laneId, parsed, new Callback<>() {
+                    @Override
+                    public void success(Envelope<CepState, Msg> afterEnrichment) {
+                        long enrichDone = timeService.currentTimeNanos();
+                        metrics.histogram("NormalPipelineFunction.enrichment.millis", enrichDone - start);
+                        if (rememberBizlogicInput) {
+                            // Deep copy cep state and msg to store in cargo - used for AI pipelines to compare input vs output
+                            var cepStateCopy = cesStateDeepCopy.copy(afterEnrichment.valueEnvelope().cepState());
+                            var msgCopy = msgDeepCopy.copy(afterEnrichment.valueEnvelope().data());
+                            EnvelopeHeader<CepState> header = afterEnrichment.valueEnvelope().header();
+                            var cargo = new HashMap<>(header.cargo());
+                            cargo.put(AiFailureEnvelopeFactory.BIZLOGIC_INPUT_CEP_STATE_CARGO_KEY, cepStateCopy);
+                            cargo.put(AiFailureEnvelopeFactory.BIZLOGIC_INPUT_MSG_CARGO_KEY, msgCopy);
+                            var newHeader = header.withCargo(cargo);
+                            afterEnrichment.valueEnvelope().setHeader(newHeader);
+                        }
+                        bizLogic.process(afterEnrichment, new Callback<Envelope<CepState, Msg>>() {
+                            @Override
+                            public void success(Envelope<CepState, Msg> value) {
+                                metrics.histogram("NormalPipelineFunction.bizlogic.millis", timeService.currentTimeNanos() - enrichDone);
+                                envelopeMetrics.addToMetricsAtEnd(value);
+                                long finish = timeService.currentTimeNanos();
+                                long duration = finish - start;
+                                metrics.histogram("NormalPipelineFunction.asyncInvoke.millis", duration);
+                                value.valueEnvelope().setDurationNanos(duration);
+                                completion.success(env, corrId, value);
+                            }
 
-                var afterBizLogic = bizLogic.process(afterEnrichment);
-                envelopeMetrics.addToMetricsAtEnd(afterBizLogic);
-                long finish = timeService.currentTimeNanos();
-                long duration = finish - start;
-                metrics.histogram("NormalPipelineFunction.asyncInvoke.millis", duration);
-                afterBizLogic.valueEnvelope().setDurationNanos(duration);
+                            @Override
+                            public void failure(Throwable error) {
+                                completion.failure(parsed, corrId, error);
+                            }
+                        });
 
-                completion.success(env, corrId, afterBizLogic);
+                    }
+
+                    @Override
+                    public void failure(Throwable error) {
+                        completion.failure(parsed, corrId, error);
+                    }
+                });
             } else {
                 completion.success(env, corrId, env);
 

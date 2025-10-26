@@ -1,18 +1,15 @@
 // CelInlineLogicExecutor.java
 package com.hcltech.rmg.execution.bizlogic;
 
-import com.hcltech.rmg.celcore.CelExecutor;
 import com.hcltech.rmg.celcore.CelRuleBuilderFactory;
 import com.hcltech.rmg.celcore.CelVarType;
-import com.hcltech.rmg.celcore.CompiledCelRule;
 import com.hcltech.rmg.celcore.cache.CelRuleCache;
 import com.hcltech.rmg.celcore.cache.InMemoryCelRuleCache;
 import com.hcltech.rmg.config.bizlogic.CelInlineLogic;
-import com.hcltech.rmg.config.config.BehaviorConfig;
 import com.hcltech.rmg.config.configs.Configs;
 import com.hcltech.rmg.config.configs.ConfigsVisitor;
 import com.hcltech.rmg.config.configs.ConfigsWalker;
-import com.hcltech.rmg.execution.aspects.AspectExecutor;
+import com.hcltech.rmg.execution.aspects.AspectExecutorSync;
 import com.hcltech.rmg.messages.ValueEnvelope;
 
 import java.util.Map;
@@ -21,7 +18,7 @@ import java.util.Objects;
 public record CelInlineLogicExecutor<CepState, Msg>(
         CelRuleCache<ValueEnvelope<CepState, Msg>, ValueEnvelope<CepState, Msg>> ruleCache,
         Map<String, String> keyToCel)
-        implements AspectExecutor<CelInlineLogic, ValueEnvelope<CepState, Msg>, ValueEnvelope<CepState, Msg>> {
+        implements AspectExecutorSync<CelInlineLogic, ValueEnvelope<CepState, Msg>, ValueEnvelope<CepState, Msg>> {
 
     public CelInlineLogicExecutor(CelRuleCache<ValueEnvelope<CepState, Msg>, ValueEnvelope<CepState, Msg>> ruleCache, Map<String, String> keyToCel) {
         this.ruleCache = Objects.requireNonNull(ruleCache, "CelRuleCache is required");

@@ -23,7 +23,7 @@ import com.hcltech.rmg.config.loader.IRootConfigBuilder;
 import com.hcltech.rmg.config.loader.RootConfigLoader;
 import com.hcltech.rmg.enrichment.EnrichmentExecutor;
 import com.hcltech.rmg.enrichment.IEnrichmentAspectExecutor;
-import com.hcltech.rmg.execution.aspects.AspectExecutor;
+import com.hcltech.rmg.execution.aspects.AspectExecutorAsync;
 import com.hcltech.rmg.execution.bizlogic.BizLogicExecutor;
 import com.hcltech.rmg.flink_metrics.FlinkMetricsFactory;
 import com.hcltech.rmg.flink_metrics.FlinkMetricsParams;
@@ -33,7 +33,6 @@ import com.hcltech.rmg.kafkaconfig.KafkaConfig;
 import com.hcltech.rmg.messages.*;
 import com.hcltech.rmg.parameters.ParameterExtractor;
 import com.hcltech.rmg.parameters.Parameters;
-import com.hcltech.rmg.woodstox.WoodstoxXmlForMapStringObjectTypeClass;
 import com.hcltech.rmg.woodstox.WoodstoxXmlForMapStringObjectTypeClassNoValidation;
 import com.hcltech.rmg.xml.XmlTypeClass;
 import org.apache.flink.api.common.functions.RuntimeContext;
@@ -114,13 +113,14 @@ public final class AppContainerFactoryForMapStringObject implements IAppContaine
                     ConfigsBuilder::buildFromClasspath,
                     "noCelCondition",
                     ParameterExtractor.defaultParameterExtractor(defaultParametersForProd, Map.of(), Map.of(
-                            "productType", List.of("MPE", "mailPiece", "mailPieceBarcode","royalMailSegment", "mailTypeCode"))),
+                            "productType", List.of("MPE", "mailPiece", "mailPieceBarcode", "royalMailSegment", "mailTypeCode"))),
                     IEventTypeExtractor.fromPathForMapStringObject(List.of("MPE", "manualScan", "trackedEventCode")),
                     IDomainTypeExtractor.fixed("parcel"),
                     "config/prod/",
                     "/opt/flink-rocksdb-prod",
                     v -> v
-            );  case "dev" -> basic(
+            );
+            case "dev" -> basic(
                     id,
                     null,//topic from system properties
                     ITimeService.real,
@@ -221,9 +221,10 @@ public final class AppContainerFactoryForMapStringObject implements IAppContaine
 
 
         EnvelopeFailureAdapter<Map<String, Object>, Map<String, Object>> failureAdapter = new EnvelopeFailureAdapter<>("AppContainerForMapStringObject");
+        int laneCount = 256;
         OrderPreservingAsyncExecutorConfig<Envelope<Map<String, Object>, Map<String, Object>>, Envelope<Map<String, Object>, Map<String, Object>>, Collector<Envelope<Map<String, Object>, Map<String, Object>>>> opaeConfig =
                 new OrderPreservingAsyncExecutorConfig<>(
-                        256,//lane count
+                        laneCount,//lane count
                         64,//lane depth
                         512,//max in flight
                         100, //executor threads
@@ -244,10 +245,10 @@ public final class AppContainerFactoryForMapStringObject implements IAppContaine
                 ).flatMap(configs ->
                         XmlTypeClass.loadOptionalSchema(xml, root.xmlSchemaPath()).flatMap(schemaMap -> {
                             Class<Map<String, Object>> msgClass = (Class) Map.class;
-                            AspectExecutor<EnrichmentWithDependencies, ValueEnvelope<Map<String, Object>, Map<String, Object>>, CepEvent> oneEnrichmentExecutor = new EnrichmentExecutor<>(cepStateTypeClass,msgTypeClass);
+                            AspectExecutorAsync<EnrichmentWithDependencies, ValueEnvelope<Map<String, Object>, Map<String, Object>>, CepEvent> oneEnrichmentExecutor = new EnrichmentExecutor<>(cepStateTypeClass, msgTypeClass);
                             var bizLogicExecutor = new BizLogicExecutor<Map<String, Object>, Map<String, Object>>(configs, CelRuleBuilders.newRuleBuilder, msgClass);
 
-                            return IEnrichmentAspectExecutor.<Map<String, Object>, Map<String, Object>>create(cepStateTypeClass, configs, oneEnrichmentExecutor).map(
+                            return IEnrichmentAspectExecutor.<Map<String, Object>, Map<String, Object>>create(cepStateTypeClass, configs, oneEnrichmentExecutor, laneCount, 2).map(
                                     enricher ->
 
                                             new AppContainer<KafkaConfig, Map<String, Object>, Map<String, Object>, XMLValidationSchema, RuntimeContext, Collector<Envelope<Map<String, Object>, Map<String, Object>>>, FlinkMetricsParams>(

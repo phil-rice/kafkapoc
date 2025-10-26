@@ -1,7 +1,6 @@
 package com.hcltech.rmg.messages;
 
 import com.hcltech.rmg.config.configs.Configs;
-import com.hcltech.rmg.execution.aspects.AspectExecutor;
 
 import java.util.function.Function;
 
@@ -28,8 +27,5 @@ public interface Envelope<CepState, Msg> {
         return this;
     }
 
-    default <Component> Envelope<CepState, Msg> map(AspectExecutor<Component, ValueEnvelope<CepState, Msg>, Envelope<CepState, Msg>> executor, String key, Component aspect) {
-        return this;
-    }
 
 }

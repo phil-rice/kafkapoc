@@ -113,7 +113,8 @@ public final class OrderPreservingAsyncExecutor<In, Out, FR>
         this.currentHook = hook;
         try {
             metrics.increment("async.drain.calls");
-            ring.drain((a, b) -> { }, handler);
+            ring.drain((a, b) -> {
+            }, handler);
         } finally {
             this.currentFr = null;
             this.currentHook = null;
@@ -184,7 +185,8 @@ public final class OrderPreservingAsyncExecutor<In, Out, FR>
         if (lane.isEmpty() || lane.headT() != in || !lane.headCorrId().equals(corrId)) return;
 
         // Pop head (we are the head)
-        lane.popHead(ignored -> { });
+        lane.popHead(ignored -> {
+        });
 
         if (error == null) {
             cfg.futureRecord().completed(fr, hook, in, out);
@@ -222,7 +224,7 @@ public final class OrderPreservingAsyncExecutor<In, Out, FR>
 
         try {
             metrics.increment("async.submit.head");
-            executor.execute(new SubmitTask<>(userFn, frTypeClass, headIn, corr, submitCompletion, ring));
+            executor.execute(new SubmitTask<>(userFn, frTypeClass, laneIdx, headIn, corr, submitCompletion, ring));
         } catch (RejectedExecutionException rex) {
             metrics.increment("async.submit.rejected");
             ring.offerFailure(headIn, corr, rex);
@@ -246,7 +248,9 @@ public final class OrderPreservingAsyncExecutor<In, Out, FR>
 
     // ---- Diagnostics (operator thread) ----------------------------------
 
-    /** Cheap snapshot of lane health for tests/alerts. */
+    /**
+     * Cheap snapshot of lane health for tests/alerts.
+     */
     public LaneDiagnostics laneDiagnostics() {
         int empty = 0, full = 0, inUse = 0, expired = 0;
         final long now = cfg.timeService().currentTimeNanos();
@@ -281,12 +285,14 @@ public final class OrderPreservingAsyncExecutor<In, Out, FR>
     // ---------------------------------------------------------------------
     public interface UserFnPort<I, O, FR> {
         void submit(FutureRecordTypeClass<FR, I, O> tc,
+                    int laneId,
                     I in,
                     String corrId,
                     Completion<I, O> completion);
 
         interface Completion<I, O> {
             void success(I in, String corrId, O out);
+
             void failure(I in, String corrId, Throwable err);
         }
     }
@@ -304,15 +310,18 @@ public final class OrderPreservingAsyncExecutor<In, Out, FR>
         private final String corr;
         private final UserFnPort.Completion<I, O> completion;
         private final IMpscRing<FRX, I, O> ring;
+        private final int laneId;
 
         SubmitTask(UserFnPort<I, O, FRX> userFn,
                    FutureRecordTypeClass<FRX, I, O> tc,
+                   int laneId,
                    I in,
                    String corr,
                    UserFnPort.Completion<I, O> completion,
                    IMpscRing<FRX, I, O> ring) {
             this.userFn = userFn;
             this.tc = tc;
+            this.laneId = laneId;
             this.in = in;
             this.corr = corr;
             this.completion = completion;
@@ -322,7 +331,7 @@ public final class OrderPreservingAsyncExecutor<In, Out, FR>
         @Override
         public void run() {
             try {
-                userFn.submit(tc, in, corr, completion);
+                userFn.submit(tc, laneId, in, corr, completion);
             } catch (Throwable t) {
                 ring.offerFailure(in, corr, t);
             }

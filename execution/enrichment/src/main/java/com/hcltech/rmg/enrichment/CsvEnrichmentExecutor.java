@@ -4,7 +4,7 @@ import com.hcltech.rmg.cepstate.CepEvent;
 import com.hcltech.rmg.cepstate.CepStateTypeClass;
 import com.hcltech.rmg.common.csv.CsvResourceLoader;
 import com.hcltech.rmg.config.enrich.CsvEnrichment;
-import com.hcltech.rmg.execution.aspects.AspectExecutor;
+import com.hcltech.rmg.execution.aspects.AspectExecutorSync;
 import com.hcltech.rmg.messages.MsgTypeClass;
 import com.hcltech.rmg.messages.ValueEnvelope;
 
@@ -34,7 +34,7 @@ import java.util.concurrent.ConcurrentHashMap;
  * @param <Msg>      type of the message payload in {@link ValueEnvelope}
  */
 public final class CsvEnrichmentExecutor<CepState, Msg>
-        implements AspectExecutor<CsvEnrichment, ValueEnvelope<CepState, Msg>, CepEvent> {
+        implements AspectExecutorSync<CsvEnrichment, ValueEnvelope<CepState, Msg>, CepEvent> {
 
     /** Cache of loaded CSV lookups keyed by the immutable {@link CsvEnrichment} record. */
     private static final ConcurrentHashMap<CsvEnrichment, Map<String, List<String>>> LOOKUP_CACHE =

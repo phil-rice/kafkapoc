@@ -2,13 +2,13 @@ package com.hcltech.rmg.enrichment;
 
 import com.hcltech.rmg.cepstate.CepEvent;
 import com.hcltech.rmg.config.enrich.MapLookupEnrichment;
-import com.hcltech.rmg.execution.aspects.AspectExecutor;
+import com.hcltech.rmg.execution.aspects.AspectExecutorSync;
 import com.hcltech.rmg.messages.MsgTypeClass;
 import com.hcltech.rmg.messages.ValueEnvelope;
 
 import java.util.List;
 
-public class MapLookupEnrichmentExecutor<CepState, Msg> implements AspectExecutor<MapLookupEnrichment, ValueEnvelope<CepState, Msg>, CepEvent> {
+public class MapLookupEnrichmentExecutor<CepState, Msg> implements AspectExecutorSync<MapLookupEnrichment, ValueEnvelope<CepState, Msg>, CepEvent> {
 
     private final MsgTypeClass<Msg, List<String>> msgTypeClass;
 

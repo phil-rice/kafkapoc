@@ -9,13 +9,13 @@ import com.hcltech.rmg.config.config.BehaviorConfig;
 import com.hcltech.rmg.config.config.BehaviorConfigVisitor;
 import com.hcltech.rmg.config.config.BehaviorConfigWalker;
 import com.hcltech.rmg.config.validation.CelValidation;
-import com.hcltech.rmg.execution.aspects.AspectExecutor;
+import com.hcltech.rmg.execution.aspects.AspectExecutorSync;
 import com.hcltech.rmg.messages.ValueEnvelope;
 
 import java.util.*;
 
 public class CelValidationExecutor<CepState, Msg>
-        implements AspectExecutor<CelValidation, ValueEnvelope<CepState, Msg>, List<String>> {
+        implements AspectExecutorSync<CelValidation, ValueEnvelope<CepState, Msg>, List<String>> {
 
     private final CelRuleCache<ValueEnvelope<CepState, Msg>, List<String>> ruleCache;
 
