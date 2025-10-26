@@ -1,0 +1,134 @@
+# TRACKING BUSINESS LOGIC - CEL Rules
+# Reverse-engineered from generate_rm_full_dataset_v2.py
+#
+# Creates tracking events for all scan events
+# Output format matches the tracking API JSON structure
+#
+# Input:  enriched scan events
+# Output: tracking messages with parcel journey details
+
+events:
+  # ========================================
+  # EVDAV - Accepted at Depot
+  # ========================================
+  EVDAV:
+    bizlogic:
+      tracking:
+        type: "cel"
+        cel: |
+          {
+            'out': [
+              {
+                'type': 'tracking',
+                'eventCode': 'EVDAV',
+                'eventName': 'Accepted at Depot',
+                'eventDateTime': manualScan.eventTimestamp,
+                'uniqueItemId': mailPiece.mailPieceBarcode.channelSegment.uniqueItemId,
+                'UPUTrackingNumber': mailPiece.mailPieceBarcode.channelSegment.UPUTrackingNumber,
+                'productId': mailPiece.mailPieceBarcode.channelSegment.productId,
+                'productName': enrichment.productCategory.productCategory,
+                'functionalLocationId': has(manualScan.RMGLocation.functionalLocationId) ? manualScan.RMGLocation.functionalLocationId : '',
+                'siteId': has(manualScan.RMGLocation.siteId) ? manualScan.RMGLocation.siteId : '',
+                'locationName': has(enrichment.postcodeRegion) ? enrichment.postcodeRegion : '',
+                'postcode': mailPiece.mailPieceBarcode.channelSegment.destinationPostcodeDPS.postcode,
+                'destinationCountry': mailPiece.mailPieceBarcode.channelSegment.destinationCountry
+              }
+            ]
+          }
+  
+  # ========================================
+  # EVIMC - In Transit / Mail Center
+  # ========================================
+  EVIMC:
+    bizlogic:
+      tracking:
+        type: "cel"
+        cel: |
+          {
+            'out': [
+              {
+                'type': 'tracking',
+                'eventCode': 'EVIMC',
+                'eventName': 'In Transit at Mail Centre',
+                'eventDateTime': manualScan.eventTimestamp,
+                'uniqueItemId': mailPiece.mailPieceBarcode.channelSegment.uniqueItemId,
+                'UPUTrackingNumber': mailPiece.mailPieceBarcode.channelSegment.UPUTrackingNumber,
+                'productId': mailPiece.mailPieceBarcode.channelSegment.productId,
+                'productName': enrichment.productCategory.productCategory,
+                'functionalLocationId': has(manualScan.RMGLocation.functionalLocationId) ? manualScan.RMGLocation.functionalLocationId : '',
+                'siteId': has(manualScan.RMGLocation.siteId) ? manualScan.RMGLocation.siteId : '',
+                'locationName': has(enrichment.sortingCenter) ? enrichment.sortingCenter : '',
+                'postcode': mailPiece.mailPieceBarcode.channelSegment.destinationPostcodeDPS.postcode,
+                'destinationCountry': mailPiece.mailPieceBarcode.channelSegment.destinationCountry
+              }
+            ]
+          }
+  
+  # ========================================
+  # EVGPD - Out for Delivery
+  # ========================================
+  EVGPD:
+    bizlogic:
+      tracking:
+        type: "cel"
+        cel: |
+          {
+            'out': [
+              {
+                'type': 'tracking',
+                'eventCode': 'EVGPD',
+                'eventName': 'Out for Delivery',
+                'eventDateTime': manualScan.eventTimestamp,
+                'uniqueItemId': mailPiece.mailPieceBarcode.channelSegment.uniqueItemId,
+                'UPUTrackingNumber': mailPiece.mailPieceBarcode.channelSegment.UPUTrackingNumber,
+                'productId': mailPiece.mailPieceBarcode.channelSegment.productId,
+                'productName': enrichment.productCategory.productCategory,
+                'userId': has(manualScan.userId) ? manualScan.userId : '',
+                'deviceId': has(manualScan.deviceId) ? manualScan.deviceId : '',
+                'functionalLocationId': has(manualScan.RMGLocation.functionalLocationId) ? manualScan.RMGLocation.functionalLocationId : '',
+                'siteId': has(manualScan.RMGLocation.siteId) ? manualScan.RMGLocation.siteId : '',
+                'locationName': has(enrichment.deliveryOffice) ? enrichment.deliveryOffice : '',
+                'postcode': mailPiece.mailPieceBarcode.channelSegment.destinationPostcodeDPS.postcode,
+                'destinationCountry': mailPiece.mailPieceBarcode.channelSegment.destinationCountry,
+                'routeOrWalkNumber': has(manualScan.routeOrWalkNumber) ? manualScan.routeOrWalkNumber : '',
+                'longitude': has(manualScan.scanLocation.longitude) ? manualScan.scanLocation.longitude : 0.0,
+                'latitude': has(manualScan.scanLocation.latitude) ? manualScan.scanLocation.latitude : 0.0,
+                'altitude': has(manualScan.scanLocation.altitude) ? manualScan.scanLocation.altitude : 0.0
+              }
+            ]
+          }
+  
+  # ========================================
+  # ENKDN - Delivered
+  # ========================================
+  ENKDN:
+    bizlogic:
+      tracking:
+        type: "cel"
+        cel: |
+          {
+            'out': [
+              {
+                'type': 'tracking',
+                'eventCode': 'ENKDN',
+                'eventName': 'Delivered',
+                'eventDateTime': manualScan.eventTimestamp,
+                'uniqueItemId': mailPiece.mailPieceBarcode.channelSegment.uniqueItemId,
+                'UPUTrackingNumber': mailPiece.mailPieceBarcode.channelSegment.UPUTrackingNumber,
+                'productId': mailPiece.mailPieceBarcode.channelSegment.productId,
+                'productName': enrichment.productCategory.productCategory,
+                'userId': has(manualScan.userId) ? manualScan.userId : '',
+                'deviceId': has(manualScan.deviceId) ? manualScan.deviceId : '',
+                'functionalLocationId': has(manualScan.RMGLocation.functionalLocationId) ? manualScan.RMGLocation.functionalLocationId : '',
+                'siteId': has(manualScan.RMGLocation.siteId) ? manualScan.RMGLocation.siteId : '',
+                'locationName': has(enrichment.deliveryLocation) ? enrichment.deliveryLocation : '',
+                'postcode': mailPiece.mailPieceBarcode.channelSegment.destinationPostcodeDPS.postcode,
+                'destinationCountry': mailPiece.mailPieceBarcode.channelSegment.destinationCountry,
+                'routeOrWalkNumber': has(manualScan.routeOrWalkNumber) ? manualScan.routeOrWalkNumber : '',
+                'longitude': has(manualScan.scanLocation.longitude) ? manualScan.scanLocation.longitude : 0.0,
+                'latitude': has(manualScan.scanLocation.latitude) ? manualScan.scanLocation.latitude : 0.0,
+                'altitude': has(manualScan.scanLocation.altitude) ? manualScan.scanLocation.altitude : 0.0
+              }
+            ]
+          }
+
