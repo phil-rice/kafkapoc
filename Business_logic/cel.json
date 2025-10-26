@@ -4,11 +4,7 @@
       "bizlogic": {
         "notification": {
           "type": "cel",
-          "cel": "{'template': 'ACCEPTANCE_CONFIRMATION', 'channel': input.serviceType == 'TRACKED24' ? 'email' : 'sms', 'recipient': input.senderEmail}"
-        },
-        "tracking": {
-          "type": "cel",
-          "cel": "{'status': 'ACCEPTED', 'location': input.acceptanceOffice, 'timestamp': input.eventTime, 'nextStep': 'IN_TRANSIT'}"
+          "cel": "{'out': [message]}"
         }
       },
       "enrichment": {
@@ -18,41 +14,45 @@
             {
               "type": "fixed",
               "inputs": [],
-              "output": ["serviceDefaults"],
-              "value": {"acceptanceWindow": "2_hours", "cutoffTime": "17:00"}
-            },
-            {
-              "type": "csv",
-              "inputs": [["sender", "postcode"], ["receiver", "postcode"]],
-              "output": ["route_details"],
-              "inputColumns": ["origin_postcode", "destination_postcode"],
-              "outputColumns": ["expected_days", "route_code", "sorting_hub"],
-              "value": {"routeType": "standard"},
-              "keyDelimiter": ":",
-              "csvFileName": "csvs/routing_matrix.csv"
+              "output": ["eventType"],
+              "value": {"eventCode": "EVDAV", "eventDescription": "Accepted at depot"}
             },
             {
               "type": "lookup",
-              "inputs": [["acceptance", "officeCode"]],
-              "output": ["officeDetails"],
+              "inputs": [["mailPiece", "mailPieceBarcode", "channelSegment", "productId"]],
+              "output": ["productCategory"],
               "lookup": {
-                "MC01": "MountPleasantMailCentre",
-                "EC02": "EastCroydonDO",
-                "BH01": "BirminghamMC",
-                "MN03": "ManchesterSouthDO",
-                "GL04": "GlasgowMC"
+                "100": "Tracked24",
+                "101": "Tracked48",
+                "109": "SpecialDelivery09",
+                "113": "SpecialDelivery13"
               }
             },
             {
               "type": "lookup",
-              "inputs": [["item", "serviceCode"]],
-              "output": ["serviceLevel"],
+              "inputs": [["mailPiece", "mailPieceBarcode", "channelSegment", "destinationPostcodeDPS", "postcode"]],
+              "output": ["postcodeRegion"],
               "lookup": {
-                "TK24": "Tracked24",
-                "TK48": "Tracked48",
-                "SD1": "SpecialDelivery1pm",
-                "SD9": "SpecialDelivery9am",
-                "RM24": "RoyalMail24"
+                "EC1A1BB": "London",
+                "W1A0AX": "London",
+                "M11AE": "Manchester",
+                "B338TH": "Birmingham",
+                "UB70BH": "London",
+                "SW1A1AA": "London",
+                "E14BH": "London",
+                "G11AA": "Glasgow",
+                "BT71NN": "Belfast",
+                "L16XX": "Liverpool",
+                "SE11ZZ": "London",
+                "N16XY": "London",
+                "NE10AA": "Newcastle",
+                "TN12AB": "Kent",
+                "GU11AA": "Guildford",
+                "CF101BH": "Cardiff",
+                "EH12AB": "Edinburgh",
+                "AB101NN": "Aberdeen",
+                "KA11BB": "Ayrshire",
+                "DD11AA": "Dundee"
               }
             }
           ]
@@ -61,57 +61,41 @@
     },
     "EVIMC": {
       "bizlogic": {
-        "notification": {
-          "type": "cel",
-          "cel": "input.serviceType in ['SD1', 'SD9'] ? {'template': 'IN_TRANSIT_UPDATE', 'channel': 'email'} : null"
-        },
         "tracking": {
           "type": "cel",
-          "cel": "{'status': 'IN_TRANSIT', 'currentHub': input.mailCentre, 'scanTime': input.eventTime}"
+          "cel": "{'out': [message]}"
         }
       },
       "enrichment": {
-        "notification": {
+        "tracking": {
           "type": "composite",
           "enrichers": [
             {
               "type": "fixed",
               "inputs": [],
-              "output": ["transitDefaults"],
-              "value": {"updateFrequency": "hub_scan_only", "internalProcess": true}
-            },
-            {
-              "type": "csv",
-              "inputs": [["hub", "code"]],
-              "output": ["hub_info"],
-              "inputColumns": ["hub_code"],
-              "outputColumns": ["hub_name", "region", "capacity"],
-              "value": {"hubType": "sorting"},
-              "keyDelimiter": ":",
-              "csvFileName": "csvs/mail_centres.csv"
+              "output": ["eventType"],
+              "value": {"eventCode": "EVIMC", "eventDescription": "In transit / sorting"}
             },
             {
               "type": "lookup",
-              "inputs": [["transit", "hubCode"]],
-              "output": ["hubLocation"],
+              "inputs": [["mailPiece", "mailPieceBarcode", "channelSegment", "productId"]],
+              "output": ["productCategory"],
               "lookup": {
-                "SWIN": "SwindonMC",
-                "COVN": "CoventryMC",
-                "NOTT": "NottinghamMC",
-                "LEEDS": "LeedsMC",
-                "EDIN": "EdinburghMC"
+                "100": "Tracked24",
+                "101": "Tracked48",
+                "109": "SpecialDelivery09",
+                "113": "SpecialDelivery13"
               }
             },
             {
               "type": "lookup",
-              "inputs": [["route", "nextHub"]],
-              "output": ["nextDestination"],
+              "inputs": [["manualScan", "RMGLocation", "siteId"]],
+              "output": ["sortingCenter"],
               "lookup": {
-                "LOCAL": "DeliveryOffice",
-                "REGIONAL": "RegionalHub",
-                "NATIONAL": "NationalHub",
-                "INTERNATIONAL": "HeathrowIDC",
-                "FINAL": "LocalDeliveryUnit"
+                "000001": "London Central MC",
+                "000002": "Manchester MC",
+                "000003": "Birmingham MC",
+                "000175": "Regional Hub"
               }
             }
           ]
@@ -122,15 +106,11 @@
       "bizlogic": {
         "notification": {
           "type": "cel",
-          "cel": "{'template': 'OUT_FOR_DELIVERY', 'channel': 'multi', 'sms': input.recipientMobile != null, 'email': true, 'deliveryWindow': input.roundType == 'MORNING' ? '9am-1pm' : '2pm-6pm'}"
+          "cel": "{'out': [message]}"
         },
         "tracking": {
           "type": "cel",
-          "cel": "{'status': 'OUT_FOR_DELIVERY', 'van': input.vanNumber, 'round': input.roundCode, 'estimatedDelivery': input.plannedTime, 'stopNumber': input.dropSequence}"
-        },
-        "billing": {
-          "type": "cel",
-          "cel": "input.serviceType == 'SD1' && time.hour(input.eventTime) > 13 ? {'charge': 'LATE_DELIVERY_REFUND', 'amount': 6.85} : null"
+          "cel": "{'out': [message]}"
         }
       },
       "enrichment": {
@@ -140,42 +120,57 @@
             {
               "type": "fixed",
               "inputs": [],
-              "output": ["deliveryDefaults"],
-              "value": {"safePlace": "enabled", "neighbourDelivery": "allowed", "photoProof": "required"}
-            },
-            {
-              "type": "csv",
-              "inputs": [["delivery", "postcode"], ["delivery", "roundCode"]],
-              "output": ["delivery_route"],
-              "inputColumns": ["postcode", "round_code"],
-              "outputColumns": ["postman_id", "van_reg", "depot_code", "usual_time"],
-              "value": {"deliveryType": "standard"},
-              "keyDelimiter": ":",
-              "csvFileName": "csvs/delivery_rounds.csv"
+              "output": ["eventType"],
+              "value": {"eventCode": "EVGPD", "eventDescription": "Out for delivery"}
             },
             {
               "type": "lookup",
-              "inputs": [["address", "line1"], ["address", "line2"], ["address", "postcode"]],
-              "output": ["deliveryPoint"],
+              "inputs": [["mailPiece", "mailPieceBarcode", "channelSegment", "productId"]],
+              "output": ["productCategory"],
               "lookup": {
-                "10 Downing St..SW1A 2AA": "Westminster_VIP",
-                "Buckingham Palace..SW1A 1AA": "RoyalDelivery",
-                "1 Canada Square.Canary Wharf.E14 5AB": "CanaryWharfCommercial",
-                "Old Trafford.Sir Matt Busby Way.M16 0RA": "ManchesterStadium",
-                "Edinburgh Castle.Castlehill.EH1 2NG": "EdinburghHistoric"
+                "100": "Tracked24",
+                "101": "Tracked48",
+                "109": "SpecialDelivery09",
+                "113": "SpecialDelivery13"
               }
             },
             {
               "type": "lookup",
-              "inputs": [["round", "type"]],
-              "output": ["roundTiming"],
+              "inputs": [["mailPiece", "mailPieceBarcode", "channelSegment", "destinationPostcodeDPS", "postcode"]],
+              "output": ["deliveryOffice"],
               "lookup": {
-                "MORNING": "09:00-13:00",
-                "AFTERNOON": "13:00-17:00",
-                "EVENING": "17:00-20:00",
-                "SATURDAY": "09:00-15:00",
-                "RURAL": "08:00-16:00"
+                "EC1A1BB": "City of London DO",
+                "W1A0AX": "West End DO",
+                "M11AE": "Manchester Central DO",
+                "B338TH": "Birmingham South DO",
+                "UB70BH": "Uxbridge DO",
+                "SW1A1AA": "Westminster DO",
+                "E14BH": "Canary Wharf DO",
+                "G11AA": "Glasgow Central DO",
+                "BT71NN": "Belfast DO",
+                "L16XX": "Liverpool DO",
+                "SE11ZZ": "Southwark DO",
+                "N16XY": "Islington DO",
+                "NE10AA": "Newcastle DO",
+                "TN12AB": "Tunbridge Wells DO",
+                "GU11AA": "Guildford DO",
+                "CF101BH": "Cardiff DO",
+                "EH12AB": "Edinburgh DO",
+                "AB101NN": "Aberdeen DO",
+                "KA11BB": "Kilmarnock DO",
+                "DD11AA": "Dundee DO"
               }
+            }
+          ]
+        },
+        "tracking": {
+          "type": "composite",
+          "enrichers": [
+            {
+              "type": "fixed",
+              "inputs": [],
+              "output": ["eventType"],
+              "value": {"eventCode": "EVGPD", "eventDescription": "Out for delivery"}
             }
           ]
         }
@@ -185,19 +180,15 @@
       "bizlogic": {
         "notification": {
           "type": "cel",
-          "cel": "{'template': input.deliveryType == 'SAFEPLACE' ? 'DELIVERED_SAFEPLACE' : input.deliveryType == 'NEIGHBOUR' ? 'DELIVERED_NEIGHBOUR' : 'DELIVERED_STANDARD', 'channel': 'all', 'includePhoto': input.proofPhoto != null}"
+          "cel": "{'out': [message]}"
         },
         "tracking": {
           "type": "cel",
-          "cel": "{'status': 'DELIVERED', 'deliveryTime': input.eventTime, 'signature': input.signature, 'location': input.deliveryLocation, 'gps': input.gpsCoords, 'proofUrl': input.proofPhoto}"
+          "cel": "{'out': [message]}"
         },
         "billing": {
           "type": "cel",
-          "cel": "{'event': 'DELIVERY_COMPLETE', 'charge': input.cod ? input.codAmount : 0, 'vat': input.international ? input.customsDuty : 0, 'complete': true}"
-        },
-        "analytics": {
-          "type": "cel",
-          "cel": "{'kpi': 'DELIVERY_SUCCESS', 'onTime': input.actualTime <= input.promisedTime, 'attempts': input.attemptNumber, 'customerSatisfied': input.rating >= 4}"
+          "cel": "{'out': [message]}"
         }
       },
       "enrichment": {
@@ -207,41 +198,78 @@
             {
               "type": "fixed",
               "inputs": [],
-              "output": ["completionDefaults"],
-              "value": {"feedbackUrl": "https://royalmail.com/feedback", "retentionDays": 90, "proofRequired": true}
-            },
-            {
-              "type": "csv",
-              "inputs": [["delivery", "postmanId"], ["delivery", "depotCode"]],
-              "output": ["performance_metrics"],
-              "inputColumns": ["postman_id", "depot_code"],
-              "outputColumns": ["success_rate", "avg_time", "customer_rating"],
-              "value": {"metricsType": "delivery"},
-              "keyDelimiter": ":",
-              "csvFileName": "csvs/postman_performance.csv"
+              "output": ["eventType"],
+              "value": {"eventCode": "ENKDN", "eventDescription": "Delivered"}
             },
             {
               "type": "lookup",
-              "inputs": [["proof", "type"]],
-              "output": ["proofValidation"],
+              "inputs": [["mailPiece", "mailPieceBarcode", "channelSegment", "productId"]],
+              "output": ["productCategory"],
               "lookup": {
-                "SIGNATURE": "SignatureCaptured",
-                "PHOTO": "PhotoTaken",
-                "SAFEPLACE": "SafePlacePhoto",
-                "NEIGHBOUR": "NeighbourSignature",
-                "DEPOT": "CollectedFromDepot"
+                "100": "Tracked24",
+                "101": "Tracked48",
+                "109": "SpecialDelivery09",
+                "113": "SpecialDelivery13"
               }
             },
             {
               "type": "lookup",
-              "inputs": [["customer", "postcode"]],
-              "output": ["regionMetrics"],
+              "inputs": [["mailPiece", "mailPieceBarcode", "channelSegment", "destinationPostcodeDPS", "postcode"]],
+              "output": ["deliveryLocation"],
               "lookup": {
-                "SW1A": "Westminster_Premium",
-                "EC1A": "CityOfLondon_Business",
-                "M1": "Manchester_City",
-                "B1": "Birmingham_Central",
-                "G1": "Glasgow_City"
+                "EC1A1BB": "City of London",
+                "W1A0AX": "West End",
+                "M11AE": "Manchester",
+                "B338TH": "Birmingham",
+                "UB70BH": "Uxbridge",
+                "SW1A1AA": "Westminster",
+                "E14BH": "Canary Wharf",
+                "G11AA": "Glasgow",
+                "BT71NN": "Belfast",
+                "L16XX": "Liverpool",
+                "SE11ZZ": "Southwark",
+                "N16XY": "Islington",
+                "NE10AA": "Newcastle",
+                "TN12AB": "Tunbridge Wells",
+                "GU11AA": "Guildford",
+                "CF101BH": "Cardiff",
+                "EH12AB": "Edinburgh",
+                "AB101NN": "Aberdeen",
+                "KA11BB": "Kilmarnock",
+                "DD11AA": "Dundee"
+              }
+            }
+          ]
+        },
+        "tracking": {
+          "type": "composite",
+          "enrichers": [
+            {
+              "type": "fixed",
+              "inputs": [],
+              "output": ["eventType"],
+              "value": {"eventCode": "ENKDN", "eventDescription": "Delivered"}
+            }
+          ]
+        },
+        "billing": {
+          "type": "composite",
+          "enrichers": [
+            {
+              "type": "fixed",
+              "inputs": [],
+              "output": ["billingType"],
+              "value": {"billingCode": "DELIVERY_COMPLETE"}
+            },
+            {
+              "type": "lookup",
+              "inputs": [["mailPiece", "mailPieceBarcode", "channelSegment", "productId"]],
+              "output": ["productCategory"],
+              "lookup": {
+                "100": "Tracked24",
+                "101": "Tracked48",
+                "109": "SpecialDelivery09",
+                "113": "SpecialDelivery13"
               }
             }
           ]
@@ -250,3 +278,4 @@
     }
   }
 }
+
