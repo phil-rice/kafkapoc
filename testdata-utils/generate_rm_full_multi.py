@@ -533,7 +533,11 @@ def generate_parcels_worker(args):
     os.makedirs(worker_dir, exist_ok=True)
 
     inputs_dir = os.path.join(worker_dir, "inputs")
+    outputs_dir = os.path.join(worker_dir, "outputs")
+    combined_dir = os.path.join(worker_dir, "combined")
     os.makedirs(inputs_dir, exist_ok=True)
+    os.makedirs(outputs_dir, exist_ok=True)
+    os.makedirs(combined_dir, exist_ok=True)
 
     postcodes_master = load_postcodes(postcode_file)
 
@@ -550,14 +554,29 @@ def generate_parcels_worker(args):
     func_ids = [str(i + 1) for i in range(site_pool_size)]
 
     in_zip_idx = 1
+    out_zip_idx = 1
     in_zip = ZipFile(
         os.path.join(inputs_dir, f"mp_inputs_{in_zip_idx:04d}.zip"), "w", ZIP_DEFLATED
     )
+    out_zip = ZipFile(
+        os.path.join(outputs_dir, f"mp_notifications_{out_zip_idx:04d}.zip"),
+        "w",
+        ZIP_DEFLATED,
+    )
     written_in = 0
+    written_out = 0
+    combined_zip_idx = 1
+    combined_zip = ZipFile(
+        os.path.join(combined_dir, f"test_combined_{combined_zip_idx:04d}.zip"),
+        "w",
+        ZIP_DEFLATED,
+    )
+    written_combined = 0
 
     used_postcodes = set()
     postcode_to_location = {}
     postcode_suffix_rows = []
+
     summary_rows = []
 
     for i in range(parcels_chunk):
@@ -616,6 +635,8 @@ def generate_parcels_worker(args):
         mp_input_xml = build_mailpiece_input_xml(
             unique_item_id, upu, postcode, barcode_creation_date, product_id
         )
+        parcel_inputs = []
+        parcel_outputs = []
 
         for idx, ev in enumerate(EVENT_FLOW, start=1):
             scan_dt = scan_times[ev]
@@ -646,6 +667,7 @@ def generate_parcels_worker(args):
             )
 
             xml_input = INPUT_NS_HEADER + mp_input_xml + manual_xml + "</ptp:MPE>"
+            parcel_inputs.append("<MPE>" + mp_input_xml + manual_xml + "</MPE>")
             in_filename = f"tracking_{unique_item_id}_{idx}.xml"
             in_zip.writestr(in_filename, xml_input)
             written_in += 1
@@ -659,24 +681,94 @@ def generate_parcels_worker(args):
                     ZIP_DEFLATED,
                 )
 
+        for ev in ("EVDAV", "EVGPD", "ENKDN"):
+            segments = []
+            email_notif = False
+            sms_notif = False
+            key = (ev, category)
+            if key in RULES:
+                prefix, tpl_email, tpl_sms = RULES[key]
+                base_dt = scan_times[ev]
+
+                if tpl_email and has_email:
+                    seg = build_notification_segment(prefix, ev, email, 1, base_dt)
+                    segments.append(seg)
+                    email_notif = True
+                if tpl_sms and has_mobile:
+                    seg = build_notification_segment(prefix, ev, mobile, 2, base_dt)
+                    segments.append(seg)
+                    sms_notif = True
+
+            summary_rows.append(
+                [
+                    unique_item_id,
+                    category,
+                    int(has_email),
+                    int(has_mobile),
+                    ev,
+                    int(email_notif),
+                    int(sms_notif),
+                ]
+            )
+
+            if segments:
+                header = build_output_notification_header(unique_item_id, upu)
+                xml_out = OUTPUT_NS_HEADER + header + "".join(segments) + "</ptp:MPE>"
+                parcel_outputs.append("<MPE>" + header + "".join(segments) + "</MPE>")
+                out_name = f"notify_{unique_item_id}_{ev}.xml"
+                out_zip.writestr(out_name, xml_out)
+                written_out += 1
+
+                if written_out % batch_size == 0:
+                    out_zip.close()
+                    out_zip_idx += 1
+                    out_zip = ZipFile(
+                        os.path.join(
+                            outputs_dir, f"mp_notifications_{out_zip_idx:04d}.zip"
+                        ),
+                        "w",
+                        ZIP_DEFLATED,
+                    )
+
+        combined_content = ["<test><input>"]
+        combined_content.extend(parcel_inputs)
+        combined_content.append("</input><output>")
+        combined_content.extend(parcel_outputs)
+        combined_content.append("</output></test>")
+        combined_xml = "".join(combined_content)
+        combined_name = f"test_{unique_item_id}.xml"
+        combined_zip.writestr(combined_name, combined_xml)
+        written_combined += 1
+
+        if written_combined % batch_size == 0:
+            combined_zip.close()
+            combined_zip_idx += 1
+            combined_zip = ZipFile(
+                os.path.join(combined_dir, f"test_combined_{combined_zip_idx:04d}.zip"),
+                "w",
+                ZIP_DEFLATED,
+            )
+
     in_zip.close()
+    out_zip.close()
+    combined_zip.close()
 
     # Write worker-specific CSVs
-    # summary_csv_path = os.path.join(worker_dir, "notifications_summary.csv")
-    # with open(summary_csv_path, "w", newline="", encoding="utf-8") as summary_f:
-    #     writer = csv.writer(summary_f)
-    #     writer.writerow(
-    #         [
-    #             "uniqueItemId",
-    #             "productCategory",
-    #             "hasEmail",
-    #             "hasMobile",
-    #             "event",
-    #             "emailNotif",
-    #             "smsNotif",
-    #         ]
-    #     )
-    #     writer.writerows(summary_rows)
+    summary_csv_path = os.path.join(worker_dir, "notifications_summary.csv")
+    with open(summary_csv_path, "w", newline="", encoding="utf-8") as summary_f:
+        writer = csv.writer(summary_f)
+        writer.writerow(
+            [
+                "uniqueItemId",
+                "productCategory",
+                "hasEmail",
+                "hasMobile",
+                "event",
+                "emailNotif",
+                "smsNotif",
+            ]
+        )
+        writer.writerows(summary_rows)
 
     postcode_csv_path = os.path.join(worker_dir, "postcode.csv")
     with open(postcode_csv_path, "w", newline="", encoding="utf-8") as pc_f:
@@ -693,9 +785,7 @@ def generate_parcels_worker(args):
         for add1, pc, suf in postcode_suffix_rows:
             w.writerow([add1, pc, suf])
 
-    print(
-        f"Worker {worker_id} completed: {parcels_chunk} parcels, {written_in} XMLs written"
-    )
+    print(f"Worker {worker_id} completed: {parcels_chunk} parcels")
     return worker_id
 
 
@@ -744,42 +834,40 @@ def generate_dataset(
     print(f"All workers completed. Merging CSVs...")
 
     # Merge summary CSVs
-    # summary_csv_path = os.path.join(output_dir, "notifications_summary.csv")
-    # with open(summary_csv_path, "w", newline="", encoding="utf-8") as out_f:
-    #     writer = csv.writer(out_f)
-    #     writer.writerow(
-    #         [
-    #             "uniqueItemId",
-    #             "productCategory",
-    #             "hasEmail",
-    #             "hasMobile",
-    #             "event",
-    #             "emailNotif",
-    #             "smsNotif",
-    #         ]
-    #     )
-    #     for i in range(num_workers):
-    #         worker_csv = os.path.join(
-    #             output_dir, f"worker_{i}", "notifications_summary.csv"
-    #         )
-    #         if os.path.exists(worker_csv):
-    #             with open(worker_csv, "r", encoding="utf-8") as in_f:
-    #                 reader = csv.reader(in_f)
-    #                 next(reader)  # skip header
-    #                 writer.writerows(reader)
+    summary_csv_path = os.path.join(output_dir, "notifications_summary.csv")
+    with open(summary_csv_path, "w", newline="", encoding="utf-8") as out_f:
+        writer = csv.writer(out_f)
+        writer.writerow(
+            [
+                "uniqueItemId",
+                "productCategory",
+                "hasEmail",
+                "hasMobile",
+                "event",
+                "emailNotif",
+                "smsNotif",
+            ]
+        )
+        for i in range(num_workers):
+            worker_csv = os.path.join(
+                output_dir, f"worker_{i}", "notifications_summary.csv"
+            )
+            with open(worker_csv, "r", encoding="utf-8") as in_f:
+                reader = csv.reader(in_f)
+                next(reader)  # skip header
+                writer.writerows(reader)
 
     # Merge postcode CSVs (deduplicate)
     all_postcodes = {}
     for i in range(num_workers):
         worker_csv = os.path.join(output_dir, f"worker_{i}", "postcode.csv")
-        if os.path.exists(worker_csv):
-            with open(worker_csv, "r", encoding="utf-8") as in_f:
-                reader = csv.reader(in_f)
-                next(reader)
-                for row in reader:
-                    postcode = row[5]
-                    if postcode not in all_postcodes:
-                        all_postcodes[postcode] = row
+        with open(worker_csv, "r", encoding="utf-8") as in_f:
+            reader = csv.reader(in_f)
+            next(reader)
+            for row in reader:
+                postcode = row[5]
+                if postcode not in all_postcodes:
+                    all_postcodes[postcode] = row
 
     postcode_csv_path = os.path.join(output_dir, "postcode.csv")
     with open(postcode_csv_path, "w", newline="", encoding="utf-8") as out_f:
@@ -797,13 +885,13 @@ def generate_dataset(
         writer.writerow(["add_line1", "postcode", "po_suffix"])
         for i in range(num_workers):
             worker_csv = os.path.join(output_dir, f"worker_{i}", "postcode_suffix.csv")
-            if os.path.exists(worker_csv):
-                with open(worker_csv, "r", encoding="utf-8") as in_f:
-                    reader = csv.reader(in_f)
-                    next(reader)
-                    writer.writerows(reader)
+            with open(worker_csv, "r", encoding="utf-8") as in_f:
+                reader = csv.reader(in_f)
+                next(reader)
+                writer.writerows(reader)
 
     print(f"Completed generation.")
+    print(f"Summary CSV: {summary_csv_path}")
     print(f"Postcode CSV: {postcode_csv_path}")
     print(f"Postcode suffix CSV: {postcode_suffix_csv_path}")
 
