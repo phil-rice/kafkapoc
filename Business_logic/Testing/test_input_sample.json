@@ -1,0 +1,79 @@
+{
+  "message.MPE": {
+    "mailPiece": {
+      "mailPieceBarcode": {
+        "royalMailSegment": {
+          "mailTypeCode": "A",
+          "UPUCountry": "JGB",
+          "informationCode": "8",
+          "versionId": "2",
+          "mailItemFormatCode": "15",
+          "mailClassCode": "F"
+        },
+        "channelSegment": {
+          "uniqueItemId": "111968259904001091111",
+          "weightCode": "1",
+          "pricePaid": "123",
+          "barcodeCreationDate": "2024-10-24",
+          "productId": "100",
+          "address": {
+            "buildingNumber": "1"
+          },
+          "destinationPostcodeDPS": {
+            "postcode": "G11AA"
+          },
+          "mailPieceWeight": "1",
+          "UPUTrackingNumber": "YA084176802GB",
+          "destinationCountry": "GB",
+          "requiredAtDeliveryCode": "S"
+        }
+      }
+    },
+    "manualScan": {
+      "messageId": "f5c30f9c-4147-4ac9-bfae-4379697625e0",
+      "userId": "test_user",
+      "eventTimestamp": "2024-10-24T19:35:51+01:00",
+      "transmissionCompleteTimestamp": "2024-10-24T19:35:59+01:00",
+      "auxiliaryData": {
+        "data": [
+          {
+            "name": "RECIPIENT_EMAILID",
+            "value": "user111968@example.com"
+          },
+          {
+            "name": "RECIPIENT_MOBILENO",
+            "value": "07088118865"
+          }
+        ]
+      },
+      "trackEventId": "5934652298365572",
+      "scanLocation": {
+        "altitude": "0.0",
+        "longitude": "-0.127625",
+        "latitude": "51.503346"
+      },
+      "scanTimestamp": "2024-10-24T19:35:51+01:00",
+      "deviceId": "478956863836222",
+      "RMGLocation": {
+        "functionalLocationId": "356",
+        "siteId": "000175"
+      },
+      "trackedEventCode": "EVDAV",
+      "transmissionTimestamp": "2024-10-24T19:35:59+01:00",
+      "eventReceivedTimestamp": "2024-10-24T19:35:59+01:00",
+      "eventReason": "11",
+      "manualScanIndicator": "false",
+      "workProcessCode": "100"
+    }
+  },
+  "enrichment": {
+    "productCategory": {
+      "productCategory": "Tracked24"
+    },
+    "postcodeRegion": "London",
+    "sortingCenter": "London MC",
+    "deliveryOffice": "London DO",
+    "deliveryLocation": "Customer Address"
+  }
+}
+
