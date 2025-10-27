@@ -243,6 +243,7 @@ public final class AppContainerFactoryForMapStringObject implements IAppContaine
                 Duration.ofMillis(1000),//read timeout millis
                 new StringQueryParamCodec<>(new JsonMapDecoder())),
                 InsecureHttp2Client::insecureHttp2Client);
+        var tokenGenerator = new AzureStorageTokenGenerator();
 
         // RootConfig -> Configs -> SchemaMap -> Container
         return rootConfigBuilder.create(rootConfigPath).flatMap((RootConfig root) ->
@@ -254,7 +255,7 @@ public final class AppContainerFactoryForMapStringObject implements IAppContaine
                         XmlTypeClass.loadOptionalSchema(xml, root.xmlSchemaPath()).flatMap(schemaMap -> {
                             Class<Map<String, Object>> msgClass = (Class) Map.class;
                             AspectExecutor<EnrichmentWithDependencies, ValueEnvelope<Map<String, Object>, Map<String, Object>>, CepEvent> oneEnrichmentExecutor =
-                                    new EnrichmentExecutor<>(csvApiClient, cepStateTypeClass, msgTypeClass);
+                                    new EnrichmentExecutor<>(csvApiClient, cepStateTypeClass, msgTypeClass, tokenGenerator);
                             var bizLogicExecutor = new BizLogicExecutor<Map<String, Object>, Map<String, Object>>(configs, CelRuleBuilders.newRuleBuilder, msgClass);
 
                             return IEnrichmentAspectExecutor.<Map<String, Object>, Map<String, Object>>create(cepStateTypeClass, configs, oneEnrichmentExecutor).map(

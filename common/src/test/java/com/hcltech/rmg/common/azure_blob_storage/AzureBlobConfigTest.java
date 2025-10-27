@@ -1,39 +1,36 @@
 package com.hcltech.rmg.common.azure_blob_storage;
 
+import com.hcltech.rmg.common.IEnvGetter;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 
 import java.net.URI;
+import java.util.Optional;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.*;
 
 class AzureBlobConfigTest {
 
     @Nested
     class ValidationTests {
         @Test
-        void nullsAreRejected() {
+        void nullsAreRejected_forRequiredFields_only() {
             assertThrows(NullPointerException.class,
-                    () -> new AzureBlobConfig(null, "c", "p.csv", "sv=...&sig=...", null));
+                    () -> new AzureBlobConfig(null, "c", "p.csv", null, null, null));
             assertThrows(NullPointerException.class,
-                    () -> new AzureBlobConfig("acct", null, "p.csv", "sv=...&sig=...", null));
+                    () -> new AzureBlobConfig("acct", null, "p.csv", null, null, null));
             assertThrows(NullPointerException.class,
-                    () -> new AzureBlobConfig("acct", "c", null, "sv=...&sig=...", null));
-            assertThrows(NullPointerException.class,
-                    () -> new AzureBlobConfig("acct", "c", "p.csv", null, null));
+                    () -> new AzureBlobConfig("acct", "c", null, null, null, null));
         }
 
         @Test
-        void blanksAreRejected() {
+        void blanksAreRejected_forRequiredFields_only() {
             assertThrows(IllegalArgumentException.class,
-                    () -> new AzureBlobConfig("", "c", "p.csv", "sv=...&sig=...", null));
+                    () -> new AzureBlobConfig("", "c", "p.csv", null, null, null));
             assertThrows(IllegalArgumentException.class,
-                    () -> new AzureBlobConfig("acct", "", "p.csv", "sv=...&sig=...", null));
+                    () -> new AzureBlobConfig("acct", "", "p.csv", null, null, null));
             assertThrows(IllegalArgumentException.class,
-                    () -> new AzureBlobConfig("acct", "c", "", "sv=...&sig=...", null));
-            assertThrows(IllegalArgumentException.class,
-                    () -> new AzureBlobConfig("acct", "c", "p.csv", "", null));
+                    () -> new AzureBlobConfig("acct", "c", "", null, null, null));
         }
     }
 
@@ -41,79 +38,87 @@ class AzureBlobConfigTest {
     class EndpointHostTests {
         @Test
         void defaultEndpointHostIsPublicAzure() {
-            AzureBlobConfig cfg = new AzureBlobConfig("acct", "data", "x.csv", "sv=1&sig=abc", null);
+            AzureBlobConfig cfg = new AzureBlobConfig(
+                    "acct", "data", "x.csv",
+                    null, null, null);
             assertEquals("blob.core.windows.net", cfg.resolvedEndpointHost());
         }
 
         @Test
         void customEndpointHostOverridesDefault() {
-            AzureBlobConfig cfg = new AzureBlobConfig("acct", "data", "x.csv", "sv=1&sig=abc", "127.0.0.1:10000");
+            AzureBlobConfig cfg = new AzureBlobConfig(
+                    "acct", "data", "x.csv",
+                    null, null, "127.0.0.1:10000");
             assertEquals("127.0.0.1:10000", cfg.resolvedEndpointHost());
         }
     }
 
     @Nested
-    class SignedUriTests {
+    class SasResolutionTests {
         @Test
-        void buildsSignedUri_withLeadingQuestionMarkInSas() {
+        void resolvedSas_prefersDirectSasToken() {
             AzureBlobConfig cfg = new AzureBlobConfig(
-                    "myacct", "data", "lookups/countries.csv",
-                    "?sv=2024-05-04&sp=rl&se=2026-01-01&sig=XYZ",
+                    "acct", "data", "f.csv",
+                    "sv=1&sig=abc",  // direct SAS provided
+                    "ENV_SAS",
                     null);
 
-            URI uri = cfg.signedBlobUri();
-            assertEquals(
-                    "https://myacct.blob.core.windows.net/data/lookups/countries.csv?sv=2024-05-04&sp=rl&se=2026-01-01&sig=XYZ",
-                    uri.toString());
+            // env getter should be ignored because direct SAS exists
+            IEnvGetter env = name -> "should_not_be_used";
+            assertEquals(Optional.of("?sv=1&sig=abc"), cfg.resolvedSas(env));
         }
 
         @Test
-        void buildsSignedUri_withoutLeadingQuestionMarkInSas() {
+        void resolvedSas_readsFromEnvVar_whenDirectSasMissing() {
+            IEnvGetter fakeEnv = name -> name.equals("AZUREBLOB_SAS_FOR_TEST") ? "sv=envsig" : null;
+
             AzureBlobConfig cfg = new AzureBlobConfig(
-                    "myacct", "data", "lookups/countries.csv",
-                    "sv=2024-05-04&sp=rl&se=2026-01-01&sig=XYZ",
+                    "acct", "data", "f.csv",
+                    null,                       // no direct SAS
+                    "AZUREBLOB_SAS_FOR_TEST",   // env var name
                     null);
 
-            URI uri = cfg.signedBlobUri();
-            assertEquals(
-                    "https://myacct.blob.core.windows.net/data/lookups/countries.csv?sv=2024-05-04&sp=rl&se=2026-01-01&sig=XYZ",
-                    uri.toString());
+            assertEquals(Optional.of("?sv=envsig"), cfg.resolvedSas(fakeEnv));
         }
 
         @Test
-        void normalizesBlobPathThatStartsWithSlash() {
+        void resolvedSas_emptyWhenNothingProvided() {
             AzureBlobConfig cfg = new AzureBlobConfig(
-                    "acct", "data", "/lookups/cities.csv",
-                    "sv=1&sig=abc",
-                    null);
+                    "acct", "data", "f.csv",
+                    null, null, null);
+            IEnvGetter emptyEnv = name -> null;
 
-            assertEquals(
-                    "https://acct.blob.core.windows.net/data/lookups/cities.csv?sv=1&sig=abc",
-                    cfg.signedBlobUri().toString());
+            assertEquals(Optional.empty(), cfg.resolvedSas(emptyEnv));
         }
+    }
 
+    @Nested
+    class BlobUriTests {
         @Test
-        void preservesBlobPathWithoutSlash() {
+        void blobUri_buildsCorrectUrl() {
             AzureBlobConfig cfg = new AzureBlobConfig(
                     "acct", "data", "lookups/cities.csv",
-                    "sv=1&sig=abc",
-                    null);
-
-            assertEquals(
-                    "https://acct.blob.core.windows.net/data/lookups/cities.csv?sv=1&sig=abc",
-                    cfg.signedBlobUri().toString());
+                    null, null, null);
+            URI uri = cfg.blobUri();
+            assertEquals("https://acct.blob.core.windows.net/data/lookups/cities.csv", uri.toString());
         }
 
         @Test
-        void worksWithCustomEndpointHost_e_g_Azurite() {
+        void blobUri_normalizesLeadingSlash() {
+            AzureBlobConfig cfg = new AzureBlobConfig(
+                    "acct", "data", "/lookups/cities.csv",
+                    null, null, null);
+            URI uri = cfg.blobUri();
+            assertEquals("https://acct.blob.core.windows.net/data/lookups/cities.csv", uri.toString());
+        }
+
+        @Test
+        void blobUri_usesCustomEndpointHost() {
             AzureBlobConfig cfg = new AzureBlobConfig(
                     "devstoreaccount1", "data", "x.csv",
-                    "sv=1&sig=abc",
-                    "127.0.0.1:10000");
-
-            assertEquals(
-                    "https://devstoreaccount1.127.0.0.1:10000/data/x.csv?sv=1&sig=abc",
-                    cfg.signedBlobUri().toString());
+                    null, null, "127.0.0.1:10000");
+            URI uri = cfg.blobUri();
+            assertEquals("https://devstoreaccount1.127.0.0.1:10000/data/x.csv", uri.toString());
         }
     }
 }

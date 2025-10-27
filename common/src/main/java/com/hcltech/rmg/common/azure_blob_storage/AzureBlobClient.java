@@ -1,5 +1,9 @@
 package com.hcltech.rmg.common.azure_blob_storage;
 
+
+import com.hcltech.rmg.common.tokens.ITokenGenerator;
+import com.hcltech.rmg.common.tokens.Token;
+
 import java.io.IOException;
 import java.io.InputStream;
 import java.net.URI;
@@ -8,8 +12,10 @@ import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 
 /**
- * Minimal HTTP client for reading Azure blobs via SAS URL.
- * Uses the JDK built-in HttpClient and returns an InputStream of the blob data.
+ * Minimal HTTP-based Azure Blob reader supporting both SAS and Managed Identity tokens.
+ * <p>
+ * - If {@link Token.Type#SAS}, the SAS token is appended to the URL.
+ * - If {@link Token.Type#BEARER}, it is sent as an Authorization header.
  */
 public final class AzureBlobClient {
 
@@ -17,28 +23,44 @@ public final class AzureBlobClient {
 
     /**
      * Opens an InputStream to the blob described by the given config.
-     *
-     * @param cfg AzureBlobConfig containing the full SAS URL information
-     * @return InputStream of blob contents (caller must close it)
+     * <p>
+     * The token is supplied by an injected {@link ITokenGenerator}.
      */
-    public static InputStream openBlobStream(AzureBlobConfig cfg) throws IOException, InterruptedException {
-        return openBlobStream(cfg, HttpClient.newHttpClient());
+    public static InputStream openBlobStream(AzureBlobConfig cfg,
+                                             ITokenGenerator tokenGenerator)
+            throws IOException, InterruptedException {
+        return openBlobStream(cfg, tokenGenerator, HttpClient.newHttpClient());
     }
-    public static InputStream openBlobStream(AzureBlobConfig cfg, HttpClient httpClient) throws IOException, InterruptedException {
-        URI uri = cfg.signedBlobUri();
 
-        HttpRequest request = HttpRequest.newBuilder()
-                .uri(uri)
-                .GET()
-                .build();
+    public static InputStream openBlobStream(AzureBlobConfig cfg,
+                                             ITokenGenerator tokenGenerator,
+                                             HttpClient httpClient)
+            throws IOException, InterruptedException {
 
-        // Use BodyHandlers.ofInputStream to lazily stream data
-        HttpResponse<InputStream> response =
-                httpClient.send(request, HttpResponse.BodyHandlers.ofInputStream());
+        var token = tokenGenerator.token(cfg.sasEnvVar());
+        var tokenType = token.type();
+        var tokenValue = token.value();
 
+        URI uri;
+        HttpRequest.Builder requestBuilder;
+
+        if (tokenType == Token.Type.SAS) {
+            // Append SAS token to the blob URL (no header)
+            uri = URI.create(cfg.blobUri().toString() + tokenValue);
+            requestBuilder = HttpRequest.newBuilder().uri(uri).GET();
+        } else {
+            // Use Bearer token header
+            uri = cfg.blobUri();
+            requestBuilder = HttpRequest.newBuilder()
+                    .uri(uri)
+                    .header("Authorization", tokenValue)
+                    .header("x-ms-version", "2023-11-03")
+                    .GET();
+        }
+
+        var response = httpClient.send(requestBuilder.build(), HttpResponse.BodyHandlers.ofInputStream());
         int status = response.statusCode();
         if (status != 200) {
-            // Drain/close before throwing, to free the connection
             response.body().close();
             throw new IOException("Failed to fetch blob " + uri + ": HTTP " + status);
         }

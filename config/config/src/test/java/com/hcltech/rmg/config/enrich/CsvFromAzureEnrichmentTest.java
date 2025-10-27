@@ -26,7 +26,14 @@ class CsvFromAzureEnrichmentTest {
     }
 
     private static AzureBlobConfig sampleAzure() {
-        return new AzureBlobConfig("acct", "cont", "path/file.csv", "sv=1&sig=abc", null);
+        return new AzureBlobConfig(
+                "acct",
+                "cont",
+                "path/file.csv",
+                "sv=1&sig=abc",   // sasToken (optional)
+                null,             // sasEnvVar (optional)
+                null              // endpointHost (defaults to blob.core.windows.net)
+        );
     }
 
     @Test
@@ -37,7 +44,7 @@ class CsvFromAzureEnrichmentTest {
                 sampleAzure(),
                 inputCols(),
                 outputCols(),
-                "-"
+                "-"   // custom delimiter
         );
 
         assertEquals(sampleInputs(), cfg.inputs());

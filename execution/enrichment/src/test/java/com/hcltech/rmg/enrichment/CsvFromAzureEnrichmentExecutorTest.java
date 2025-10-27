@@ -4,6 +4,8 @@ import com.hcltech.rmg.cepstate.CepEvent;
 import com.hcltech.rmg.cepstate.CepStateTypeClass;
 import com.hcltech.rmg.cepstate.MapStringObjectCepStateTypeClass;
 import com.hcltech.rmg.common.azure_blob_storage.AzureBlobConfig;
+import com.hcltech.rmg.common.tokens.ITokenGenerator;
+import com.hcltech.rmg.common.tokens.Token;
 import com.hcltech.rmg.config.enrich.CsvFromAzureEnrichment;
 import com.hcltech.rmg.messages.MapStringObjectAndListStringMsgTypeClass;
 import com.hcltech.rmg.messages.MsgTypeClass;
@@ -26,6 +28,16 @@ import static org.mockito.Mockito.*;
 
 class CsvFromAzureEnrichmentExecutorTest {
 
+    /** Simple fixed token generator that always returns a SAS token. */
+    private static final class FixedSasTokenGen implements ITokenGenerator {
+        private final String sas; // should include or omit '?' — client will accept either
+        private FixedSasTokenGen(String sas) { this.sas = sas; }
+        @Override public Token token(String envVariableNameOrNull) {
+            String normalized = sas.startsWith("?") ? sas : "?" + sas;
+            return new Token(Token.Type.SAS, normalized);
+        }
+    }
+
     @AfterEach
     void tearDown() {
         CsvFromAzureEnrichmentExecutor.clearCache();
@@ -43,17 +55,22 @@ class CsvFromAzureEnrichmentExecutorTest {
         String csv = "code,name\nGB,United Kingdom\nUS,United States\n";
         byte[] csvBytes = csv.getBytes(StandardCharsets.UTF_8);
 
-        // Azure config (values arbitrary; we only need the signed URI)
-        AzureBlobConfig az = new AzureBlobConfig("acct", "data", "lookups/countries.csv", "sv=1&sig=abc", null);
+        // Azure config (base info; SAS is provided by token generator now)
+        AzureBlobConfig az = new AzureBlobConfig(
+                "acct", "data", "lookups/countries.csv",
+                null,               // sasToken (unused here)
+                "LOCAL_BLOB_SAS",   // sasEnvVar name (not actually used by FixedSasTokenGen)
+                null                // endpointHost
+        );
 
-        // Enrichment config: key from message at ["inp","code"], write enriched map to ["enriched"]
+        // Enrichment config
         CsvFromAzureEnrichment cfg = new CsvFromAzureEnrichment(
-                List.of(List.of("inp", "code")),      // inputs -> composite key from msg.data().code
-                List.of("enriched"),                  // output path in CEP state
+                List.of(List.of("inp", "code")),
+                List.of("enriched"),
                 az,
-                List.of("code"),                      // CSV input columns
-                List.of("name"),                      // CSV output columns -> payload keys
-                "."                                   // key delimiter
+                List.of("code"),
+                List.of("name"),
+                "."
         );
 
         // Real helper implementations
@@ -68,40 +85,36 @@ class CsvFromAzureEnrichmentExecutorTest {
         when(resp.body()).thenReturn(new ByteArrayInputStream(csvBytes));
         when(http.send(any(HttpRequest.class), anyInputStreamHandler())).thenReturn(resp);
 
-        // Mock ValueEnvelope to provide msg data and (null) cep state
+        // Mock ValueEnvelope
         @SuppressWarnings("unchecked")
         ValueEnvelope<Map<String, Object>, Map<String, Object>> env =
                 (ValueEnvelope<Map<String, Object>, Map<String, Object>>) mock(ValueEnvelope.class);
 
         Map<String, Object> msgData = new HashMap<>();
         msgData.put("code", "GB");
-
         when(env.data()).thenReturn(msgData);
-        when(env.cepState()).thenReturn(null); // not used in this test
+        when(env.cepState()).thenReturn(null);
 
-        // Executor with injected HttpClient
+        // Executor with injected HttpClient and SAS token generator
+        ITokenGenerator tokenGen = new FixedSasTokenGen("?sv=1&sig=abc");
         CsvFromAzureEnrichmentExecutor<Map<String, Object>, Map<String, Object>> exec =
-                new CsvFromAzureEnrichmentExecutor<>(cepType, msgType, http);
+                new CsvFromAzureEnrichmentExecutor<>(cepType, msgType, tokenGen, http);
 
         // First execute -> should load CSV over HTTP, build lookup, emit event
         CepEvent ev1 = exec.execute("k", cfg, env);
         assertNotNull(ev1, "Expected enrichment event on first execution");
 
-        // Apply the event to CEP state to verify it's setting the correct payload
         Map<String, Object> state1 = cepType.createEmpty();
         Map<String, Object> updated1 = cepType.processState(state1, ev1);
-
         @SuppressWarnings("unchecked")
         Map<String, Object> enriched1 = (Map<String, Object>) updated1.get("enriched");
         assertNotNull(enriched1, "Expected 'enriched' path to be set");
         assertEquals("United Kingdom", enriched1.get("name"));
 
-        // Second execute with same cfg -> should use cache (no extra HTTP), still emit event
+        // Second execute with same cfg -> should use cache (no extra HTTP)
         CepEvent ev2 = exec.execute("k", cfg, env);
         assertNotNull(ev2, "Expected enrichment event on second execution");
-
-        Map<String, Object> state2 = cepType.createEmpty();
-        Map<String, Object> updated2 = cepType.processState(state2, ev2);
+        Map<String, Object> updated2 = cepType.processState(cepType.createEmpty(), ev2);
         @SuppressWarnings("unchecked")
         Map<String, Object> enriched2 = (Map<String, Object>) updated2.get("enriched");
         assertNotNull(enriched2);
@@ -134,8 +147,9 @@ class CsvFromAzureEnrichmentExecutorTest {
         when(env.data()).thenReturn(Map.of("code", "GB"));
         when(env.cepState()).thenReturn(null);
 
+        ITokenGenerator tokenGen = new FixedSasTokenGen("?sv=1&sig=abc"); // unused here
         CsvFromAzureEnrichmentExecutor<Map<String, Object>, Map<String, Object>> exec =
-                new CsvFromAzureEnrichmentExecutor<>(cepType, msgType, http);
+                new CsvFromAzureEnrichmentExecutor<>(cepType, msgType, tokenGen, http);
 
         CepEvent ev = exec.execute("k", cfg, env);
         assertNull(ev, "No Azure config -> executor should produce no event");
@@ -149,7 +163,10 @@ class CsvFromAzureEnrichmentExecutorTest {
         String csv = "code,name\nGB,United Kingdom\nUS,United States\n";
         byte[] csvBytes = csv.getBytes(StandardCharsets.UTF_8);
 
-        AzureBlobConfig az = new AzureBlobConfig("acct", "data", "lookups/countries.csv", "sv=1&sig=abc", null);
+        AzureBlobConfig az = new AzureBlobConfig(
+                "acct", "data", "lookups/countries.csv",
+                null, "LOCAL_BLOB_SAS", null);
+
         CsvFromAzureEnrichment cfg = new CsvFromAzureEnrichment(
                 List.of(List.of("inp", "code")),
                 List.of("enriched"),
@@ -175,8 +192,9 @@ class CsvFromAzureEnrichmentExecutorTest {
         when(env.data()).thenReturn(Map.of("code", "FR")); // not present in CSV
         when(env.cepState()).thenReturn(null);
 
+        ITokenGenerator tokenGen = new FixedSasTokenGen("?sv=1&sig=abc");
         CsvFromAzureEnrichmentExecutor<Map<String, Object>, Map<String, Object>> exec =
-                new CsvFromAzureEnrichmentExecutor<>(cepType, msgType, http);
+                new CsvFromAzureEnrichmentExecutor<>(cepType, msgType, tokenGen, http);
 
         CepEvent ev = exec.execute("k", cfg, env);
         assertNull(ev, "Unknown key -> no enrichment event");
@@ -191,7 +209,10 @@ class CsvFromAzureEnrichmentExecutorTest {
         String csv = "code,name\nGB,United Kingdom\n";
         byte[] csvBytes = csv.getBytes(StandardCharsets.UTF_8);
 
-        AzureBlobConfig az = new AzureBlobConfig("acct", "data", "lookups/countries.csv", "sv=1&sig=abc", null);
+        AzureBlobConfig az = new AzureBlobConfig(
+                "acct", "data", "lookups/countries.csv",
+                null, "LOCAL_BLOB_SAS", null);
+
         CsvFromAzureEnrichment cfg = new CsvFromAzureEnrichment(
                 List.of(List.of("cep", "ctx", "code")),  // read from CEP state at ["ctx","code"]
                 List.of("enriched"),
@@ -221,8 +242,9 @@ class CsvFromAzureEnrichmentExecutorTest {
         when(env.data()).thenReturn(Map.of()); // message not used
         when(env.cepState()).thenReturn(cepState);
 
+        ITokenGenerator tokenGen = new FixedSasTokenGen("?sv=1&sig=abc");
         CsvFromAzureEnrichmentExecutor<Map<String, Object>, Map<String, Object>> exec =
-                new CsvFromAzureEnrichmentExecutor<>(cepType, msgType, http);
+                new CsvFromAzureEnrichmentExecutor<>(cepType, msgType, tokenGen, http);
 
         CepEvent ev = exec.execute("k", cfg, env);
         assertNotNull(ev, "Expected enrichment event when key comes from CEP state");

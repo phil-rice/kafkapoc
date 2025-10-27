@@ -78,6 +78,7 @@
         <jxpath.version>1.3</jxpath.version>
         <woodstoxcore.version>7.1.1</woodstoxcore.version>
         <woodstoxstax2.version>4.2.2</woodstoxstax2.version>
+        <azure.identity.version>1.12.0</azure.identity.version>
 
         <opentelemetry.version>1.43.0</opentelemetry.version>
         <spring-boot.version>3.3.4</spring-boot.version>
@@ -102,6 +103,12 @@
                 <version>${opentelemetry.version}</version>
                 <type>pom</type>
                 <scope>import</scope>
+            </dependency>
+            <!-- Azure Identity to get tokens from Managed Identity (or CLI locally) -->
+            <dependency>
+                <groupId>com.azure</groupId>
+                <artifactId>azure-identity</artifactId>
+                <version>${azure.identity.version}</version>
             </dependency>
 
             <dependency>

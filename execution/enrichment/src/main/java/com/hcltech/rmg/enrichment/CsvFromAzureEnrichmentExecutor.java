@@ -5,6 +5,7 @@ import com.hcltech.rmg.cepstate.CepStateTypeClass;
 import com.hcltech.rmg.common.azure_blob_storage.AzureBlobClient;
 import com.hcltech.rmg.common.azure_blob_storage.AzureBlobConfig;
 import com.hcltech.rmg.common.csv.CsvResourceLoader;
+import com.hcltech.rmg.common.tokens.ITokenGenerator;
 import com.hcltech.rmg.config.enrich.CsvFromAzureEnrichment;
 import com.hcltech.rmg.execution.aspects.AspectExecutor;
 import com.hcltech.rmg.messages.MsgTypeClass;
@@ -45,19 +46,23 @@ public final class CsvFromAzureEnrichmentExecutor<CepState, Msg>
     private final MsgTypeClass<Msg, List<String>> msgTypeClass;
     private final CepStateTypeClass<CepState>     cepStateTypeClass;
     private final HttpClient httpClient;
+    private final ITokenGenerator tokenGenerator;
 
-    /** Uses a default JDK HttpClient. */
-    public CsvFromAzureEnrichmentExecutor(CepStateTypeClass<CepState> cepStateTypeClass,
-                                          MsgTypeClass<Msg, List<String>> msgTypeClass) {
-        this(cepStateTypeClass, msgTypeClass, HttpClient.newHttpClient());
-    }
-
-    /** DI-friendly ctor for tests (inject a mocked or custom HttpClient). */
+    /** DI-friendly ctor (provide your token generator; e.g., AzureStorageTokenGenerator). Uses default JDK HttpClient. */
     public CsvFromAzureEnrichmentExecutor(CepStateTypeClass<CepState> cepStateTypeClass,
                                           MsgTypeClass<Msg, List<String>> msgTypeClass,
+                                          ITokenGenerator tokenGenerator) {
+        this(cepStateTypeClass, msgTypeClass, tokenGenerator, HttpClient.newHttpClient());
+    }
+
+    /** Full-args ctor for tests (inject mocked/custom HttpClient and token generator). */
+    public CsvFromAzureEnrichmentExecutor(CepStateTypeClass<CepState> cepStateTypeClass,
+                                          MsgTypeClass<Msg, List<String>> msgTypeClass,
+                                          ITokenGenerator tokenGenerator,
                                           HttpClient httpClient) {
         this.msgTypeClass = Objects.requireNonNull(msgTypeClass, "msgTypeClass");
         this.cepStateTypeClass = Objects.requireNonNull(cepStateTypeClass, "cepStateTypeClass");
+        this.tokenGenerator = Objects.requireNonNull(tokenGenerator, "tokenGenerator");
         this.httpClient = Objects.requireNonNull(httpClient, "httpClient");
     }
 
@@ -70,9 +75,7 @@ public final class CsvFromAzureEnrichmentExecutor<CepState, Msg>
     public CepEvent execute(String key, CsvFromAzureEnrichment cfg, ValueEnvelope<CepState, Msg> input) {
         // 1) Resolve (possibly cached) lookup map for this exact config record
         final Map<String, List<String>> lookup = resolveLookup(cfg);
-        if (lookup == null || lookup.isEmpty()) {
-            return null; // nothing to enrich from
-        }
+        if (lookup == null || lookup.isEmpty()) return null;
 
         // 2) Build composite key using helper
         final String compositeKey = EnricherHelper.buildCompositeKey(
@@ -82,17 +85,13 @@ public final class CsvFromAzureEnrichmentExecutor<CepState, Msg>
                 msgTypeClass,
                 cepStateTypeClass
         );
-        if (compositeKey == null) {
-            return null; // missing required input -> no enrichment
-        }
+        if (compositeKey == null) return null;
 
         // 3) Lookup values
         final List<String> values = lookup.get(compositeKey);
-        if (values == null) {
-            return null; // no matching row
-        }
+        if (values == null) return null;
 
-        // 4) Map values to output columns, padding with nulls for short rows
+        // 4) Map values to output columns (pad with nulls)
         final List<String> outCols = cfg.outputColumns();
         final Map<String, Object> payload = new HashMap<>(Math.max(4, outCols.size() * 2));
         for (int i = 0; i < outCols.size(); i++) {
@@ -109,20 +108,17 @@ public final class CsvFromAzureEnrichmentExecutor<CepState, Msg>
 
     private Map<String, List<String>> resolveLookup(CsvFromAzureEnrichment cfg) {
         final AzureBlobConfig az = cfg.azure();
-        if (az == null) {
-            return null; // no azure config -> nothing to load
-        }
+        if (az == null) return null; // nothing to load
 
-        // Cache keyed by the immutable config record itself (record's equals/hashCode suffice)
+        // Cache keyed by the immutable config record itself
         return LOOKUP_CACHE.computeIfAbsent(cfg, c -> {
             final String desc = safeDescribe(az);
-            try (InputStream is = AzureBlobClient.openBlobStream(az, httpClient)) {
-                // Use ',' as the CSV delimiter (same as previous impl), and cfg.keyDelimiter() for composite keys
+            try (InputStream is = AzureBlobClient.openBlobStream(az, tokenGenerator, httpClient)) {
+                // ',' CSV delimiter; composite key delimiter from cfg
                 return CsvResourceLoader
                         .loadFromInputStream(is, ',', desc, c.inputColumns(), c.outputColumns(), c.keyDelimiter())
                         .map();
             } catch (Exception e) {
-                // Wrap checked exceptions as runtime, as allowed by the AspectExecutor contract comment
                 throw new RuntimeException("Error loading CSV from Azure blob: " + desc, e);
             }
         });
@@ -130,9 +126,8 @@ public final class CsvFromAzureEnrichmentExecutor<CepState, Msg>
 
     private static String safeDescribe(AzureBlobConfig az) {
         try {
-            return az.signedBlobUri().toString();
+            return az.blobUri().toString();
         } catch (Exception ignore) {
-            // Fallback to a minimal description without risking toString() surprises
             return "azure://" + az.accountName() + "/" + az.container() + "/" + az.blobPath();
         }
     }
