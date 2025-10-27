@@ -6,6 +6,8 @@ pom.xml.releaseBackup
 pom.xml.versionsBackup
 release.properties
 dependency-reduced-pom.xml
+.replay_index/
+out_10M/
 *.iml
 *.ipr
 *.iws
