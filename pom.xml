@@ -44,6 +44,7 @@
         <module>optics</module>
 
         <module>worker/ai_worker</module>
+        <module>worker/csv_api</module>
         <module>worker/flink_worker</module>
         <module>worker/performance</module>
         <module>worker/producer</module>
