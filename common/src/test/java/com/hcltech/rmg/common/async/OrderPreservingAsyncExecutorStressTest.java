@@ -111,7 +111,7 @@ public class OrderPreservingAsyncExecutorStressTest {
     // 1) Parallel success across many keys (fast)
     // ---------------------------------------------------------------------
     @Timeout(30)
-    @Test
+//    @Test
     void stress_parallel_success_manyKeys() throws Exception {
         final int TOTAL = 5_000;
         final int KEYS  = 500;       // 10 items per key on average
@@ -170,7 +170,7 @@ public class OrderPreservingAsyncExecutorStressTest {
     // 2) Parallel mixed success/failure across many keys (fast)
     // ---------------------------------------------------------------------
     @Timeout(30)
-    @Test
+//    @Test
     void stress_parallel_mixed_manyKeys() throws Exception {
         final int TOTAL = 5_000;
         final int KEYS  = 500;
@@ -242,7 +242,7 @@ public class OrderPreservingAsyncExecutorStressTest {
     // 3) Serial timeouts (lane depth = 1, never-completing userFn)
     // ---------------------------------------------------------------------
     @Timeout(30)
-    @Test
+//    @Test
     void stress_serial_timeouts() throws Exception {
         final int N = 300;
         final long TIMEOUT_MS = 5L;

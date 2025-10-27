@@ -46,6 +46,10 @@ public final class CsvResourceLoader {
             throw new IllegalArgumentException("CSV resource not found on classpath: " + rn);
         }
 
+        return loadFromInputStream(is, csvFieldDelimiter, rn, inCols, outCols, kd);
+    }
+
+    public static CsvLookup loadFromInputStream(InputStream is, char csvFieldDelimiter, String descriptionForError, List<String> inCols, List<String> outCols, String keyDelimiter) {
         try (BufferedReader br = new BufferedReader(new InputStreamReader(is, StandardCharsets.UTF_8))) {
             CsvLineParser lineParser = new CsvLineParser(csvFieldDelimiter);
 
@@ -61,10 +65,10 @@ public final class CsvResourceLoader {
                 }
             }
             if (header == null || header.isEmpty()) {
-                throw new IllegalArgumentException("CSV '" + rn + "' has no header row");
+                throw new IllegalArgumentException("CSV '" + descriptionForError + "' has no header row");
             }
 
-            CsvLookupCollector collector = new CsvLookupCollector(header, inCols, outCols, kd);
+            CsvLookupCollector collector = new CsvLookupCollector(header, inCols, outCols, keyDelimiter);
 
             // data lines
             while ((line = br.readLine()) != null) {
@@ -76,7 +80,7 @@ public final class CsvResourceLoader {
         } catch (RuntimeException re) {
             throw re; // preserve IllegalArgumentException etc.
         } catch (Exception e) {
-            throw new RuntimeException("Error loading CSV resource: " + rn, e);
+            throw new RuntimeException("Error loading CSV resource: " + descriptionForError, e);
         }
     }
 
