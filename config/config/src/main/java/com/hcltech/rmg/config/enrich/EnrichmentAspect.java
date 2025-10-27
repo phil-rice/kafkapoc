@@ -12,6 +12,6 @@ import java.util.List;
         @JsonSubTypes.Type(value = FixedEnrichment.class, name = "fixed"),
         @JsonSubTypes.Type(value = CsvEnrichment.class, name = "csv"),
 })
-public sealed interface EnrichmentAspect permits MapLookupEnrichment, CompositeExecutor, FixedEnrichment,CsvEnrichment {
+public sealed interface EnrichmentAspect permits MapLookupEnrichment, CompositeExecutor, FixedEnrichment,CsvEnrichment,ApiEnrichment {
     List<EnrichmentWithDependencies> asDependencies();
 }

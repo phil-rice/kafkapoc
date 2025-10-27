@@ -18,14 +18,14 @@ import java.util.concurrent.ConcurrentHashMap;
  * Executor for {@link CsvEnrichment} (config-only).
  *
  * Flow:
- *  1) Build a composite key from {@code cfg.inputs()} by reading values from either:
- *        - "inp":  ValueEnvelope.data() via {@link MsgTypeClass}
- *        - "cep":  ValueEnvelope.cepState() via {@link CepStateTypeClass}
- *     Join parts with {@code cfg.keyDelimiter()}.
- *  2) Resolve a cached lookup map for {@code cfg}:
+ *  1) Resolve a cached lookup map for {@code cfg}:
  *        If {@code cfg.csvFileName()} is non-empty, lazily load once via {@link CsvResourceLoader}
  *        using the SAME key delimiter; cache is keyed by the {@code CsvEnrichment} record itself.
  *        If no resource, return {@code null} (nothing to enrich from).
+ *  2) Build a composite key from {@code cfg.inputs()} by reading values from either:
+ *        - "inp":  ValueEnvelope.data() via {@link MsgTypeClass}
+ *        - "cep":  ValueEnvelope.cepState() via {@link CepStateTypeClass}
+ *     Join parts with {@code cfg.keyDelimiter()}. (Implemented in {@link EnricherHelper}.)
  *  3) Lookup the composite key; if found, map the resulting List&lt;String&gt; to {@code cfg.outputColumns()},
  *     padding with {@code null} as needed.
  *  4) Emit {@code CepEvent.set(cfg.output(), payload)}; otherwise return {@code null}.
@@ -40,13 +40,11 @@ public final class CsvEnrichmentExecutor<CepState, Msg>
     private static final ConcurrentHashMap<CsvEnrichment, Map<String, List<String>>> LOOKUP_CACHE =
             new ConcurrentHashMap<>();
 
-    private static final String ROOT_INP = "inp";
-    private static final String ROOT_CEP = "cep";
-
     private final MsgTypeClass<Msg, List<String>> msgTypeClass;
     private final CepStateTypeClass<CepState>     cepStateTypeClass;
 
-    public CsvEnrichmentExecutor(CepStateTypeClass<CepState> cepStateTypeClass, MsgTypeClass<Msg, List<String>> msgTypeClass) {
+    public CsvEnrichmentExecutor(CepStateTypeClass<CepState> cepStateTypeClass,
+                                 MsgTypeClass<Msg, List<String>> msgTypeClass) {
         this.msgTypeClass = Objects.requireNonNull(msgTypeClass, "msgTypeClass");
         this.cepStateTypeClass = Objects.requireNonNull(cepStateTypeClass, "cepStateTypeClass");
     }
@@ -64,8 +62,14 @@ public final class CsvEnrichmentExecutor<CepState, Msg>
             return null; // nothing to enrich from
         }
 
-        // 2) Build composite key from message/state using cfg.inputs() and cfg.keyDelimiter()
-        final String compositeKey = buildCompositeKey(cfg, input);
+        // 2) Build composite key using helper (no subList allocations)
+        final String compositeKey = EnricherHelper.buildCompositeKey(
+                cfg.inputs(),
+                cfg.keyDelimiter(),
+                input,
+                msgTypeClass,
+                cepStateTypeClass
+        );
         if (compositeKey == null) {
             return null; // missing required input -> no enrichment
         }
@@ -103,47 +107,5 @@ public final class CsvEnrichmentExecutor<CepState, Msg>
                         .load(c.csvFileName(), c.inputColumns(), c.outputColumns(), ',', c.keyDelimiter())
                         .map()
         );
-    }
-
-    private String buildCompositeKey(CsvEnrichment cfg, ValueEnvelope<CepState, Msg> input) {
-        final StringBuilder sb = new StringBuilder();
-        final String delim = cfg.keyDelimiter();
-
-        for (List<String> rawPath : cfg.inputs()) {
-            if (rawPath == null || rawPath.isEmpty()) {
-                return null; // no root selector provided -> treat as missing
-            }
-
-            final String root = rawPath.get(0);
-            final List<String> path = rawPath.size() > 1 ? rawPath.subList(1, rawPath.size()) : List.of();
-
-            Object value;
-            if (ROOT_INP.equals(root)) {
-                // Read from message payload via MsgTypeClass
-                value = msgTypeClass.getValueFromPath(input.data(), path);
-            } else if (ROOT_CEP.equals(root)) {
-                // Read from CEP state via CepStateTypeClass
-                final CepState state = input.cepState();
-                if (state == null) {
-                    return null; // no state available but requested
-                }
-                value = cepStateTypeClass.getFromPath(state, path);
-            } else {
-                // Fallback to legacy behavior: treat whole path as data path
-                // If you want to enforce "must be 'inp' or 'cep'", replace with: return null;
-                value = msgTypeClass.getValueFromPath(input.data(), rawPath);
-            }
-
-            if (value == null) {
-                return null; // missing component -> abort enrichment
-            }
-
-            if (sb.length() > 0) {
-                sb.append(delim);
-            }
-            sb.append(String.valueOf(value));
-        }
-
-        return sb.toString();
     }
 }

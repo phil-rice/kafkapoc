@@ -18,9 +18,6 @@ public class FlinkHelper {
         conf.setString("metrics.reporter.promjm.factory.class", "org.apache.flink.metrics.prometheus.PrometheusReporterFactory");
         conf.setString("metrics.reporter.promjm.port", "9400");
 
-        conf.setString("metrics.reporter.promtm.factory.class", "org.apache.flink.metrics.prometheus.PrometheusReporterFactory");
-        conf.setString("metrics.reporter.promtm.port", "9401");
-
         conf.setString("jobmanager.metrics.reporters", "promjm");
         conf.setString("taskmanager.metrics.reporters", "promtm");
         return conf;

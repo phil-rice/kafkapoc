@@ -11,6 +11,8 @@ import com.hcltech.rmg.cepstate.CepEventLog;
 import com.hcltech.rmg.cepstate.CepStateTypeClass;
 import com.hcltech.rmg.cepstate.MapStringObjectCepStateTypeClass;
 import com.hcltech.rmg.common.ITimeService;
+import com.hcltech.rmg.common.apiclient.*;
+import com.hcltech.rmg.common.async.ExecutorServiceFactory;
 import com.hcltech.rmg.common.async.OrderPreservingAsyncExecutorConfig;
 import com.hcltech.rmg.common.copy.MapObjectDeepCopy;
 import com.hcltech.rmg.common.errorsor.ErrorsOr;
@@ -40,6 +42,7 @@ import org.apache.flink.api.common.functions.RuntimeContext;
 import org.apache.flink.util.Collector;
 import org.codehaus.stax2.validation.XMLValidationSchema;
 
+import java.time.Duration;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -114,13 +117,14 @@ public final class AppContainerFactoryForMapStringObject implements IAppContaine
                     ConfigsBuilder::buildFromClasspath,
                     "noCelCondition",
                     ParameterExtractor.defaultParameterExtractor(defaultParametersForProd, Map.of(), Map.of(
-                            "productType", List.of("MPE", "mailPiece", "mailPieceBarcode","royalMailSegment", "mailTypeCode"))),
+                            "productType", List.of("MPE", "mailPiece", "mailPieceBarcode", "royalMailSegment", "mailTypeCode"))),
                     IEventTypeExtractor.fromPathForMapStringObject(List.of("MPE", "manualScan", "trackedEventCode")),
                     IDomainTypeExtractor.fixed("parcel"),
                     "config/prod/",
                     "/opt/flink-rocksdb-prod",
                     v -> v
-            );  case "dev" -> basic(
+            );
+            case "dev" -> basic(
                     id,
                     null,//topic from system properties
                     ITimeService.real,
@@ -234,6 +238,11 @@ public final class AppContainerFactoryForMapStringObject implements IAppContaine
                         time
                 );
 
+        var csvApiClient = new BlockingHttp2ApiClient<String, Map<String, Object>>(HttpClientConfig.withJsonAccept(
+                Duration.ofMillis(1000),//connect timeout millis
+                Duration.ofMillis(1000),//read timeout millis
+                new StringQueryParamCodec<>(new JsonMapDecoder())),
+                InsecureHttp2Client::insecureHttp2Client);
 
         // RootConfig -> Configs -> SchemaMap -> Container
         return rootConfigBuilder.create(rootConfigPath).flatMap((RootConfig root) ->
@@ -244,7 +253,8 @@ public final class AppContainerFactoryForMapStringObject implements IAppContaine
                 ).flatMap(configs ->
                         XmlTypeClass.loadOptionalSchema(xml, root.xmlSchemaPath()).flatMap(schemaMap -> {
                             Class<Map<String, Object>> msgClass = (Class) Map.class;
-                            AspectExecutor<EnrichmentWithDependencies, ValueEnvelope<Map<String, Object>, Map<String, Object>>, CepEvent> oneEnrichmentExecutor = new EnrichmentExecutor<>(cepStateTypeClass,msgTypeClass);
+                            AspectExecutor<EnrichmentWithDependencies, ValueEnvelope<Map<String, Object>, Map<String, Object>>, CepEvent> oneEnrichmentExecutor =
+                                    new EnrichmentExecutor<>(csvApiClient, cepStateTypeClass, msgTypeClass);
                             var bizLogicExecutor = new BizLogicExecutor<Map<String, Object>, Map<String, Object>>(configs, CelRuleBuilders.newRuleBuilder, msgClass);
 
                             return IEnrichmentAspectExecutor.<Map<String, Object>, Map<String, Object>>create(cepStateTypeClass, configs, oneEnrichmentExecutor).map(
@@ -253,6 +263,7 @@ public final class AppContainerFactoryForMapStringObject implements IAppContaine
                                             new AppContainer<KafkaConfig, Map<String, Object>, Map<String, Object>, XMLValidationSchema, RuntimeContext, Collector<Envelope<Map<String, Object>, Map<String, Object>>>, FlinkMetricsParams>(
                                                     time,
                                                     uuid,
+                                                    ExecutorServiceFactory.fixed(),
                                                     xml,
                                                     afterParse,
                                                     cepStateTypeClass,

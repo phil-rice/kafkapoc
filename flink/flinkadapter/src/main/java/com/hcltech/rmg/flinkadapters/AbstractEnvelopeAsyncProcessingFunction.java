@@ -20,7 +20,7 @@ import java.util.function.BiConsumer;
 /**
  * Custom keyed operator that runs the OrderPreservingAsyncExecutor inside the operator
  * (no AsyncFunction). Completions are drained on the operator thread.
- *
+ * <p>
  * K   : String key
  * In  : Envelope<CepState, Msg>
  * Out : Envelope<CepState, Msg>
@@ -64,6 +64,7 @@ public abstract class AbstractEnvelopeAsyncProcessingFunction<ESC, CepState, Msg
     @Override
     public void open() throws Exception {
         super.open();
+        int subTask = getRuntimeContext().getTaskInfo().getIndexOfThisSubtask();
 
         this.frType = new FlinkOutputFutureRecordAdapter<>(new EnvelopeFailureAdapter<>("someOperation"));
 
@@ -74,9 +75,9 @@ public abstract class AbstractEnvelopeAsyncProcessingFunction<ESC, CepState, Msg
         this.userFn = createUserFnPort(container);
 
         lanes = new Lanes<>(cfg.laneCount(), cfg.laneDepth(), cfg.correlator());
-        ring  = new MpscRing<>(Math.max(1024, cfg.maxInFlight() * 2));
+        ring = new MpscRing<>(Math.max(1024, cfg.maxInFlight() * 2));
         permits = new AtomicPermitManager(cfg.maxInFlight());
-        ioPool  = Executors.newFixedThreadPool(Math.max(4, cfg.executorThreads()));
+        ioPool = container.executorServiceFactory().create(Math.max(4, cfg.executorThreads()), "EnvelopeAsyncIOPool-" + subTask);
 
         var localCfg = new OrderPreservingAsyncExecutorConfig<>(
                 cfg.laneCount(), cfg.laneDepth(), cfg.maxInFlight(),

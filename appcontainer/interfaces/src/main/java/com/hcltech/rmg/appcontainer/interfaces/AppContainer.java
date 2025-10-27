@@ -4,6 +4,7 @@ import com.hcltech.rmg.celcore.CelRuleBuilderFactory;
 import com.hcltech.rmg.cepstate.CepEventLog;
 import com.hcltech.rmg.cepstate.CepStateTypeClass;
 import com.hcltech.rmg.common.ITimeService;
+import com.hcltech.rmg.common.async.ExecutorServiceFactory;
 import com.hcltech.rmg.common.async.OrderPreservingAsyncExecutorConfig;
 import com.hcltech.rmg.common.copy.DeepCopy;
 import com.hcltech.rmg.common.uuid.IUuidGenerator;
@@ -24,7 +25,7 @@ public record AppContainer<EventSourceConfig, CepState, Msg, Schema, FlinkRT, Fl
         // infra
         ITimeService timeService,
         IUuidGenerator uuid,
-
+        ExecutorServiceFactory executorServiceFactory,
         // XML services
         XmlTypeClass<Msg, Schema> xml,                // keyExtraction + parse + validate
         Function<Envelope<CepState, Msg>, Envelope<CepState, Msg>> afterParse,
