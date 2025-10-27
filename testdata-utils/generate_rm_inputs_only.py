@@ -523,9 +523,9 @@ def generate_dataset(
 
     os.makedirs(output_dir, exist_ok=True)
     inputs_dir = os.path.join(output_dir, "inputs")
-    # outputs_dir = os.path.join(output_dir, "outputs")
+    outputs_dir = os.path.join(output_dir, "outputs")
     os.makedirs(inputs_dir, exist_ok=True)
-    # os.makedirs(outputs_dir, exist_ok=True)
+    os.makedirs(outputs_dir, exist_ok=True)
 
     postcodes_master = load_postcodes(postcode_file)
 
@@ -543,26 +543,26 @@ def generate_dataset(
 
     # zip files for inputs & outputs (rotate by batch_size)
     in_zip_idx = 1
-    # out_zip_idx = 1
+    out_zip_idx = 1
     in_zip = ZipFile(
         os.path.join(inputs_dir, f"mp_inputs_{in_zip_idx:04d}.zip"), "w", ZIP_DEFLATED
     )
-    # out_zip = ZipFile(
-    #     os.path.join(outputs_dir, f"mp_notifications_{out_zip_idx:04d}.zip"),
-    #     "w",
-    #     ZIP_DEFLATED,
-    # )
+    out_zip = ZipFile(
+        os.path.join(outputs_dir, f"mp_notifications_{out_zip_idx:04d}.zip"),
+        "w",
+        ZIP_DEFLATED,
+    )
     written_in = 0
-    # written_out = 0
-    # combined_dir = os.path.join(output_dir, "combined")
-    # os.makedirs(combined_dir, exist_ok=True)
-    # combined_zip_idx = 1
-    # combined_zip = ZipFile(
-    #     os.path.join(combined_dir, f"test_combined_{combined_zip_idx:04d}.zip"),
-    #     "w",
-    #     ZIP_DEFLATED,
-    # )
-    # written_combined = 0
+    written_out = 0
+    combined_dir = os.path.join(output_dir, "combined")
+    os.makedirs(combined_dir, exist_ok=True)
+    combined_zip_idx = 1
+    combined_zip = ZipFile(
+        os.path.join(combined_dir, f"test_combined_{combined_zip_idx:04d}.zip"),
+        "w",
+        ZIP_DEFLATED,
+    )
+    written_combined = 0
 
     # Collections for postcode CSVs
     used_postcodes = set()
@@ -651,7 +651,7 @@ def generate_dataset(
                 unique_item_id, upu, postcode, barcode_creation_date, product_id
             )
             parcel_inputs = []  # collect stripped input MPE blocks
-            # parcel_outputs = []  # collect stripped output MPE blocks
+            parcel_outputs = []  # collect stripped output MPE blocks
 
             # Write 4 input scan XMLs (aux contact only in first scan)
             for idx, ev in enumerate(EVENT_FLOW, start=1):
@@ -700,84 +700,84 @@ def generate_dataset(
                     )
 
             # For each rule-eligible event, create at most one output XML bundling segments
-            # for ev in ("EVDAV", "EVGPD", "ENKDN"):
-            #     segments = []
-            #     email_notif = False
-            #     sms_notif = False
-            #     key = (ev, category)
-            #     if key in RULES:
-            #         prefix, tpl_email, tpl_sms = RULES[key]
-            #         base_dt = scan_times[ev]
+            for ev in ("EVDAV", "EVGPD", "ENKDN"):
+                segments = []
+                email_notif = False
+                sms_notif = False
+                key = (ev, category)
+                if key in RULES:
+                    prefix, tpl_email, tpl_sms = RULES[key]
+                    base_dt = scan_times[ev]
 
-            #         if tpl_email and has_email:
-            #             seg = build_notification_segment(prefix, ev, email, 1, base_dt)
-            #             segments.append(seg)
-            #             email_notif = True
-            #         if tpl_sms and has_mobile:
-            #             seg = build_notification_segment(prefix, ev, mobile, 2, base_dt)
-            #             segments.append(seg)
-            #             sms_notif = True
+                    if tpl_email and has_email:
+                        seg = build_notification_segment(prefix, ev, email, 1, base_dt)
+                        segments.append(seg)
+                        email_notif = True
+                    if tpl_sms and has_mobile:
+                        seg = build_notification_segment(prefix, ev, mobile, 2, base_dt)
+                        segments.append(seg)
+                        sms_notif = True
 
-            #     writer.writerow(
-            #         [
-            #             unique_item_id,
-            #             category,
-            #             int(has_email),
-            #             int(has_mobile),
-            #             ev,
-            #             int(email_notif),
-            #             int(sms_notif),
-            #         ]
-            #     )
+                writer.writerow(
+                    [
+                        unique_item_id,
+                        category,
+                        int(has_email),
+                        int(has_mobile),
+                        ev,
+                        int(email_notif),
+                        int(sms_notif),
+                    ]
+                )
 
-            #     if segments:
-            #         header = build_output_notification_header(unique_item_id, upu)
-            #         xml_out = (
-            #             OUTPUT_NS_HEADER + header + "".join(segments) + "</ptp:MPE>"
-            #         )
-            #         parcel_outputs.append(
-            #             "<MPE>" + header + "".join(segments) + "</MPE>"
-            #         )
-            #         out_name = f"notify_{unique_item_id}_{ev}.xml"
-            #         out_zip.writestr(out_name, xml_out)
-            #         written_out += 1
+                if segments:
+                    header = build_output_notification_header(unique_item_id, upu)
+                    xml_out = (
+                        OUTPUT_NS_HEADER + header + "".join(segments) + "</ptp:MPE>"
+                    )
+                    parcel_outputs.append(
+                        "<MPE>" + header + "".join(segments) + "</MPE>"
+                    )
+                    out_name = f"notify_{unique_item_id}_{ev}.xml"
+                    out_zip.writestr(out_name, xml_out)
+                    written_out += 1
 
-            #         if written_out % batch_size == 0:
-            #             out_zip.close()
-            #             out_zip_idx += 1
-            #             out_zip = ZipFile(
-            #                 os.path.join(
-            #                     outputs_dir, f"mp_notifications_{out_zip_idx:04d}.zip"
-            #                 ),
-            #                 "w",
-            #                 ZIP_DEFLATED,
-            #             )
-            # --- Build combined input-output test XML ---
-            # combined_content = ["<test><input>"]
-            # combined_content.extend(parcel_inputs)
-            # combined_content.append("</input><output>")
-            # combined_content.extend(parcel_outputs)
-            # combined_content.append("</output></test>")
-            # combined_xml = "".join(combined_content)
-            # combined_name = f"test_{unique_item_id}.xml"
-            # combined_zip.writestr(combined_name, combined_xml)
-            # written_combined += 1
+                    if written_out % batch_size == 0:
+                        out_zip.close()
+                        out_zip_idx += 1
+                        out_zip = ZipFile(
+                            os.path.join(
+                                outputs_dir, f"mp_notifications_{out_zip_idx:04d}.zip"
+                            ),
+                            "w",
+                            ZIP_DEFLATED,
+                        )
+                # --- Build combined input-output test XML ---
+            combined_content = ["<test><input>"]
+            combined_content.extend(parcel_inputs)
+            combined_content.append("</input><output>")
+            combined_content.extend(parcel_outputs)
+            combined_content.append("</output></test>")
+            combined_xml = "".join(combined_content)
+            combined_name = f"test_{unique_item_id}.xml"
+            combined_zip.writestr(combined_name, combined_xml)
+            written_combined += 1
 
-            # if written_combined % batch_size == 0:
-            #     combined_zip.close()
-            #     combined_zip_idx += 1
-            #     combined_zip = ZipFile(
-            #         os.path.join(
-            #             combined_dir, f"test_combined_{combined_zip_idx:04d}.zip"
-            #         ),
-            #         "w",
-            #         ZIP_DEFLATED,
-            #     )
+            if written_combined % batch_size == 0:
+                combined_zip.close()
+                combined_zip_idx += 1
+                combined_zip = ZipFile(
+                    os.path.join(
+                        combined_dir, f"test_combined_{combined_zip_idx:04d}.zip"
+                    ),
+                    "w",
+                    ZIP_DEFLATED,
+                )
 
     # finalize zips
     in_zip.close()
-    # out_zip.close()
-    # combined_zip.close()
+    out_zip.close()
+    combined_zip.close()
 
     # Write postcode.csv and postcode_suffix.csv
     postcode_csv_path = os.path.join(output_dir, "postcode.csv")
@@ -798,7 +798,7 @@ def generate_dataset(
 
     print(f"Completed generation.")
     print(f"Input scans written: {written_in} (zips in {inputs_dir})")
-    # print(f"Notifications written: {written_out} (zips in {outputs_dir})")
+    print(f"Notifications written: {written_out} (zips in {outputs_dir})")
     print(f"Summary CSV: {summary_csv_path}")
     print(f"Postcode CSV: {postcode_csv_path}")
     print(f"Postcode suffix CSV: {postcode_suffix_csv_path}")
