@@ -1,0 +1,124 @@
+# TRACKING BUSINESS LOGIC - Updated with message.MPE structure
+# Version 2.0 - Updated path structure based on mentor feedback
+#
+# Key Changes:
+# 1. All paths now prefixed with message.MPE
+# 2. auxiliaryData structure changed to auxiliaryData.data array
+# 3. Structure matches JSON format from scratch_1.json
+#
+# Tracking generates one event per scan, capturing location and status
+
+tracking:
+  events:
+    # EVDAV - Accepted at Depot
+    EVDAV:
+      bizlogic:
+        type: "cel"
+        cel: |
+          {
+            'out': [
+              {
+                'type': 'tracking',
+                'eventCode': 'EVDAV',
+                'eventName': 'Accepted at Depot',
+                'eventDateTime': message.MPE.manualScan.eventTimestamp,
+                'uniqueItemId': message.MPE.mailPiece.mailPieceBarcode.channelSegment.uniqueItemId,
+                'UPUTrackingNumber': message.MPE.mailPiece.mailPieceBarcode.channelSegment.UPUTrackingNumber,
+                'productId': message.MPE.mailPiece.mailPieceBarcode.channelSegment.productId,
+                'productName': enrichment.productCategory.productCategory,
+                'functionalLocationId': has(message.MPE.manualScan.RMGLocation.functionalLocationId) ? message.MPE.manualScan.RMGLocation.functionalLocationId : '',
+                'siteId': has(message.MPE.manualScan.RMGLocation.siteId) ? message.MPE.manualScan.RMGLocation.siteId : '',
+                'locationName': has(enrichment.postcodeRegion) ? enrichment.postcodeRegion : '',
+                'postcode': message.MPE.mailPiece.mailPieceBarcode.channelSegment.destinationPostcodeDPS.postcode,
+                'destinationCountry': message.MPE.mailPiece.mailPieceBarcode.channelSegment.destinationCountry
+              }
+            ]
+          }
+    
+    # EVIMC - In Transit at Mail Centre
+    EVIMC:
+      bizlogic:
+        type: "cel"
+        cel: |
+          {
+            'out': [
+              {
+                'type': 'tracking',
+                'eventCode': 'EVIMC',
+                'eventName': 'In Transit at Mail Centre',
+                'eventDateTime': message.MPE.manualScan.eventTimestamp,
+                'uniqueItemId': message.MPE.mailPiece.mailPieceBarcode.channelSegment.uniqueItemId,
+                'UPUTrackingNumber': message.MPE.mailPiece.mailPieceBarcode.channelSegment.UPUTrackingNumber,
+                'productId': message.MPE.mailPiece.mailPieceBarcode.channelSegment.productId,
+                'productName': enrichment.productCategory.productCategory,
+                'functionalLocationId': has(message.MPE.manualScan.RMGLocation.functionalLocationId) ? message.MPE.manualScan.RMGLocation.functionalLocationId : '',
+                'siteId': has(message.MPE.manualScan.RMGLocation.siteId) ? message.MPE.manualScan.RMGLocation.siteId : '',
+                'locationName': has(enrichment.sortingCenter) ? enrichment.sortingCenter : '',
+                'postcode': message.MPE.mailPiece.mailPieceBarcode.channelSegment.destinationPostcodeDPS.postcode,
+                'destinationCountry': message.MPE.mailPiece.mailPieceBarcode.channelSegment.destinationCountry
+              }
+            ]
+          }
+    
+    # EVGPD - Out for Delivery
+    EVGPD:
+      bizlogic:
+        type: "cel"
+        cel: |
+          {
+            'out': [
+              {
+                'type': 'tracking',
+                'eventCode': 'EVGPD',
+                'eventName': 'Out for Delivery',
+                'eventDateTime': message.MPE.manualScan.eventTimestamp,
+                'uniqueItemId': message.MPE.mailPiece.mailPieceBarcode.channelSegment.uniqueItemId,
+                'UPUTrackingNumber': message.MPE.mailPiece.mailPieceBarcode.channelSegment.UPUTrackingNumber,
+                'productId': message.MPE.mailPiece.mailPieceBarcode.channelSegment.productId,
+                'productName': enrichment.productCategory.productCategory,
+                'userId': has(message.MPE.manualScan.userId) ? message.MPE.manualScan.userId : '',
+                'deviceId': has(message.MPE.manualScan.deviceId) ? message.MPE.manualScan.deviceId : '',
+                'functionalLocationId': has(message.MPE.manualScan.RMGLocation.functionalLocationId) ? message.MPE.manualScan.RMGLocation.functionalLocationId : '',
+                'siteId': has(message.MPE.manualScan.RMGLocation.siteId) ? message.MPE.manualScan.RMGLocation.siteId : '',
+                'locationName': has(enrichment.deliveryOffice) ? enrichment.deliveryOffice : '',
+                'postcode': message.MPE.mailPiece.mailPieceBarcode.channelSegment.destinationPostcodeDPS.postcode,
+                'destinationCountry': message.MPE.mailPiece.mailPieceBarcode.channelSegment.destinationCountry,
+                'routeOrWalkNumber': has(message.MPE.manualScan.routeOrWalkNumber) ? message.MPE.manualScan.routeOrWalkNumber : '',
+                'longitude': has(message.MPE.manualScan.scanLocation.longitude) ? message.MPE.manualScan.scanLocation.longitude : 0.0,
+                'latitude': has(message.MPE.manualScan.scanLocation.latitude) ? message.MPE.manualScan.scanLocation.latitude : 0.0,
+                'altitude': has(message.MPE.manualScan.scanLocation.altitude) ? message.MPE.manualScan.scanLocation.altitude : 0.0
+              }
+            ]
+          }
+    
+    # ENKDN - Delivered
+    ENKDN:
+      bizlogic:
+        type: "cel"
+        cel: |
+          {
+            'out': [
+              {
+                'type': 'tracking',
+                'eventCode': 'ENKDN',
+                'eventName': 'Delivered',
+                'eventDateTime': message.MPE.manualScan.eventTimestamp,
+                'uniqueItemId': message.MPE.mailPiece.mailPieceBarcode.channelSegment.uniqueItemId,
+                'UPUTrackingNumber': message.MPE.mailPiece.mailPieceBarcode.channelSegment.UPUTrackingNumber,
+                'productId': message.MPE.mailPiece.mailPieceBarcode.channelSegment.productId,
+                'productName': enrichment.productCategory.productCategory,
+                'userId': has(message.MPE.manualScan.userId) ? message.MPE.manualScan.userId : '',
+                'deviceId': has(message.MPE.manualScan.deviceId) ? message.MPE.manualScan.deviceId : '',
+                'functionalLocationId': has(message.MPE.manualScan.RMGLocation.functionalLocationId) ? message.MPE.manualScan.RMGLocation.functionalLocationId : '',
+                'siteId': has(message.MPE.manualScan.RMGLocation.siteId) ? message.MPE.manualScan.RMGLocation.siteId : '',
+                'locationName': has(enrichment.deliveryLocation) ? enrichment.deliveryLocation : '',
+                'postcode': message.MPE.mailPiece.mailPieceBarcode.channelSegment.destinationPostcodeDPS.postcode,
+                'destinationCountry': message.MPE.mailPiece.mailPieceBarcode.channelSegment.destinationCountry,
+                'routeOrWalkNumber': has(message.MPE.manualScan.routeOrWalkNumber) ? message.MPE.manualScan.routeOrWalkNumber : '',
+                'longitude': has(message.MPE.manualScan.scanLocation.longitude) ? message.MPE.manualScan.scanLocation.longitude : 0.0,
+                'latitude': has(message.MPE.manualScan.scanLocation.latitude) ? message.MPE.manualScan.scanLocation.latitude : 0.0,
+                'altitude': has(message.MPE.manualScan.scanLocation.altitude) ? message.MPE.manualScan.scanLocation.altitude : 0.0
+              }
+            ]
+          }
+
