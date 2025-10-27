@@ -20,7 +20,8 @@ public class EnrichmentExecutor<CepState, Msg> implements AspectExecutor<Enrichm
         aspectRepository.register(MapLookupEnrichment.class, new MapLookupEnrichmentExecutor<CepState, Msg>(msgTypeClass));
         aspectRepository.register(FixedEnrichment.class, new FixedEnrichmentExecutor<>());
         aspectRepository.register(CsvEnrichment.class, new CsvEnrichmentExecutor<>(cepStateTypeClass, msgTypeClass));
-        aspectRepository.register(ApiEnrichment.class, new ApiEnrichmentExecutor<CepState,Msg>(apiClient, cepStateTypeClass, msgTypeClass));
+        aspectRepository.register(CsvFromAzureEnrichment.class, new CsvFromAzureEnrichmentExecutor<>(cepStateTypeClass, msgTypeClass));
+        aspectRepository.register(ApiEnrichment.class, new ApiEnrichmentExecutor<CepState, Msg>(apiClient, cepStateTypeClass, msgTypeClass));
         this.executor = aspectRepository.build();
     }
 

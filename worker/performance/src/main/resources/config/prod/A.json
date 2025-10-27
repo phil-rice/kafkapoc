@@ -9,6 +9,10 @@
         "tracking": {
           "type": "cel",
           "cel": "{'status': 'ACCEPTED', 'location': input.acceptanceOffice, 'timestamp': input.eventTime, 'nextStep': 'IN_TRANSIT'}"
+        },
+        "all": {
+          "type": "cel",
+          "cel": "{'status': 'ACCEPTED', 'location': input.acceptanceOffice, 'timestamp': input.eventTime, 'nextStep': 'IN_TRANSIT'}"
         }
       },
       "enrichment": {
