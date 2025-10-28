@@ -79,6 +79,12 @@
             <scope>test</scope>
         </dependency>
         <dependency>
+            <groupId>org.apache.flink</groupId>
+            <artifactId>flink-streaming-java</artifactId>
+            <version>${flink.version}</version>
+            <scope>provided</scope>
+        </dependency>
+        <dependency>
             <groupId>com.hcltech.rmg</groupId>
             <artifactId>appcontainer_interfaces</artifactId>
             <version>${project.version}</version>

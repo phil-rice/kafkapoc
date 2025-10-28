@@ -2,49 +2,40 @@ package com.hcltech.rmg.telemetry;
 
 import com.microsoft.applicationinsights.TelemetryClient;
 import com.microsoft.applicationinsights.attach.ApplicationInsights;
-import com.microsoft.applicationinsights.TelemetryConfiguration;
 
+/**
+ * Works with Application Insights 3.x.
+ * No direct TelemetryConfiguration access.
+ */
 public final class AppInsightsTelemetry {
 
-    private static volatile TelemetryClient CLIENT;
+    private static volatile TelemetryClient client;
 
     private AppInsightsTelemetry() {}
 
     public static synchronized void initGlobal() {
-        if (CLIENT != null) return;
-
-        String connStr = System.getenv("APPINSIGHTS_CONNECTION_STRING");
-        String ikey    = System.getenv("APPINSIGHTS_INSTRUMENTATIONKEY");
-
-        if (connStr != null && !connStr.isBlank()) {
-            TelemetryConfiguration.getActive().setConnectionString(connStr);
-        } else if (ikey != null && !ikey.isBlank()) {
-            TelemetryConfiguration.getActive().setInstrumentationKey(ikey);
-        }
+        if (client != null) return;
 
         try {
+            // Automatically attaches agent; reads connection string from env
             ApplicationInsights.attach();
         } catch (Throwable t) {
-            System.err.println("AppInsights attach failed: " + t.getMessage());
+            System.err.println("Application Insights attach failed: " + t.getMessage());
         }
 
-        CLIENT = new TelemetryClient(TelemetryConfiguration.getActive());
-        CLIENT.trackEvent("flink_worker_startup");
-        CLIENT.flush();
+        client = new TelemetryClient();
+        client.trackEvent("flink_worker_startup");
+        client.flush();
     }
 
     public static void trackMetric(String name, double value) {
-        TelemetryClient c = CLIENT;
-        if (c != null) {
-            c.trackMetric(name, value);
-        }
+        if (client != null) client.trackMetric(name, value);
     }
 
-    public static void trackException(Throwable t, String where) {
-        TelemetryClient c = CLIENT;
-        if (c != null) {
-            c.trackException(t);
-            c.trackEvent("exception@" + where);
+    public static void trackException(Exception ex, String where) {
+        if (client != null) {
+            client.trackException(ex);
+            client.trackEvent("exception@" + where);
         }
     }
 }
