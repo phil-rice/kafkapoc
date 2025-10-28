@@ -1,0 +1,11 @@
+rest.address: 0.0.0.0
+rest.port: 8088
+
+metrics.reporter.promjm.factory.class: org.apache.flink.metrics.prometheus.PrometheusReporterFactory
+metrics.reporter.promjm.port: "9400"
+jobmanager.metrics.reporters: promjm
+taskmanager.metrics.reporters: promjm
+
+state.backend: rocksdb
+state.checkpoints.dir: file:///tmp/flink-checkpoints
+state.savepoints.dir: file:///tmp/flink-savepoints
