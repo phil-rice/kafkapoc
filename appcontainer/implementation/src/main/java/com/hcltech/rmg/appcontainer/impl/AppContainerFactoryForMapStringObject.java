@@ -210,7 +210,7 @@ public final class AppContainerFactoryForMapStringObject implements IAppContaine
         final FlinkMetricsFactory metricsFactory = new FlinkMetricsFactory(env, "EventProcessor", 100, true);
         final CepStateTypeClass<Map<String, Object>> cepStateTypeClass = new MapStringObjectCepStateTypeClass();
 //        final XmlTypeClass<Map<String, Object>, XMLValidationSchema> xml = new WoodstoxXmlForMapStringObjectTypeClass();
-        final XmlTypeClass<Map<String, Object>, XMLValidationSchema> xml = new WoodstoxXmlForMapStringObjectTypeClassNoValidation();
+        final XmlTypeClass<Map<String, Object>, XMLValidationSchema> xml = new WoodstoxXmlForMapStringObjectTypeClassNoValidation<>();
         final List<String> keyPath = List.of("domainId");
         final KafkaConfig eventSourceConfig = KafkaConfig.fromSystemProps(topicOrNull);
 

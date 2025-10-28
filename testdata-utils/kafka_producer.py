@@ -372,6 +372,7 @@ def produce_scan_index_parallel(
             headers = [
                 ("event_code", (event_code or "").encode()),
                 ("scan_ts_iso", (iso_ts or "").encode()),
+                ("domainId", (uid or "").encode()),
             ]
             key = (uid or "").encode()
             while True:

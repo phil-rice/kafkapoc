@@ -7,10 +7,10 @@ all:
           {
             'out': (
               let notificationOut = (
-                has(enrichment.productCategory.productCategory) && 
+                has(cepState.productCategory.productCategory) && 
                 has(message.MPE.manualScan.auxiliaryData.data) ?
                 
-                (enrichment.productCategory.productCategory == 'Tracked24' ? 
+                (cepState.productCategory.productCategory == 'Tracked24' ? 
                   (message.MPE.manualScan.auxiliaryData.data.exists(d, d.name == 'RECIPIENT_EMAILID') ? 
                     [
                       {
@@ -28,7 +28,7 @@ all:
                     : []
                   )
                 :
-                enrichment.productCategory.productCategory == 'SpecialDelivery09' ?
+                cepState.productCategory.productCategory == 'SpecialDelivery09' ?
                   (
                     (message.MPE.manualScan.auxiliaryData.data.exists(d, d.name == 'RECIPIENT_EMAILID') ? 
                       [
@@ -64,7 +64,7 @@ all:
                     )
                   )
                 :
-                enrichment.productCategory.productCategory == 'SpecialDelivery13' ?
+                cepState.productCategory.productCategory == 'SpecialDelivery13' ?
                   (message.MPE.manualScan.auxiliaryData.data.exists(d, d.name == 'RECIPIENT_MOBILENO') ? 
                     [
                       {
@@ -95,10 +95,10 @@ all:
                   'uniqueItemId': message.MPE.mailPiece.mailPieceBarcode.channelSegment.uniqueItemId,
                   'UPUTrackingNumber': message.MPE.mailPiece.mailPieceBarcode.channelSegment.UPUTrackingNumber,
                   'productId': message.MPE.mailPiece.mailPieceBarcode.channelSegment.productId,
-                  'productName': enrichment.productCategory.productCategory,
+                  'productName': cepState.productCategory.productCategory,
                   'functionalLocationId': has(message.MPE.manualScan.RMGLocation.functionalLocationId) ? message.MPE.manualScan.RMGLocation.functionalLocationId : '',
                   'siteId': has(message.MPE.manualScan.RMGLocation.siteId) ? message.MPE.manualScan.RMGLocation.siteId : '',
-                  'locationName': has(enrichment.postcodeRegion) ? enrichment.postcodeRegion : '',
+                  'locationName': has(cepState.postcodeRegion) ? cepState.postcodeRegion : '',
                   'postcode': message.MPE.mailPiece.mailPieceBarcode.channelSegment.destinationPostcodeDPS.postcode,
                   'destinationCountry': message.MPE.mailPiece.mailPieceBarcode.channelSegment.destinationCountry
                 }
@@ -122,10 +122,10 @@ all:
                 'uniqueItemId': message.MPE.mailPiece.mailPieceBarcode.channelSegment.uniqueItemId,
                 'UPUTrackingNumber': message.MPE.mailPiece.mailPieceBarcode.channelSegment.UPUTrackingNumber,
                 'productId': message.MPE.mailPiece.mailPieceBarcode.channelSegment.productId,
-                'productName': enrichment.productCategory.productCategory,
+                'productName': cepState.productCategory.productCategory,
                 'functionalLocationId': has(message.MPE.manualScan.RMGLocation.functionalLocationId) ? message.MPE.manualScan.RMGLocation.functionalLocationId : '',
                 'siteId': has(message.MPE.manualScan.RMGLocation.siteId) ? message.MPE.manualScan.RMGLocation.siteId : '',
-                'locationName': has(enrichment.sortingCenter) ? enrichment.sortingCenter : '',
+                'locationName': has(cepState.sortingCenter) ? cepState.sortingCenter : '',
                 'postcode': message.MPE.mailPiece.mailPieceBarcode.channelSegment.destinationPostcodeDPS.postcode,
                 'destinationCountry': message.MPE.mailPiece.mailPieceBarcode.channelSegment.destinationCountry
               }
@@ -139,10 +139,10 @@ all:
           {
             'out': (
               let notificationOut = (
-                has(enrichment.productCategory.productCategory) && 
+                has(cepState.productCategory.productCategory) && 
                 has(message.MPE.manualScan.auxiliaryData.data) ?
                 
-                (enrichment.productCategory.productCategory == 'Tracked24' ? 
+                (cepState.productCategory.productCategory == 'Tracked24' ? 
                   (
                     (message.MPE.manualScan.auxiliaryData.data.exists(d, d.name == 'RECIPIENT_EMAILID') ? 
                       [
@@ -178,7 +178,7 @@ all:
                     )
                   )
                 :
-                enrichment.productCategory.productCategory == 'Tracked48' ?
+                cepState.productCategory.productCategory == 'Tracked48' ?
                   (
                     (message.MPE.manualScan.auxiliaryData.data.exists(d, d.name == 'RECIPIENT_EMAILID') ? 
                       [
@@ -214,7 +214,7 @@ all:
                     )
                   )
                 :
-                enrichment.productCategory.productCategory == 'SpecialDelivery09' ?
+                cepState.productCategory.productCategory == 'SpecialDelivery09' ?
                   (
                     (message.MPE.manualScan.auxiliaryData.data.exists(d, d.name == 'RECIPIENT_EMAILID') ? 
                       [
@@ -250,7 +250,7 @@ all:
                     )
                   )
                 :
-                enrichment.productCategory.productCategory == 'SpecialDelivery13' ?
+                cepState.productCategory.productCategory == 'SpecialDelivery13' ?
                   (
                     (message.MPE.manualScan.auxiliaryData.data.exists(d, d.name == 'RECIPIENT_EMAILID') ? 
                       [
@@ -299,12 +299,12 @@ all:
                   'uniqueItemId': message.MPE.mailPiece.mailPieceBarcode.channelSegment.uniqueItemId,
                   'UPUTrackingNumber': message.MPE.mailPiece.mailPieceBarcode.channelSegment.UPUTrackingNumber,
                   'productId': message.MPE.mailPiece.mailPieceBarcode.channelSegment.productId,
-                  'productName': enrichment.productCategory.productCategory,
+                  'productName': cepState.productCategory.productCategory,
                   'userId': has(message.MPE.manualScan.userId) ? message.MPE.manualScan.userId : '',
                   'deviceId': has(message.MPE.manualScan.deviceId) ? message.MPE.manualScan.deviceId : '',
                   'functionalLocationId': has(message.MPE.manualScan.RMGLocation.functionalLocationId) ? message.MPE.manualScan.RMGLocation.functionalLocationId : '',
                   'siteId': has(message.MPE.manualScan.RMGLocation.siteId) ? message.MPE.manualScan.RMGLocation.siteId : '',
-                  'locationName': has(enrichment.deliveryOffice) ? enrichment.deliveryOffice : '',
+                  'locationName': has(cepState.deliveryOffice) ? cepState.deliveryOffice : '',
                   'postcode': message.MPE.mailPiece.mailPieceBarcode.channelSegment.destinationPostcodeDPS.postcode,
                   'destinationCountry': message.MPE.mailPiece.mailPieceBarcode.channelSegment.destinationCountry,
                   'routeOrWalkNumber': has(message.MPE.manualScan.routeOrWalkNumber) ? message.MPE.manualScan.routeOrWalkNumber : '',
@@ -325,10 +325,10 @@ all:
           {
             'out': (
               let notificationOut = (
-                has(enrichment.productCategory.productCategory) && 
+                has(cepState.productCategory.productCategory) && 
                 has(message.MPE.manualScan.auxiliaryData.data) ?
                 
-                (enrichment.productCategory.productCategory == 'Tracked24' ? 
+                (cepState.productCategory.productCategory == 'Tracked24' ? 
                   (message.MPE.manualScan.auxiliaryData.data.exists(d, d.name == 'RECIPIENT_EMAILID') ? 
                     [
                       {
@@ -346,7 +346,7 @@ all:
                     : []
                   )
                 :
-                enrichment.productCategory.productCategory == 'Tracked48' ?
+                cepState.productCategory.productCategory == 'Tracked48' ?
                   (message.MPE.manualScan.auxiliaryData.data.exists(d, d.name == 'RECIPIENT_MOBILENO') ? 
                     [
                       {
@@ -364,7 +364,7 @@ all:
                     : []
                   )
                 :
-                enrichment.productCategory.productCategory == 'SpecialDelivery09' ?
+                cepState.productCategory.productCategory == 'SpecialDelivery09' ?
                   (message.MPE.manualScan.auxiliaryData.data.exists(d, d.name == 'RECIPIENT_MOBILENO') ? 
                     [
                       {
@@ -382,7 +382,7 @@ all:
                     : []
                   )
                 :
-                enrichment.productCategory.productCategory == 'SpecialDelivery13' ?
+                cepState.productCategory.productCategory == 'SpecialDelivery13' ?
                   (
                     (message.MPE.manualScan.auxiliaryData.data.exists(d, d.name == 'RECIPIENT_EMAILID') ? 
                       [
@@ -431,12 +431,12 @@ all:
                   'uniqueItemId': message.MPE.mailPiece.mailPieceBarcode.channelSegment.uniqueItemId,
                   'UPUTrackingNumber': message.MPE.mailPiece.mailPieceBarcode.channelSegment.UPUTrackingNumber,
                   'productId': message.MPE.mailPiece.mailPieceBarcode.channelSegment.productId,
-                  'productName': enrichment.productCategory.productCategory,
+                  'productName': cepState.productCategory.productCategory,
                   'userId': has(message.MPE.manualScan.userId) ? message.MPE.manualScan.userId : '',
                   'deviceId': has(message.MPE.manualScan.deviceId) ? message.MPE.manualScan.deviceId : '',
                   'functionalLocationId': has(message.MPE.manualScan.RMGLocation.functionalLocationId) ? message.MPE.manualScan.RMGLocation.functionalLocationId : '',
                   'siteId': has(message.MPE.manualScan.RMGLocation.siteId) ? message.MPE.manualScan.RMGLocation.siteId : '',
-                  'locationName': has(enrichment.deliveryLocation) ? enrichment.deliveryLocation : '',
+                  'locationName': has(cepState.deliveryLocation) ? cepState.deliveryLocation : '',
                   'postcode': message.MPE.mailPiece.mailPieceBarcode.channelSegment.destinationPostcodeDPS.postcode,
                   'destinationCountry': message.MPE.mailPiece.mailPieceBarcode.channelSegment.destinationCountry,
                   'routeOrWalkNumber': has(message.MPE.manualScan.routeOrWalkNumber) ? message.MPE.manualScan.routeOrWalkNumber : '',

@@ -53,7 +53,8 @@ public final class InMemoryCelRuleCache<Inp, Out>
         }
 
         var compiledOr = compileFn.apply(source);
-        if (compiledOr.isError()) return ErrorsOr.errors(compiledOr.getErrors());
+        if (compiledOr.isError())
+            return ErrorsOr.errors(compiledOr.getErrors());
 
         var compiled = compiledOr.valueOrThrow(); // WithDetails
         if (overwriteOnPopulate) {

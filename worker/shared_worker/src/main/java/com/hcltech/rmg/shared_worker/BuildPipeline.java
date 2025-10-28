@@ -46,7 +46,7 @@ public class BuildPipeline {
                 withCepState.keyBy(Envelope::domainId);
 
 // 4) Use transform(...) with your OneInputStreamOperator
-        OneInputStreamOperator<Envelope<CepState, Msg>, Envelope<CepState, Msg>> fn = new EnvelopeAsyncProcessingFunction<KafkaConfig, CepState, Msg, Schema>(appContainerDefn, "notification", rememberBizlogicInput);
+        OneInputStreamOperator<Envelope<CepState, Msg>, Envelope<CepState, Msg>> fn = new EnvelopeAsyncProcessingFunction<KafkaConfig, CepState, Msg, Schema>(appContainerDefn, "all", rememberBizlogicInput);
 
         SingleOutputStreamOperator<Envelope<CepState, Msg>> processedStream =
                 keyedEnvelopes.<Envelope<CepState, Msg>>transform(

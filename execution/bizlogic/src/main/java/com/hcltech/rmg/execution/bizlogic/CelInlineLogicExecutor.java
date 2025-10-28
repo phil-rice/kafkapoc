@@ -15,6 +15,9 @@ import com.hcltech.rmg.config.configs.ConfigsWalker;
 import com.hcltech.rmg.execution.aspects.AspectExecutor;
 import com.hcltech.rmg.messages.ValueEnvelope;
 
+import java.sql.Array;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 
@@ -85,13 +88,18 @@ public record CelInlineLogicExecutor<CepState, Msg>(
 
         // Preload deterministically
         var keys = legalKeys(keyToCel);
+var allCelErrors = new ArrayList<>();
         for (String key : keys) {
             String source = java.util.Objects.requireNonNull(
                     keyToCel.get(key),
                     "No CEL source for key " + key + " Legal values: " + keys
             );
-            ruleCache.populate(key, source);
+            var res = ruleCache.populate(key, source);
+            if (res.isError())
+                allCelErrors.addAll(res.addPrefixIfError("Error compiling CEL for key " + key + ": ").errorsOrThrow());
         }
+        if (allCelErrors.size()>0)
+            throw new InvalidCelException("Errors compiling CEL inline logic: " + allCelErrors, allCelErrors);
         return new CelInlineLogicExecutor<>(ruleCache, keyToCel);
     }
 
