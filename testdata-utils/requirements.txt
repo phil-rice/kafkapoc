@@ -1,0 +1,5 @@
+lmdb
+confluent-kafka
+fastapi
+uvicorn
+azure-eventhub

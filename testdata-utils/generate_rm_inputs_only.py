@@ -27,7 +27,6 @@ import random
 import uuid
 from datetime import datetime, timedelta
 from zipfile import ZipFile, ZIP_DEFLATED
-from multiprocessing import Pool, cpu_count
 
 # ---------------------------
 # Configuration & rules
@@ -511,29 +510,22 @@ def build_notification_segment(
 # ---------------------------
 
 
-def generate_parcels_worker(args):
-    """Worker function for parallel generation"""
-    (
-        worker_id,
-        parcels_chunk,
-        output_dir,
-        batch_size,
-        postcode_file,
-        seed,
-        start_date,
-        end_date,
-    ) = args
+def generate_dataset(
+    parcels,
+    output_dir,
+    batch_size,
+    postcode_file="",
+    seed=42,
+    start_date=None,
+    end_date=None,
+):
+    random.seed(seed)
 
-    # Use different seed per worker
-    worker_seed = seed + worker_id
-    random.seed(worker_seed)
-
-    # Create worker-specific subdirectories
-    worker_dir = os.path.join(output_dir, f"worker_{worker_id}")
-    os.makedirs(worker_dir, exist_ok=True)
-
-    inputs_dir = os.path.join(worker_dir, "inputs")
+    os.makedirs(output_dir, exist_ok=True)
+    inputs_dir = os.path.join(output_dir, "inputs")
+    # outputs_dir = os.path.join(output_dir, "outputs")
     os.makedirs(inputs_dir, exist_ok=True)
+    # os.makedirs(outputs_dir, exist_ok=True)
 
     postcodes_master = load_postcodes(postcode_file)
 
@@ -549,136 +541,248 @@ def generate_parcels_worker(args):
     site_ids = [str(i + 1).zfill(6) for i in range(site_pool_size)]
     func_ids = [str(i + 1) for i in range(site_pool_size)]
 
+    # zip files for inputs & outputs (rotate by batch_size)
     in_zip_idx = 1
+    # out_zip_idx = 1
     in_zip = ZipFile(
         os.path.join(inputs_dir, f"mp_inputs_{in_zip_idx:04d}.zip"), "w", ZIP_DEFLATED
     )
+    # out_zip = ZipFile(
+    #     os.path.join(outputs_dir, f"mp_notifications_{out_zip_idx:04d}.zip"),
+    #     "w",
+    #     ZIP_DEFLATED,
+    # )
     written_in = 0
+    # written_out = 0
+    # combined_dir = os.path.join(output_dir, "combined")
+    # os.makedirs(combined_dir, exist_ok=True)
+    # combined_zip_idx = 1
+    # combined_zip = ZipFile(
+    #     os.path.join(combined_dir, f"test_combined_{combined_zip_idx:04d}.zip"),
+    #     "w",
+    #     ZIP_DEFLATED,
+    # )
+    # written_combined = 0
 
+    # Collections for postcode CSVs
     used_postcodes = set()
-    postcode_to_location = {}
-    postcode_suffix_rows = []
-    summary_rows = []
+    postcode_to_location = (
+        {}
+    )  # postcode -> (add_line1, add_line2, city, county, country)
+    postcode_suffix_rows = []  # list of (add_line1, postcode, po_suffix)
 
-    for i in range(parcels_chunk):
-        if i % 10000 == 0:
-            print(f"Worker {worker_id}: {i}/{parcels_chunk} parcels generated")
-
-        unique_item_id, acct = make_unique_item_id()
-        upu = make_upu_tracking()
-        category = choose_weighted(PRODUCT_CATEGORIES)
-        has_email, has_mobile = pick_contact_mix()
-        email = random_email(unique_item_id) if has_email else None
-        mobile = random_mobile() if has_mobile else None
-
-        postcode = random.choice(postcodes_master)
-        used_postcodes.add(postcode)
-
-        if postcode not in postcode_to_location:
-            city, county = random.choice(UK_LOCATIONS)
-            add_line1 = random_address_line()
-            add_line2 = (
-                "" if random.random() < 0.5 else ("Flat " + str(random.randint(1, 20)))
-            )
-            country = "GB"
-            postcode_to_location[postcode] = (
-                add_line1,
-                add_line2,
-                city,
-                county,
-                country,
-            )
-
-            suffix_count = random.randint(1, 5)
-            for _ in range(suffix_count):
-                add_line_suffix = random_address_line(street_words=2)
-                po_suffix = make_po_suffix()
-                postcode_suffix_rows.append((add_line_suffix, postcode, po_suffix))
-
-        product_id = {
-            "Tracked24": "100",
-            "Tracked48": "101",
-            "SpecialDelivery09": "109",
-            "SpecialDelivery13": "113",
-        }[category]
-
-        barcode_creation = start_dt + timedelta(
-            seconds=random.randint(0, int((end_dt - start_dt).total_seconds()))
-        )
-        barcode_creation_date = iso_date(barcode_creation)
-
-        t1 = barcode_creation + timedelta(minutes=random.randint(1, 180))
-        t2 = t1 + timedelta(hours=random.uniform(*EVENT_GAPS_HOURS["EVDAV->EVIMC"]))
-        t3 = t2 + timedelta(hours=random.uniform(*EVENT_GAPS_HOURS["EVIMC->EVGPD"]))
-        t4 = t3 + timedelta(hours=random.uniform(*EVENT_GAPS_HOURS["EVGPD->ENKDN"]))
-        scan_times = {"EVDAV": t1, "EVIMC": t2, "EVGPD": t3, "ENKDN": t4}
-
-        mp_input_xml = build_mailpiece_input_xml(
-            unique_item_id, upu, postcode, barcode_creation_date, product_id
+    # Summary CSV
+    summary_csv_path = os.path.join(output_dir, "notifications_summary.csv")
+    with open(summary_csv_path, "w", newline="", encoding="utf-8") as summary_f:
+        writer = csv.writer(summary_f)
+        writer.writerow(
+            [
+                "uniqueItemId",
+                "productCategory",
+                "hasEmail",
+                "hasMobile",
+                "event",
+                "emailNotif",
+                "smsNotif",
+            ]
         )
 
-        for idx, ev in enumerate(EVENT_FLOW, start=1):
-            scan_dt = scan_times[ev]
-            scan_ts = iso_datetime_with_tz(scan_dt)
-            tx_ts = iso_datetime_with_tz(
-                scan_dt + timedelta(seconds=random.randint(5, 120))
-            )
-            func = random.choice(func_ids)
-            site = random.choice(site_ids)
-            device_id = "".join(str(random.randint(0, 9)) for _ in range(15))
-            include_route = ev in ("EVGPD", "ENKDN")
-            route_no = str(random.randint(100000, 9999999)) if include_route else None
-            include_aux = idx == 1
+        for i in range(parcels):
+            print(f"{i} parcels generated so far...")  # 1 parcel = 4 events
+            unique_item_id, acct = make_unique_item_id()
+            upu = make_upu_tracking()
+            category = choose_weighted(PRODUCT_CATEGORIES)
+            has_email, has_mobile = pick_contact_mix()
+            email = random_email(unique_item_id) if has_email else None
+            mobile = random_mobile() if has_mobile else None
 
-            manual_xml = build_manualscan_input_xml(
-                ev,
-                scan_ts,
-                tx_ts,
-                func,
-                site,
-                device_id,
-                "test",
-                include_route=include_route,
-                route=route_no,
-                include_aux=include_aux,
-                email=(email if include_aux else None),
-                mobile=(mobile if include_aux else None),
-            )
+            # postcode selection: pick from provided master list for realism
+            postcode = random.choice(postcodes_master)
+            used_postcodes.add(postcode)
 
-            xml_input = INPUT_NS_HEADER + mp_input_xml + manual_xml + "</ptp:MPE>"
-            in_filename = f"tracking_{unique_item_id}_{idx}.xml"
-            in_zip.writestr(in_filename, xml_input)
-            written_in += 1
-
-            if written_in % batch_size == 0:
-                in_zip.close()
-                in_zip_idx += 1
-                in_zip = ZipFile(
-                    os.path.join(inputs_dir, f"mp_inputs_{in_zip_idx:04d}.zip"),
-                    "w",
-                    ZIP_DEFLATED,
+            # map postcode -> location if not already created (create realistic city/county)
+            if postcode not in postcode_to_location:
+                city, county = random.choice(UK_LOCATIONS)
+                add_line1 = random_address_line()
+                add_line2 = (
+                    ""
+                    if random.random() < 0.5
+                    else ("Flat " + str(random.randint(1, 20)))
+                )
+                country = "GB"
+                postcode_to_location[postcode] = (
+                    add_line1,
+                    add_line2,
+                    city,
+                    county,
+                    country,
                 )
 
+                # create 1-5 suffix rows for this postcode
+                suffix_count = random.randint(1, 5)
+                for _ in range(suffix_count):
+                    add_line_suffix = random_address_line(street_words=2)
+                    po_suffix = make_po_suffix()
+                    postcode_suffix_rows.append((add_line_suffix, postcode, po_suffix))
+
+            # product id mapping (for mailPiece)
+            product_id = {
+                "Tracked24": "100",
+                "Tracked48": "101",
+                "SpecialDelivery09": "109",
+                "SpecialDelivery13": "113",
+            }[category]
+
+            # barcode creation date/time
+            barcode_creation = start_dt + timedelta(
+                seconds=random.randint(0, int((end_dt - start_dt).total_seconds()))
+            )
+            barcode_creation_date = iso_date(barcode_creation)
+
+            # compute scan times for the 4 events
+            t1 = barcode_creation + timedelta(minutes=random.randint(1, 180))
+            t2 = t1 + timedelta(hours=random.uniform(*EVENT_GAPS_HOURS["EVDAV->EVIMC"]))
+            t3 = t2 + timedelta(hours=random.uniform(*EVENT_GAPS_HOURS["EVIMC->EVGPD"]))
+            t4 = t3 + timedelta(hours=random.uniform(*EVENT_GAPS_HOURS["EVGPD->ENKDN"]))
+            scan_times = {"EVDAV": t1, "EVIMC": t2, "EVGPD": t3, "ENKDN": t4}
+
+            # Build shared mailPiece XML block
+            mp_input_xml = build_mailpiece_input_xml(
+                unique_item_id, upu, postcode, barcode_creation_date, product_id
+            )
+            parcel_inputs = []  # collect stripped input MPE blocks
+            # parcel_outputs = []  # collect stripped output MPE blocks
+
+            # Write 4 input scan XMLs (aux contact only in first scan)
+            for idx, ev in enumerate(EVENT_FLOW, start=1):
+                scan_dt = scan_times[ev]
+                scan_ts = iso_datetime_with_tz(scan_dt)
+                tx_ts = iso_datetime_with_tz(
+                    scan_dt + timedelta(seconds=random.randint(5, 120))
+                )
+                func = random.choice(func_ids)
+                site = random.choice(site_ids)
+                device_id = "".join(str(random.randint(0, 9)) for _ in range(15))
+                include_route = ev in ("EVGPD", "ENKDN")
+                route_no = (
+                    str(random.randint(100000, 9999999)) if include_route else None
+                )
+                include_aux = idx == 1  # only in first scan like sample
+
+                manual_xml = build_manualscan_input_xml(
+                    ev,
+                    scan_ts,
+                    tx_ts,
+                    func,
+                    site,
+                    device_id,
+                    "test",
+                    include_route=include_route,
+                    route=route_no,
+                    include_aux=include_aux,
+                    email=(email if include_aux else None),
+                    mobile=(mobile if include_aux else None),
+                )
+
+                xml_input = INPUT_NS_HEADER + mp_input_xml + manual_xml + "</ptp:MPE>"
+                parcel_inputs.append("<MPE>" + mp_input_xml + manual_xml + "</MPE>")
+                in_filename = f"tracking_{unique_item_id}_{idx}.xml"
+                in_zip.writestr(in_filename, xml_input)
+                written_in += 1
+
+                if written_in % batch_size == 0:
+                    in_zip.close()
+                    in_zip_idx += 1
+                    in_zip = ZipFile(
+                        os.path.join(inputs_dir, f"mp_inputs_{in_zip_idx:04d}.zip"),
+                        "w",
+                        ZIP_DEFLATED,
+                    )
+
+            # For each rule-eligible event, create at most one output XML bundling segments
+            # for ev in ("EVDAV", "EVGPD", "ENKDN"):
+            #     segments = []
+            #     email_notif = False
+            #     sms_notif = False
+            #     key = (ev, category)
+            #     if key in RULES:
+            #         prefix, tpl_email, tpl_sms = RULES[key]
+            #         base_dt = scan_times[ev]
+
+            #         if tpl_email and has_email:
+            #             seg = build_notification_segment(prefix, ev, email, 1, base_dt)
+            #             segments.append(seg)
+            #             email_notif = True
+            #         if tpl_sms and has_mobile:
+            #             seg = build_notification_segment(prefix, ev, mobile, 2, base_dt)
+            #             segments.append(seg)
+            #             sms_notif = True
+
+            #     writer.writerow(
+            #         [
+            #             unique_item_id,
+            #             category,
+            #             int(has_email),
+            #             int(has_mobile),
+            #             ev,
+            #             int(email_notif),
+            #             int(sms_notif),
+            #         ]
+            #     )
+
+            #     if segments:
+            #         header = build_output_notification_header(unique_item_id, upu)
+            #         xml_out = (
+            #             OUTPUT_NS_HEADER + header + "".join(segments) + "</ptp:MPE>"
+            #         )
+            #         parcel_outputs.append(
+            #             "<MPE>" + header + "".join(segments) + "</MPE>"
+            #         )
+            #         out_name = f"notify_{unique_item_id}_{ev}.xml"
+            #         out_zip.writestr(out_name, xml_out)
+            #         written_out += 1
+
+            #         if written_out % batch_size == 0:
+            #             out_zip.close()
+            #             out_zip_idx += 1
+            #             out_zip = ZipFile(
+            #                 os.path.join(
+            #                     outputs_dir, f"mp_notifications_{out_zip_idx:04d}.zip"
+            #                 ),
+            #                 "w",
+            #                 ZIP_DEFLATED,
+            #             )
+            # --- Build combined input-output test XML ---
+            # combined_content = ["<test><input>"]
+            # combined_content.extend(parcel_inputs)
+            # combined_content.append("</input><output>")
+            # combined_content.extend(parcel_outputs)
+            # combined_content.append("</output></test>")
+            # combined_xml = "".join(combined_content)
+            # combined_name = f"test_{unique_item_id}.xml"
+            # combined_zip.writestr(combined_name, combined_xml)
+            # written_combined += 1
+
+            # if written_combined % batch_size == 0:
+            #     combined_zip.close()
+            #     combined_zip_idx += 1
+            #     combined_zip = ZipFile(
+            #         os.path.join(
+            #             combined_dir, f"test_combined_{combined_zip_idx:04d}.zip"
+            #         ),
+            #         "w",
+            #         ZIP_DEFLATED,
+            #     )
+
+    # finalize zips
     in_zip.close()
+    # out_zip.close()
+    # combined_zip.close()
 
-    # Write worker-specific CSVs
-    # summary_csv_path = os.path.join(worker_dir, "notifications_summary.csv")
-    # with open(summary_csv_path, "w", newline="", encoding="utf-8") as summary_f:
-    #     writer = csv.writer(summary_f)
-    #     writer.writerow(
-    #         [
-    #             "uniqueItemId",
-    #             "productCategory",
-    #             "hasEmail",
-    #             "hasMobile",
-    #             "event",
-    #             "emailNotif",
-    #             "smsNotif",
-    #         ]
-    #     )
-    #     writer.writerows(summary_rows)
+    # Write postcode.csv and postcode_suffix.csv
+    postcode_csv_path = os.path.join(output_dir, "postcode.csv")
+    postcode_suffix_csv_path = os.path.join(output_dir, "postcode_suffix.csv")
 
-    postcode_csv_path = os.path.join(worker_dir, "postcode.csv")
     with open(postcode_csv_path, "w", newline="", encoding="utf-8") as pc_f:
         w = csv.writer(pc_f)
         w.writerow(["add_line1", "add_line2", "city", "county", "country", "pincode"])
@@ -686,124 +790,16 @@ def generate_parcels_worker(args):
             add1, add2, city, county, country = postcode_to_location[pc]
             w.writerow([add1, add2, city, county, country, pc])
 
-    postcode_suffix_csv_path = os.path.join(worker_dir, "postcode_suffix.csv")
     with open(postcode_suffix_csv_path, "w", newline="", encoding="utf-8") as ps_f:
         w = csv.writer(ps_f)
         w.writerow(["add_line1", "postcode", "po_suffix"])
         for add1, pc, suf in postcode_suffix_rows:
             w.writerow([add1, pc, suf])
 
-    print(
-        f"Worker {worker_id} completed: {parcels_chunk} parcels, {written_in} XMLs written"
-    )
-    return worker_id
-
-
-def generate_dataset(
-    parcels,
-    output_dir,
-    batch_size,
-    postcode_file="",
-    seed=42,
-    start_date=None,
-    end_date=None,
-    num_workers=None,
-):
-    """Main function coordinating parallel generation"""
-    if num_workers is None:
-        num_workers = max(1, cpu_count() - 1)
-
-    print(f"Starting generation with {num_workers} workers for {parcels} parcels")
-
-    os.makedirs(output_dir, exist_ok=True)
-
-    # Divide parcels among workers
-    parcels_per_worker = parcels // num_workers
-    remainder = parcels % num_workers
-
-    worker_args = []
-    for i in range(num_workers):
-        chunk = parcels_per_worker + (1 if i < remainder else 0)
-        worker_args.append(
-            (
-                i,
-                chunk,
-                output_dir,
-                batch_size,
-                postcode_file,
-                seed,
-                start_date,
-                end_date,
-            )
-        )
-
-    # Run workers in parallel
-    with Pool(processes=num_workers) as pool:
-        pool.map(generate_parcels_worker, worker_args)
-
-    print(f"All workers completed. Merging CSVs...")
-
-    # Merge summary CSVs
-    # summary_csv_path = os.path.join(output_dir, "notifications_summary.csv")
-    # with open(summary_csv_path, "w", newline="", encoding="utf-8") as out_f:
-    #     writer = csv.writer(out_f)
-    #     writer.writerow(
-    #         [
-    #             "uniqueItemId",
-    #             "productCategory",
-    #             "hasEmail",
-    #             "hasMobile",
-    #             "event",
-    #             "emailNotif",
-    #             "smsNotif",
-    #         ]
-    #     )
-    #     for i in range(num_workers):
-    #         worker_csv = os.path.join(
-    #             output_dir, f"worker_{i}", "notifications_summary.csv"
-    #         )
-    #         if os.path.exists(worker_csv):
-    #             with open(worker_csv, "r", encoding="utf-8") as in_f:
-    #                 reader = csv.reader(in_f)
-    #                 next(reader)  # skip header
-    #                 writer.writerows(reader)
-
-    # Merge postcode CSVs (deduplicate)
-    all_postcodes = {}
-    for i in range(num_workers):
-        worker_csv = os.path.join(output_dir, f"worker_{i}", "postcode.csv")
-        if os.path.exists(worker_csv):
-            with open(worker_csv, "r", encoding="utf-8") as in_f:
-                reader = csv.reader(in_f)
-                next(reader)
-                for row in reader:
-                    postcode = row[5]
-                    if postcode not in all_postcodes:
-                        all_postcodes[postcode] = row
-
-    postcode_csv_path = os.path.join(output_dir, "postcode.csv")
-    with open(postcode_csv_path, "w", newline="", encoding="utf-8") as out_f:
-        writer = csv.writer(out_f)
-        writer.writerow(
-            ["add_line1", "add_line2", "city", "county", "country", "pincode"]
-        )
-        for pc in sorted(all_postcodes.keys()):
-            writer.writerow(all_postcodes[pc])
-
-    # Merge postcode_suffix CSVs
-    postcode_suffix_csv_path = os.path.join(output_dir, "postcode_suffix.csv")
-    with open(postcode_suffix_csv_path, "w", newline="", encoding="utf-8") as out_f:
-        writer = csv.writer(out_f)
-        writer.writerow(["add_line1", "postcode", "po_suffix"])
-        for i in range(num_workers):
-            worker_csv = os.path.join(output_dir, f"worker_{i}", "postcode_suffix.csv")
-            if os.path.exists(worker_csv):
-                with open(worker_csv, "r", encoding="utf-8") as in_f:
-                    reader = csv.reader(in_f)
-                    next(reader)
-                    writer.writerows(reader)
-
     print(f"Completed generation.")
+    print(f"Input scans written: {written_in} (zips in {inputs_dir})")
+    # print(f"Notifications written: {written_out} (zips in {outputs_dir})")
+    print(f"Summary CSV: {summary_csv_path}")
     print(f"Postcode CSV: {postcode_csv_path}")
     print(f"Postcode suffix CSV: {postcode_suffix_csv_path}")
 
@@ -850,12 +846,6 @@ def parse_args():
     p.add_argument(
         "--end-date", type=str, default="", help="End date YYYY-MM-DD (default now)."
     )
-    p.add_argument(
-        "--num-workers",
-        type=int,
-        default=None,
-        help="Number of parallel workers (default: CPU count - 1).",
-    )
     return p.parse_args()
 
 
@@ -869,5 +859,4 @@ if __name__ == "__main__":
         seed=args.seed,
         start_date=args.start_date,
         end_date=args.end_date,
-        num_workers=args.num_workers,
     )

@@ -1,5 +1,4 @@
 """
-"""
 Generates:
  - Input MPEr scan XML files (4 scans per parcel)
  - Output notification XML files (1 per parcel-event containing 0..2 notificationSegment blocks)
