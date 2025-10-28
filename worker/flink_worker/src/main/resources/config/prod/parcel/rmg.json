@@ -27,7 +27,7 @@
               "outputColumns": ["po_suffix"],
               "value":{"addedValue": "valueAdded"},
               "keyDelimiter": ":",
-              "csvFileName": "csvs/postcode_lookup.csv"
+              "csvFileName": "csvs/postcode_suffix.csv"
             },
             {
               "type": "lookup",
