@@ -30,9 +30,8 @@ class CsvFromAzureEnrichmentTest {
                 "acct",
                 "cont",
                 "path/file.csv",
-                "sv=1&sig=abc",   // sasToken (optional)
-                null,             // sasEnvVar (optional)
-                null              // endpointHost (defaults to blob.core.windows.net)
+                "ENV_SAS",   // sasEnvVar (optional): name of env var holding SAS
+                null         // endpointHost (defaults to blob.core.windows.net)
         );
     }
 

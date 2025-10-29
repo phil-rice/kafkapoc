@@ -107,6 +107,7 @@ public final class AppContainerFactoryForMapStringObject implements IAppContaine
 
         return switch (id) {
             case "prod" -> basic(
+                    KafkaConfig::fromSystemProps,
                     id,
                     "mper-input-events",//topic from system properties
                     ITimeService.real,
@@ -125,6 +126,7 @@ public final class AppContainerFactoryForMapStringObject implements IAppContaine
                     v -> v
             );
             case "dev" -> basic(
+                    KafkaConfig::fromSystemProps,
                     id,
                     null,//topic from system properties
                     ITimeService.real,
@@ -144,6 +146,7 @@ public final class AppContainerFactoryForMapStringObject implements IAppContaine
                     v -> v
             );
             case "ai" -> basic(
+                    KafkaConfig::fromSystemProps,
                     id,
                     "input-output-topic",
                     ITimeService.real,
@@ -164,6 +167,7 @@ public final class AppContainerFactoryForMapStringObject implements IAppContaine
                     AppContainerFactoryForMapStringObject::aiMessagePostParse
             );
             case "test" -> basic(
+                    KafkaConfig::fromSystemProps,
                     id,
                     null,//topic from system properties
                     () -> 1_726_000_000_000L,
@@ -187,6 +191,7 @@ public final class AppContainerFactoryForMapStringObject implements IAppContaine
     // ---------- monadic composition (inlined) ----------
 
     private static ErrorsOr<AppContainer<KafkaConfig, Map<String, Object>, Map<String, Object>, XMLValidationSchema, RuntimeContext, Collector<Envelope<Map<String, Object>, Map<String, Object>>>, FlinkMetricsParams>> basic(
+            Function<String, KafkaConfig> eventSourceConfigFn,
             String env,
             String topicOrNull,
             ITimeService time,
@@ -212,7 +217,7 @@ public final class AppContainerFactoryForMapStringObject implements IAppContaine
 //        final XmlTypeClass<Map<String, Object>, XMLValidationSchema> xml = new WoodstoxXmlForMapStringObjectTypeClass();
         final XmlTypeClass<Map<String, Object>, XMLValidationSchema> xml = new WoodstoxXmlForMapStringObjectTypeClassNoValidation<>();
         final List<String> keyPath = List.of("domainId");
-        final KafkaConfig eventSourceConfig = KafkaConfig.fromSystemProps(topicOrNull);
+        final KafkaConfig eventSourceConfig = eventSourceConfigFn.apply(topicOrNull);
 
         // Prefer TCCL for resource loading
         final ClassLoader cl = java.util.Objects.requireNonNullElseGet(

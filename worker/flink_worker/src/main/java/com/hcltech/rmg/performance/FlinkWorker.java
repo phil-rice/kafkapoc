@@ -22,6 +22,8 @@ import java.util.Map;
 public final class FlinkWorker {
 
     public static void main(String[] args) throws Exception {
+        var appContainerDefn = AppContainerDefn.of(AppContainerFactoryForMapStringObject.class, "prod");
+
         System.setProperty("java.io.tmpdir", "C:\\flink-tmp");
         // print to confirm
         System.out.println("tmpdir = " + System.getProperty("java.io.tmpdir"));
@@ -34,7 +36,19 @@ public final class FlinkWorker {
         Path base = Paths.get(System.getProperty("java.io.tmpdir"));           // e.g. C:\flink-tmp
 
         // --- Flink Configuration (no YAML) ---
-        Configuration conf = FlinkHelper.makeDefaultFlinkConfig();
+        Configuration conf = new Configuration();
+
+
+// Web UI fixed off 8081
+        conf.setString("rest.address", "localhost");
+        conf.setString("rest.port", "8088");
+        System.out.println("Flink Web UI at http://localhost:8088");
+        conf.setString("metrics.reporter.promjm.factory.class", "org.apache.flink.metrics.prometheus.PrometheusReporterFactory");
+        conf.setString("metrics.reporter.promjm.port", "9400");
+
+        conf.setString("jobmanager.metrics.reporters", "promjm");
+        conf.setString("taskmanager.metrics.reporters", "promtm");
+
         // --- Local filesystem targets for checkpoints/savepoints ---
         Path checkpoints = base.resolve("checkpoints");
         Path savepoints = base.resolve("savepoints");
@@ -46,7 +60,8 @@ public final class FlinkWorker {
         conf.set(CheckpointingOptions.SAVEPOINT_DIRECTORY, savepoints.toUri().toString());  // file:///C:/flink-tmp/savepoints
 
         StreamExecutionEnvironment env = StreamExecutionEnvironment.createLocalEnvironmentWithWebUI(conf);
-        var appContainerDefn = AppContainerDefn.of(AppContainerFactoryForMapStringObject.class, "prod");
+
+
         var appContainer = IAppContainerFactory.resolve(appContainerDefn).valueOrThrow();
         if (KafkaTopics.ensureTopics(appContainer.eventSourceConfig(), EnvelopeRouting.allTopics, 12, (short) 1).valueOrThrow()) {//just sticking 12/3 in for tests
             System.out.println("Created output topics");

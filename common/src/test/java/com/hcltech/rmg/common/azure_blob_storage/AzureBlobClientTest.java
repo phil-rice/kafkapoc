@@ -43,7 +43,6 @@ class AzureBlobClientTest {
                 "acct",
                 "data",
                 "lookups/cities.csv",
-                null,              // sasToken
                 "LOCAL_BLOB_SAS",  // sasEnvVar (name irrelevant in tests)
                 null               // endpointHost
         );
@@ -94,7 +93,7 @@ class AzureBlobClientTest {
     @Test
     void openBlobStream_success_withBearer_addsAuthHeader_andVersion() throws Exception {
         // Arrange
-        AzureBlobConfig cfg = new AzureBlobConfig("acct","data","lookups/cities.csv", null,null, null);
+        AzureBlobConfig cfg = new AzureBlobConfig("acct","data","lookups/cities.csv", null, null);
 
         String bearer = "Bearer eyJ.mock.token";
         ITokenGenerator tg = new FixedTokenGenerator(new Token(Token.Type.BEARER, bearer));
