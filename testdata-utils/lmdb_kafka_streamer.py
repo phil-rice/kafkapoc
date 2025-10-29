@@ -1,6 +1,12 @@
 """
 LMDB-sorted event buffer + Kafka producer (POC) — **100% Source-Fidelity Generator**
 
+Generates:
+ - LMDB event buffer (sorted by timestamp)
+ - parcel_address.csv (uniqueItemId,add_line1,add_line2,city,county,country,postcode) -> one row per parcel
+ - postcode.csv (add_line1,add_line2,city,county,country,pincode) -> one row per postcode used
+ - postcode_suffix.csv (add_line1,postcode,po_suffix) -> 1-5 suffix rows per postcode
+
 This version is built on generate_rm_inputs_only.py with ADDED LMDB/Kafka streaming:
 - EXACT same namespaces and headers
 - EXACT same product/category mix, contact mix, rules
@@ -61,10 +67,36 @@ from dataclasses import dataclass
 from datetime import datetime, timedelta, timezone
 from typing import Iterable, Optional, Tuple, List
 
+# Load environment variables from .env file
+try:
+    from dotenv import load_dotenv
+
+    load_dotenv()  # Load variables from .env file if it exists
+except ImportError:
+    pass  # python-dotenv not installed, will use system environment variables
+
 try:
     from confluent_kafka import Producer
 except Exception:
     Producer = None
+
+# Azure Blob Storage configuration from environment variables
+AZURE_CONNECTION_STRING = os.getenv("AZURE_STORAGE_CONNECTION_STRING")
+AZURE_CONTAINER_NAME = os.getenv("AZURE_STORAGE_CONTAINER_NAME", "address-lookup")
+AZURE_BLOB_PREFIX = os.getenv("AZURE_BLOB_PREFIX", "")
+
+# Event Hub / Kafka configuration from environment variables
+EVENTHUB_CONNECTION_STRING = os.getenv("EVENTHUB_CONNECTION_STRING")
+EVENTHUB_NAMESPACE = os.getenv("EVENTHUB_NAMESPACE")
+KAFKA_BOOTSTRAP_SERVERS = os.getenv("KAFKA_BOOTSTRAP_SERVERS", "localhost:9092")
+KAFKA_TOPIC = os.getenv("KAFKA_TOPIC", "mper-input-events")
+
+try:
+    from azure.storage.blob import BlobServiceClient
+
+    AZURE_AVAILABLE = True
+except ImportError:
+    AZURE_AVAILABLE = False
 
 # ---------------------------
 # Config from source (EXACT COPY)
@@ -833,10 +865,17 @@ def _worker_make_events(
     postcodes_master: List[str],
     site_ids: List[str],
     func_ids: List[str],
-) -> List[Event]:
-    """Worker function using EXACT source generation logic"""
+) -> Tuple[List[Event], List[Tuple], set, List[Tuple]]:
+    """Worker function using EXACT source generation logic
+
+    Returns: (events, parcel_address_rows, used_postcodes, postcode_suffix_rows)
+    """
     random.seed(seed + start_idx)
     out: List[Event] = []
+    parcel_address_rows = []
+    used_postcodes = set()
+    postcode_suffix_rows = []
+    postcode_to_location = {}
 
     for i in range(start_idx, start_idx + count):
         unique_item_id, acct = make_unique_item_id()
@@ -848,6 +887,36 @@ def _worker_make_events(
 
         # postcode selection from master list
         postcode = random.choice(postcodes_master)
+        used_postcodes.add(postcode)
+
+        # Create postcode location mapping if not exists
+        if postcode not in postcode_to_location:
+            city, county = random.choice(UK_LOCATIONS)
+            add_line1 = random_address_line()
+            add_line2 = (
+                "" if random.random() < 0.5 else ("Flat " + str(random.randint(1, 20)))
+            )
+            country = "GB"
+            postcode_to_location[postcode] = (
+                add_line1,
+                add_line2,
+                city,
+                county,
+                country,
+            )
+
+            # create 1-5 suffix rows for this postcode
+            suffix_count = random.randint(1, 5)
+            for _ in range(suffix_count):
+                add_line_suffix = random_address_line(street_words=2)
+                po_suffix = make_po_suffix()
+                postcode_suffix_rows.append((add_line_suffix, postcode, po_suffix))
+
+        # Record this parcel's address mapping
+        add1, add2, city, county, country = postcode_to_location[postcode]
+        parcel_address_rows.append(
+            (unique_item_id, add1, add2, city, county, country, postcode)
+        )
 
         # product id mapping
         product_id = {
@@ -910,7 +979,128 @@ def _worker_make_events(
                 )
             )
 
-    return out
+    return out, parcel_address_rows, used_postcodes, postcode_suffix_rows
+
+
+def _upload_to_azure_blob(
+    connection_string: str,
+    container_name: str,
+    local_file_path: str,
+    blob_name: str = None,
+):
+    """Upload a file to Azure Blob Storage"""
+    if not AZURE_AVAILABLE:
+        raise RuntimeError(
+            "azure-storage-blob not installed. Run: pip install azure-storage-blob"
+        )
+
+    if blob_name is None:
+        blob_name = os.path.basename(local_file_path)
+
+    print(f"[azure] Uploading {local_file_path} to {container_name}/{blob_name}")
+    blob_service_client = BlobServiceClient.from_connection_string(connection_string)
+    blob_client = blob_service_client.get_blob_client(
+        container=container_name, blob=blob_name
+    )
+
+    with open(local_file_path, "rb") as data:
+        blob_client.upload_blob(data, overwrite=True)
+
+    print(f"[azure] Uploaded {blob_name}")
+
+
+def _write_csv_files(
+    output_dir: str,
+    parcel_address_rows: List[Tuple],
+    used_postcodes: set,
+    postcode_suffix_rows: List[Tuple],
+    postcode_to_location: dict,
+    azure_connection_string: str = None,
+    azure_container_name: str = None,
+    azure_blob_prefix: str = "",
+):
+    """Write CSV files for parcel addresses, postcodes, and postcode suffixes"""
+    import csv
+
+    os.makedirs(output_dir, exist_ok=True)
+
+    # Write parcel_address.csv
+    parcel_address_csv_path = os.path.join(output_dir, "parcel_address.csv")
+    with open(parcel_address_csv_path, "w", newline="", encoding="utf-8") as pa_f:
+        w = csv.writer(pa_f)
+        w.writerow(
+            [
+                "uniqueItemId",
+                "add_line1",
+                "add_line2",
+                "city",
+                "county",
+                "country",
+                "postcode",
+            ]
+        )
+        for row in parcel_address_rows:
+            w.writerow(row)
+    print(f"[generation] Parcel address CSV: {parcel_address_csv_path}")
+
+    # Write postcode.csv
+    postcode_csv_path = os.path.join(output_dir, "postcode.csv")
+    with open(postcode_csv_path, "w", newline="", encoding="utf-8") as pc_f:
+        w = csv.writer(pc_f)
+        w.writerow(["add_line1", "add_line2", "city", "county", "country", "pincode"])
+        for pc in sorted(used_postcodes):
+            if pc in postcode_to_location:
+                add1, add2, city, county, country = postcode_to_location[pc]
+                w.writerow([add1, add2, city, county, country, pc])
+    print(f"[generation] Postcode CSV: {postcode_csv_path}")
+
+    # Write postcode_suffix.csv
+    postcode_suffix_csv_path = os.path.join(output_dir, "postcode_suffix.csv")
+    with open(postcode_suffix_csv_path, "w", newline="", encoding="utf-8") as ps_f:
+        w = csv.writer(ps_f)
+        w.writerow(["add_line1", "postcode", "po_suffix"])
+        for add1, pc, suf in postcode_suffix_rows:
+            w.writerow([add1, pc, suf])
+    print(f"[generation] Postcode suffix CSV: {postcode_suffix_csv_path}")
+
+    # Upload to Azure if credentials provided (from env vars or function args)
+    azure_conn = azure_connection_string or AZURE_CONNECTION_STRING
+    azure_container = azure_container_name or AZURE_CONTAINER_NAME
+    azure_prefix_final = azure_blob_prefix if azure_blob_prefix else AZURE_BLOB_PREFIX
+
+    if azure_conn and azure_container:
+        print(f"[azure] Uploading CSV files to Azure Blob Storage...")
+        _upload_to_azure_blob(
+            azure_conn,
+            azure_container,
+            parcel_address_csv_path,
+            (
+                f"{azure_prefix_final}parcel_address.csv"
+                if azure_prefix_final
+                else "parcel_address.csv"
+            ),
+        )
+        _upload_to_azure_blob(
+            azure_conn,
+            azure_container,
+            postcode_csv_path,
+            (
+                f"{azure_prefix_final}postcode.csv"
+                if azure_prefix_final
+                else "postcode.csv"
+            ),
+        )
+        _upload_to_azure_blob(
+            azure_conn,
+            azure_container,
+            postcode_suffix_csv_path,
+            (
+                f"{azure_prefix_final}postcode_suffix.csv"
+                if azure_prefix_final
+                else "postcode_suffix.csv"
+            ),
+        )
+        print(f"[azure]3 CSV files uploaded to container: {azure_container}")
 
 
 def generate_all_to_lmdb(
@@ -922,8 +1112,19 @@ def generate_all_to_lmdb(
     workers: int,
     chunk_size: int,
     postcode_file: str = "",
+    output_csv_dir: str = "",
+    azure_connection_string: str = None,
+    azure_container_name: str = None,
+    azure_blob_prefix: str = "",
 ):
-    """Generate all events using EXACT source logic and store in LMDB"""
+    """Generate all events using EXACT source logic and store in LMDB
+
+    Args:
+        output_csv_dir: If provided, write parcel_address.csv, postcode.csv, and postcode_suffix.csv to this directory
+        azure_connection_string: Azure Storage connection string for uploading CSVs
+        azure_container_name: Azure Blob Storage container name
+        azure_blob_prefix: Optional prefix for Azure blob names
+    """
     seq = 0
 
     # Load postcodes using EXACT source logic
@@ -933,6 +1134,12 @@ def generate_all_to_lmdb(
     site_pool_size = 500
     site_ids = [str(i + 1).zfill(6) for i in range(site_pool_size)]
     func_ids = [str(i + 1) for i in range(site_pool_size)]
+
+    # Collections for CSV generation
+    all_parcel_address_rows = []
+    all_used_postcodes = set()
+    all_postcode_suffix_rows = []
+    all_postcode_to_location = {}
 
     # Magic parcel (goes first in each scan and in global): epoch 0 timestamps
     magic_ts = datetime.fromtimestamp(0, tz=timezone.utc)
@@ -974,9 +1181,13 @@ def generate_all_to_lmdb(
 
     if workers <= 1:
         print(f"[generation] Generating {parcels:,} parcels (single-threaded)...")
-        events = _worker_make_events(
+        events, parcel_rows, used_pcs, suffix_rows = _worker_make_events(
             seed, start, end, 0, parcels, postcodes_master, site_ids, func_ids
         )
+        all_parcel_address_rows.extend(parcel_rows)
+        all_used_postcodes.update(used_pcs)
+        all_postcode_suffix_rows.extend(suffix_rows)
+
         print(f"[generation] Writing {len(events):,} events to LMDB...")
         for i, e in enumerate(events):
             env.put_event(e, seq)
@@ -987,6 +1198,20 @@ def generate_all_to_lmdb(
                 print(
                     f"[generation] Progress: {i+1:,}/{len(events):,} events ({pct:.0f}%)"
                 )
+
+        # Write CSVs if output directory provided
+        if output_csv_dir:
+            _write_csv_files(
+                output_csv_dir,
+                all_parcel_address_rows,
+                all_used_postcodes,
+                all_postcode_suffix_rows,
+                all_postcode_to_location,
+                azure_connection_string,
+                azure_container_name,
+                azure_blob_prefix,
+            )
+
         return seq
 
     # Multiprocessing path
@@ -1016,8 +1241,12 @@ def generate_all_to_lmdb(
 
         completed = 0
         for fut in as_completed(futures):
-            batch = fut.result()
-            for e in batch:
+            events, parcel_rows, used_pcs, suffix_rows = fut.result()
+            all_parcel_address_rows.extend(parcel_rows)
+            all_used_postcodes.update(used_pcs)
+            all_postcode_suffix_rows.extend(suffix_rows)
+
+            for e in events:
                 env.put_event(e, seq)
                 seq += 1
             completed += 1
@@ -1030,6 +1259,26 @@ def generate_all_to_lmdb(
             print(
                 f"[generation] Batch {completed}/{len(futures)} complete ({pct:.0f}%) - {parcels_done:,}/{parcels:,} parcels, {seq:,} events written"
             )
+
+    # Write CSVs if output directory provided
+    if output_csv_dir:
+        print(f"[generation] Writing CSV files to {output_csv_dir}...")
+        # Build postcode_to_location from collected data (reconstruct from parcel addresses)
+        for unique_id, add1, add2, city, county, country, pc in all_parcel_address_rows:
+            if pc not in all_postcode_to_location:
+                all_postcode_to_location[pc] = (add1, add2, city, county, country)
+
+        _write_csv_files(
+            output_csv_dir,
+            all_parcel_address_rows,
+            all_used_postcodes,
+            all_postcode_suffix_rows,
+            all_postcode_to_location,
+            azure_connection_string,
+            azure_container_name,
+            azure_blob_prefix,
+        )
+
     return seq
 
 
@@ -1228,11 +1477,26 @@ def build_app(
         end: str = "2025-10-01T00:00:00",
         workers: int = 4,
         chunk_size: int = 5000,
+        csv_output: str = "",
+        azure_connection_string: str = "",
+        azure_container: str = "",
+        azure_prefix: str = "",
     ):
         s = datetime.fromisoformat(start).replace(tzinfo=timezone.utc)
         e = datetime.fromisoformat(end).replace(tzinfo=timezone.utc)
         total = generate_all_to_lmdb(
-            DB, parcels, s, e, seed, workers, chunk_size, postcode_file
+            DB,
+            parcels,
+            s,
+            e,
+            seed,
+            workers,
+            chunk_size,
+            postcode_file,
+            csv_output,
+            azure_connection_string or None,
+            azure_container or None,
+            azure_prefix,
         )
         return {"status": "ok", "inserted": total}
 
@@ -1279,6 +1543,30 @@ def main():
         default="",
         help="Optional file of real UK postcodes",
     )
+    pgen.add_argument(
+        "--csv-output",
+        type=str,
+        default="",
+        help="Optional directory to write CSV files (parcel_address, postcode, postcode_suffix)",
+    )
+    pgen.add_argument(
+        "--azure-connection-string",
+        type=str,
+        default="",
+        help="Azure Storage connection string for uploading CSV files.",
+    )
+    pgen.add_argument(
+        "--azure-container",
+        type=str,
+        default="",
+        help="Azure Blob Storage container name.",
+    )
+    pgen.add_argument(
+        "--azure-prefix",
+        type=str,
+        default="",
+        help="Optional prefix for Azure blob names (e.g., 'run1/').",
+    )
 
     pchron = sub.add_parser(
         "emit-chronological",
@@ -1286,8 +1574,18 @@ def main():
     )
     pchron.add_argument("--db", type=str, default="./event_buffer_lmdb")
     pchron.add_argument("--map-size-gb", type=int, default=32)
-    pchron.add_argument("--bootstrap-servers", type=str, required=True)
-    pchron.add_argument("--topic", type=str, required=True)
+    pchron.add_argument(
+        "--bootstrap-servers",
+        type=str,
+        default=KAFKA_BOOTSTRAP_SERVERS,
+        help=f"Kafka/EventHub bootstrap servers (default: env KAFKA_BOOTSTRAP_SERVERS or {KAFKA_BOOTSTRAP_SERVERS})",
+    )
+    pchron.add_argument(
+        "--topic",
+        type=str,
+        default=KAFKA_TOPIC,
+        help=f"Kafka/EventHub topic (default: env KAFKA_TOPIC or {KAFKA_TOPIC})",
+    )
     pchron.add_argument("--partitions", type=int, default=1)
     pchron.add_argument("--acks", type=str, default="all")
     pchron.add_argument("--limit", type=int, default=None)
@@ -1301,8 +1599,8 @@ def main():
     pchron.add_argument(
         "--eventhub-connection-string",
         type=str,
-        default=None,
-        help="Azure Event Hub connection string (required if --producer-type=eventhub)",
+        default=EVENTHUB_CONNECTION_STRING,
+        help="Azure Event Hub connection string (default: env EVENTHUB_CONNECTION_STRING, required if --producer-type=eventhub)",
     )
 
     pscan = sub.add_parser(
@@ -1312,8 +1610,18 @@ def main():
     pscan.add_argument("--scan", type=int, choices=[1, 2, 3], required=True)
     pscan.add_argument("--db", type=str, default="./event_buffer_lmdb")
     pscan.add_argument("--map-size-gb", type=int, default=32)
-    pscan.add_argument("--bootstrap-servers", type=str, required=True)
-    pscan.add_argument("--topic", type=str, required=True)
+    pscan.add_argument(
+        "--bootstrap-servers",
+        type=str,
+        default=KAFKA_BOOTSTRAP_SERVERS,
+        help=f"Kafka/EventHub bootstrap servers (default: env KAFKA_BOOTSTRAP_SERVERS or {KAFKA_BOOTSTRAP_SERVERS})",
+    )
+    pscan.add_argument(
+        "--topic",
+        type=str,
+        default=KAFKA_TOPIC,
+        help=f"Kafka/EventHub topic (default: env KAFKA_TOPIC or {KAFKA_TOPIC})",
+    )
     pscan.add_argument("--partitions", type=int, default=1)
     pscan.add_argument("--acks", type=str, default="all")
     pscan.add_argument("--limit", type=int, default=None)
@@ -1327,8 +1635,8 @@ def main():
     pscan.add_argument(
         "--eventhub-connection-string",
         type=str,
-        default=None,
-        help="Azure Event Hub connection string (required if --producer-type=eventhub)",
+        default=EVENTHUB_CONNECTION_STRING,
+        help="Azure Event Hub connection string (default: env EVENTHUB_CONNECTION_STRING, required if --producer-type=eventhub)",
     )
 
     pserve = sub.add_parser(
@@ -1336,8 +1644,18 @@ def main():
     )
     pserve.add_argument("--db", type=str, default="./event_buffer_lmdb")
     pserve.add_argument("--map-size-gb", type=int, default=32)
-    pserve.add_argument("--bootstrap-servers", type=str, required=True)
-    pserve.add_argument("--topic", type=str, required=True)
+    pserve.add_argument(
+        "--bootstrap-servers",
+        type=str,
+        default=KAFKA_BOOTSTRAP_SERVERS,
+        help=f"Kafka/EventHub bootstrap servers (default: env KAFKA_BOOTSTRAP_SERVERS or {KAFKA_BOOTSTRAP_SERVERS})",
+    )
+    pserve.add_argument(
+        "--topic",
+        type=str,
+        default=KAFKA_TOPIC,
+        help=f"Kafka/EventHub topic (default: env KAFKA_TOPIC or {KAFKA_TOPIC})",
+    )
     pserve.add_argument("--partitions", type=int, default=1)
     pserve.add_argument("--host", type=str, default="127.0.0.1")
     pserve.add_argument("--port", type=int, default=8080)
@@ -1357,8 +1675,8 @@ def main():
     pserve.add_argument(
         "--eventhub-connection-string",
         type=str,
-        default=None,
-        help="Azure Event Hub connection string (required if --producer-type=eventhub)",
+        default=EVENTHUB_CONNECTION_STRING,
+        help="Azure Event Hub connection string (default: env EVENTHUB_CONNECTION_STRING, required if --producer-type=eventhub)",
     )
 
     args = parser.parse_args()
@@ -1376,6 +1694,10 @@ def main():
             args.workers,
             args.chunk_size,
             args.postcode_file,
+            args.csv_output,
+            args.azure_connection_string or None,
+            args.azure_container or None,
+            args.azure_prefix,
         )
         print(f"Generated and stored {total} events into {args.db}")
         return

@@ -9,7 +9,52 @@ High-performance test data generator for Royal Mail parcel tracking events with 
 
 ```bash
 # Install Python dependencies
-pip install lmdb confluent-kafka fastapi uvicorn azure-eventhub
+pip install -r requirements.txt
+
+# Or install individually:
+pip install lmdb confluent-kafka fastapi uvicorn azure-eventhub azure-storage-blob python-dotenv
+```
+
+---
+
+## Environment Variables
+
+All scripts now support environment variables for configuration. This is more secure and convenient than passing credentials via command-line arguments.
+
+### Quick Setup
+
+Copy the example configuration file and add your credentials:
+
+```bash
+# 1. Copy the example file
+cp env.example .env
+
+# 2. Edit .env with your actual credentials (it's already in .gitignore)
+nano .env  # or use your preferred editor
+
+# 3. Run the scripts - they automatically load .env
+python lmdb_kafka_streamer.py generate --parcels 10000
+```
+
+The `.env.example` file includes:
+- Your specific Azure Storage Account: **abcparcelcheckpoint**
+- Your blob container: **address-lookup**
+- Placeholders for keys and connection strings
+- Detailed usage instructions
+
+**No need to `source .env`** - the scripts use `python-dotenv` to automatically load variables from `.env` files!
+
+### Alternative: Manual Environment Variables
+
+You can also set environment variables manually if preferred:
+
+```bash
+export AZURE_STORAGE_CONNECTION_STRING="DefaultEndpointsProtocol=https;AccountName=abcparcelcheckpoint;AccountKey=...;EndpointSuffix=core.windows.net"
+export AZURE_STORAGE_CONTAINER_NAME="address-lookup"
+export AZURE_BLOB_PREFIX=""  # Optional: e.g., "test/" or "prod/"
+export KAFKA_BOOTSTRAP_SERVERS="localhost:9092"
+export KAFKA_TOPIC="mper-input-events"
+export EVENTHUB_CONNECTION_STRING="Endpoint=sb://...;SharedAccessKeyName=...;SharedAccessKey=..."
 ```
 
 ---
