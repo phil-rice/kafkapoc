@@ -13,8 +13,8 @@ public final class EnricherHelper {
     private EnricherHelper() {}
 
     // TODO: adjust to your actual constants/imports if these differ
-    private static final String ROOT_INP = "inp";
-    private static final String ROOT_CEP = "cep";
+    private static final String ROOT_INP = "message";
+    private static final String ROOT_CEP = "cepState";
 
     /**
      * Builds a composite key by reading configured inputs from either the message payload (inp)

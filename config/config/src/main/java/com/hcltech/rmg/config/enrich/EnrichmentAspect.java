@@ -12,7 +12,7 @@ import java.util.List;
         @JsonSubTypes.Type(value = CompositeExecutor.class, name = "composite"),
         @JsonSubTypes.Type(value = FixedEnrichment.class, name = "fixed"),
         @JsonSubTypes.Type(value = CsvEnrichment.class, name = "csv"),
-        @JsonSubTypes.Type(value = AzureBlobClient.class, name = "csvAzure"),
+        @JsonSubTypes.Type(value = CsvFromAzureEnrichment.class, name = "csvAzure"),
 })
 public sealed interface EnrichmentAspect permits MapLookupEnrichment, CompositeExecutor, FixedEnrichment,CsvEnrichment,ApiEnrichment,CsvFromAzureEnrichment {
     List<EnrichmentWithDependencies> asDependencies();

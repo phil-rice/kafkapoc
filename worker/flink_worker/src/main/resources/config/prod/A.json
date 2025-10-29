@@ -12,26 +12,17 @@
           "type": "composite",
           "enrichers": [
             {
-              "type": "lookup",
-              "inputs": [["message", "MPE", "mailPiece", "mailPieceBarcode", "channelSegment", "productId"]],
-              "output": ["productCategory"],
-              "lookup": {
-                "100": {"productCategory": "Tracked24"},
-                "101": {"productCategory": "Tracked48"},
-                "102": {"productCategory": "SpecialDelivery09"},
-                "103": {"productCategory": "SpecialDelivery13"}
-              }
-            },
-            {
-              "type": "lookup",
-              "inputs": [["message", "MPE", "mailPiece", "mailPieceBarcode", "channelSegment", "destinationPostcodeDPS", "postcode"]],
-              "output": ["postcodeRegion"],
-              "lookup": {
-                "EC1A1BB": "London Central",
-                "W1A0AX": "London West End",
-                "G11AA": "Glasgow City",
-                "M11AE": "Manchester Central",
-                "B338TH": "Birmingham"
+              "type": "csvAzure",
+              "inputColumns": ["uniqueItemId"],
+              "inputs": [["message", "MPE", "mailPiece", "mailPieceBarcode", "channelSegment", "uniqueItemId"]],
+              "output": ["address"],
+              "outputColumns": ["add_line1", "add_line2", "city", "county", "country", "postcode"],
+              "keyDelimiter": ":",
+              "azure": {
+                "accountName": "rmgparcelcheckpoint",
+                "container": "address-lookup",
+                "blobPath": "parcel_address.csv",
+                "sasEnvVar": "RMG_SAS_TOKEN"
               }
             }
           ]

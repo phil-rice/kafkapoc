@@ -58,7 +58,6 @@ class CsvFromAzureEnrichmentExecutorTest {
         // Azure config (base info; SAS is provided by token generator now)
         AzureBlobConfig az = new AzureBlobConfig(
                 "acct", "data", "lookups/countries.csv",
-                null,               // sasToken (unused here)
                 "LOCAL_BLOB_SAS",   // sasEnvVar name (not actually used by FixedSasTokenGen)
                 null                // endpointHost
         );
@@ -165,7 +164,7 @@ class CsvFromAzureEnrichmentExecutorTest {
 
         AzureBlobConfig az = new AzureBlobConfig(
                 "acct", "data", "lookups/countries.csv",
-                null, "LOCAL_BLOB_SAS", null);
+                "LOCAL_BLOB_SAS", null);
 
         CsvFromAzureEnrichment cfg = new CsvFromAzureEnrichment(
                 List.of(List.of("inp", "code")),
@@ -211,7 +210,7 @@ class CsvFromAzureEnrichmentExecutorTest {
 
         AzureBlobConfig az = new AzureBlobConfig(
                 "acct", "data", "lookups/countries.csv",
-                null, "LOCAL_BLOB_SAS", null);
+                "LOCAL_BLOB_SAS", null);
 
         CsvFromAzureEnrichment cfg = new CsvFromAzureEnrichment(
                 List.of(List.of("cep", "ctx", "code")),  // read from CEP state at ["ctx","code"]
