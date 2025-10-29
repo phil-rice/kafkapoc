@@ -26,7 +26,7 @@ public class BizLogicPipelineStep<ESC, CepState, Msg, Schema, FlinkRT, FlinkFR, 
     private final IEventTypeExtractor<Msg> eventTypeExtractor;
     private final Schema schema;
 
-    public BizLogicPipelineStep(AppContainer<ESC, CepState, Msg, Schema, FlinkRT,  FlinkFR,MetricParam> container, Supplier<CepEventLog> cepStateSupplier, String module) {
+    public BizLogicPipelineStep(AppContainer<ESC, CepState, Msg, Schema, FlinkRT, FlinkFR, MetricParam> container, Supplier<CepEventLog> cepStateSupplier, String module) {
         this.module = module;
         this.keyToConfigMap = container.keyToConfigMap();
         this.enrichmentExecutor = container.enrichmentExecutor();
@@ -48,7 +48,9 @@ public class BizLogicPipelineStep<ESC, CepState, Msg, Schema, FlinkRT, FlinkFR, 
             AspectMap aspectMap = config.behaviorConfig().events().get(valueEnvelope.header().eventType());
             if (aspectMap == null) return valueEnvelope;
             var bizLogicConfig = aspectMap.bizlogic().get(module);
-            Envelope<CepState, Msg> result = valueEnvelope.map(ve -> bizLogic.execute(fullKey, bizLogicConfig, ve));
+            Envelope<CepState, Msg> result = bizLogicConfig == null
+                    ? valueEnvelope
+                    : valueEnvelope.map(ve -> bizLogic.execute(fullKey, bizLogicConfig, ve));
             return result;
         }
         return envelope;
