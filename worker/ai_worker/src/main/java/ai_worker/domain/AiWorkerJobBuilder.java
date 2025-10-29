@@ -13,12 +13,15 @@ import com.hcltech.rmg.flinkadapters.PerfStats;
 import com.hcltech.rmg.kafka.KafkaTopics;
 
 import com.hcltech.rmg.kafka.ValueErrorRetryStreams;
+import com.hcltech.rmg.kafkaconfig.KafkaConfig;
 import com.hcltech.rmg.shared_worker.BuildPipeline;
 import com.hcltech.rmg.shared_worker.EnvelopeRouting;
 import com.hcltech.rmg.shared_worker.FirstHitJobKiller;
 import org.apache.flink.streaming.api.environment.StreamExecutionEnvironment;
+import org.codehaus.stax2.validation.XMLValidationSchema;
 import org.springframework.stereotype.Component;
 
+import java.io.OutputStream;
 import java.util.Map;
 import java.util.Properties;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -55,7 +58,9 @@ public class AiWorkerJobBuilder implements JobBuilder<StreamExecutionEnvironment
 
         // Route to Kafka
         String brokers = appContainer.eventSourceConfig().bootstrapServer();
-        EnvelopeRouting.<Map<String, Object>, Map<String, Object>>routeToKafkaWithFailures(
+        // <EventSourceConfig, CepState, Msg, Schema, FlinkRT, FlinkFR, MetricsParam>
+        EnvelopeRouting.routeToKafkaWithFailures(
+                appContainerDefn,
                 pipe.values(),
                 pipe.errors(),
                 pipe.retries(),
