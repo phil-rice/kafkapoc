@@ -268,6 +268,7 @@ public final class AppContainerFactoryForMapStringObject implements IAppContaine
                                                     xml,
                                                     afterParse,
                                                     cepStateTypeClass,
+                                                    msgTypeClass,
                                                     checkpointIntervalMillis,
                                                     cepEventLogFunction,
                                                     opaeConfig,

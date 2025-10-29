@@ -33,19 +33,19 @@ public final class PerfHarnessMain {
         System.setProperty("java.io.tmpdir", "C:\\flink-tmp");
 
         // --- Build local paths (portable across Win/*nix) ---
-        Path base       = Paths.get(System.getProperty("java.io.tmpdir"));           // e.g. C:\flink-tmp
+        Path base = Paths.get(System.getProperty("java.io.tmpdir"));           // e.g. C:\flink-tmp
 
         // --- Flink Configuration (no YAML) ---
         Configuration conf = FlinkHelper.makeDefaultFlinkConfig();
         // --- Local filesystem targets for checkpoints/savepoints ---
         Path checkpoints = base.resolve("checkpoints");
-        Path savepoints  = base.resolve("savepoints");
+        Path savepoints = base.resolve("savepoints");
 
 //        conf.set(StateBackendOptions.STATE_BACKEND, "rocksdb");
         // Tell Flink we’re using filesystem checkpoint storage to a local path
         conf.set(CheckpointingOptions.CHECKPOINT_STORAGE, "filesystem");
         conf.set(CheckpointingOptions.CHECKPOINTS_DIRECTORY, checkpoints.toUri().toString()); // file:///C:/flink-tmp/checkpoints
-        conf.set(CheckpointingOptions.SAVEPOINT_DIRECTORY,   savepoints.toUri().toString());  // file:///C:/flink-tmp/savepoints
+        conf.set(CheckpointingOptions.SAVEPOINT_DIRECTORY, savepoints.toUri().toString());  // file:///C:/flink-tmp/savepoints
 
         StreamExecutionEnvironment env = StreamExecutionEnvironment.createLocalEnvironmentWithWebUI(conf);
         var appContainerDefn = AppContainerDefn.of(AppContainerFactoryForMapStringObject.class, "dev");
@@ -69,7 +69,7 @@ public final class PerfHarnessMain {
 
         // route to Kafka
         String brokers = appContainer.eventSourceConfig().bootstrapServer();
-        EnvelopeRouting.routeToKafka(pipe.values(), pipe.errors(), pipe.retries(), brokers, "processed", "errors", "retry");
+        EnvelopeRouting.routeToKafka(appContainerDefn, pipe.values(), pipe.errors(), pipe.retries(), brokers, "processed", "errors", "retry");
 
         pipe.env().execute("rmg-perf-harness");
     }

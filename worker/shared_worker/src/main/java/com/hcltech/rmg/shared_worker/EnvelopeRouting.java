@@ -1,5 +1,6 @@
 package com.hcltech.rmg.shared_worker;
 
+import com.hcltech.rmg.appcontainer.interfaces.AppContainerDefn;
 import com.hcltech.rmg.messages.AiFailureEnvelope;
 import com.hcltech.rmg.messages.ErrorEnvelope;
 import com.hcltech.rmg.messages.RetryEnvelope;
@@ -22,7 +23,8 @@ public final class EnvelopeRouting {
     /**
      * Preferred: pass producer config (e.g., SASL, linger.ms, acks).
      */
-    public static <CepState, Msg> void routeToKafka(
+    public static <EventSourceConfig, CepState, Msg, Schema, FlinkRT, FlinkFR, MetricsParam> void routeToKafka(
+            AppContainerDefn<EventSourceConfig, CepState, Msg, Schema, FlinkRT, FlinkFR, MetricsParam> defn,
             DataStream<ValueEnvelope<CepState, Msg>> values,
             DataStream<ErrorEnvelope<CepState, Msg>> errors,
             DataStream<RetryEnvelope<CepState, Msg>> retries,
@@ -31,10 +33,11 @@ public final class EnvelopeRouting {
             String errorsTopic,
             String retryTopic,
             Properties producerConfig) {
-        routeToKafkaWithFailures(values, errors, retries, null, new AtomicBoolean(false), brokers, processedTopic, errorsTopic, retryTopic, null, producerConfig);
+        routeToKafkaWithFailures(defn, values, errors, retries, null, new AtomicBoolean(false), brokers, processedTopic, errorsTopic, retryTopic, null, producerConfig);
     }
 
-    public static <CepState, Msg> void routeToKafkaWithFailures(
+    public static <EventSourceConfig, CepState, Msg, Schema, FlinkRT, FlinkFR, MetricsParam> void routeToKafkaWithFailures(
+            AppContainerDefn<EventSourceConfig, CepState, Msg, Schema, FlinkRT, FlinkFR, MetricsParam> defn,
             DataStream<ValueEnvelope<CepState, Msg>> values,
             DataStream<ErrorEnvelope<CepState, Msg>> errors,
             DataStream<RetryEnvelope<CepState, Msg>> retries,
@@ -50,7 +53,7 @@ public final class EnvelopeRouting {
         final Properties cfg = (producerConfig == null) ? new Properties() : producerConfig;
 
         values
-                .sinkTo(EnvelopeKafkaSinks.valueSink(brokers, processedTopic, cfg))
+                .sinkTo(EnvelopeKafkaSinks.valueSink(defn, brokers, processedTopic, cfg))
                 .name("values->kafka");
 
         errors
@@ -70,7 +73,8 @@ public final class EnvelopeRouting {
     /**
      * Convenience overload: no producer config.
      */
-    public static <CepState, Msg> void routeToKafka(
+    public static <EventSourceConfig, CepState, Msg, Schema, FlinkRT, FlinkFR, MetricsParam>  void routeToKafka(
+            AppContainerDefn<EventSourceConfig, CepState, Msg, Schema, FlinkRT, FlinkFR, MetricsParam> defn,
             DataStream<ValueEnvelope<CepState, Msg>> values,
             DataStream<ErrorEnvelope<CepState, Msg>> errors,
             DataStream<RetryEnvelope<CepState, Msg>> retries,
@@ -79,6 +83,6 @@ public final class EnvelopeRouting {
             String errorsTopic,
             String retryTopic
     ) {
-        routeToKafka(values, errors, retries, brokers, processedTopic, errorsTopic, retryTopic, new Properties());
+        routeToKafka(defn,values, errors, retries, brokers, processedTopic, errorsTopic, retryTopic, new Properties());
     }
 }

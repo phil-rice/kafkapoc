@@ -34,6 +34,7 @@ public record AppContainer<EventSourceConfig, CepState, Msg, Schema, FlinkRT, Fl
 
         //Flink
         CepStateTypeClass<CepState> cepStateTypeClass,
+        MsgTypeClass<Msg, List<String>> msgTypeClass,
         int checkPointIntervalMillis,
         Function<FlinkRT, CepEventLog> eventLogFromRuntimeContext,
         OrderPreservingAsyncExecutorConfig<Envelope<CepState, Msg>, Envelope<CepState, Msg>, FlinkFR> asyncCfg,
