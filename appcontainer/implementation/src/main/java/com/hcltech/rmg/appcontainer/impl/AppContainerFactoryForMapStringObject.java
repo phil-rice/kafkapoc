@@ -107,7 +107,7 @@ public final class AppContainerFactoryForMapStringObject implements IAppContaine
 
         return switch (id) {
             case "prod" -> basic(
-                    KafkaConfig::fromSystemProps,
+                    t -> KafkaConfig.fromSystemProps(t, true),
                     id,
                     "mper-input-events",//topic from system properties
                     ITimeService.real,
@@ -126,7 +126,7 @@ public final class AppContainerFactoryForMapStringObject implements IAppContaine
                     v -> v
             );
             case "dev" -> basic(
-                    KafkaConfig::fromSystemProps,
+                    t -> KafkaConfig.fromSystemProps(t, false),
                     id,
                     null,//topic from system properties
                     ITimeService.real,
@@ -146,7 +146,7 @@ public final class AppContainerFactoryForMapStringObject implements IAppContaine
                     v -> v
             );
             case "ai" -> basic(
-                    KafkaConfig::fromSystemProps,
+                    t -> KafkaConfig.fromSystemProps(t, false),
                     id,
                     "input-output-topic",
                     ITimeService.real,
@@ -167,7 +167,7 @@ public final class AppContainerFactoryForMapStringObject implements IAppContaine
                     AppContainerFactoryForMapStringObject::aiMessagePostParse
             );
             case "test" -> basic(
-                    KafkaConfig::fromSystemProps,
+                    t -> KafkaConfig.fromSystemProps(t, false),
                     id,
                     null,//topic from system properties
                     () -> 1_726_000_000_000L,

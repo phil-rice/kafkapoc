@@ -8,6 +8,7 @@ import java.util.Properties;
 
 public record KafkaConfig(
         String bootstrapServer,
+        boolean eventHub,
         String topic,            // usually 1, but allow many
         String groupId,
         int sourceParallelism,   // source parallelism (usually = #partitions)
@@ -17,15 +18,15 @@ public record KafkaConfig(
 ) {
 
 
-    public static KafkaConfig fromSystemProps() {
-        return fromProperties(System.getProperties(), null);
+    public static KafkaConfig fromSystemProps(boolean eventHub) {
+        return fromProperties(System.getProperties(), null, eventHub);
     }
 
-    public static KafkaConfig fromSystemProps(String topicOrNull) {
-        return fromProperties(System.getProperties(), topicOrNull);
+    public static KafkaConfig fromSystemProps(String topicOrNull, boolean eventHub) {
+        return fromProperties(System.getProperties(), topicOrNull, eventHub);
     }
 
-    public static KafkaConfig fromProperties(Properties p, String topicOrNull) {
+    public static KafkaConfig fromProperties(Properties p, String topicOrNull, boolean eventHub) {
         String bootstrap = p.getProperty("kafka.bootstrap", "localhost:9092");
         String topic = topicOrNull == null ? p.getProperty("kafka.topic", "test-topic") : topicOrNull;
         String groupId = p.getProperty("kafka.group.id", "g-" + System.currentTimeMillis());
@@ -48,6 +49,7 @@ public record KafkaConfig(
 
         return new KafkaConfig(
                 bootstrap,
+                eventHub,
                 topic,
                 groupId,
                 sourceParallelism,
