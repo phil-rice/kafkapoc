@@ -64,7 +64,7 @@ class CsvFromAzureEnrichmentExecutorTest {
 
         // Enrichment config
         CsvFromAzureEnrichment cfg = new CsvFromAzureEnrichment(
-                List.of(List.of("inp", "code")),
+                List.of(List.of("message", "code")),
                 List.of("enriched"),
                 az,
                 List.of("code"),
@@ -213,7 +213,7 @@ class CsvFromAzureEnrichmentExecutorTest {
                 "LOCAL_BLOB_SAS", null);
 
         CsvFromAzureEnrichment cfg = new CsvFromAzureEnrichment(
-                List.of(List.of("cep", "ctx", "code")),  // read from CEP state at ["ctx","code"]
+                List.of(List.of("cepState", "ctx", "code")),  // read from CEP state at ["ctx","code"]
                 List.of("enriched"),
                 az,
                 List.of("code"),

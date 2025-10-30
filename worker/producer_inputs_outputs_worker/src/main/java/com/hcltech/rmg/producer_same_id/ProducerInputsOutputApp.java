@@ -90,7 +90,7 @@ public class ProducerInputsOutputApp {
         long seed = Long.parseLong(get("generator.seed", applicationProperties, "12345"));
 
 
-        KafkaConfig kafkaConfigJustForCreateTopic = new KafkaConfig(bootstrap, topic, "groupIdIgnored", partitions, "earliest", Duration.ofSeconds(60), new Properties());
+        KafkaConfig kafkaConfigJustForCreateTopic = new KafkaConfig(bootstrap,false, topic, "groupIdIgnored", partitions, "earliest", Duration.ofSeconds(60), new Properties());
         if (KafkaTopics.ensureTopics(kafkaConfigJustForCreateTopic, List.of(topic), 12, (short) 1).valueOrThrow()) {//just sticking 12/3 in for tests
             System.out.println("Created " + topic);
         }

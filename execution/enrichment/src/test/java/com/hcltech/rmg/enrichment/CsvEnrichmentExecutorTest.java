@@ -56,7 +56,7 @@ class CsvEnrichmentExecutorTest {
     void enriches_withDotDelimiter_pureInpInputs() {
         // inputs: take a and b from message payload
         CsvEnrichment cfg = new CsvEnrichment(
-                List.of(List.of("inp", "a"), List.of("inp", "b")),
+                List.of(List.of("message", "a"), List.of("message", "b")),
                 List.of("enriched"),
                 BASE + "sample.csv",
                 List.of("a", "b"),
@@ -83,7 +83,7 @@ class CsvEnrichmentExecutorTest {
     void enriches_withMixed_CepAndInpInputs() {
         // inputs: 'a' from CEP state, 'b' from message payload
         CsvEnrichment cfg = new CsvEnrichment(
-                List.of(List.of("cep", "a"), List.of("inp", "b")),
+                List.of(List.of("cepState", "a"), List.of("message", "b")),
                 List.of("enriched"),
                 BASE + "sample.csv",
                 List.of("a", "b"),
@@ -109,7 +109,7 @@ class CsvEnrichmentExecutorTest {
     void enriches_withDashDelimiter_pureCepInputs() {
         // inputs: both from CEP state; delimiter is '-'
         CsvEnrichment cfg = new CsvEnrichment(
-                List.of(List.of("cep", "a"), List.of("cep", "b")),
+                List.of(List.of("cepState", "a"), List.of("cepState", "b")),
                 List.of("enriched"),
                 BASE + "sample.csv",
                 List.of("a", "b"),
@@ -133,7 +133,7 @@ class CsvEnrichmentExecutorTest {
     @Test
     void returnsNull_whenRequiredInpMissing() {
         CsvEnrichment cfg = new CsvEnrichment(
-                List.of(List.of("inp", "a"), List.of("inp", "b")),
+                List.of(List.of("message", "a"), List.of("message", "b")),
                 List.of("enriched"),
                 BASE + "sample.csv",
                 List.of("a", "b"),
@@ -154,7 +154,7 @@ class CsvEnrichmentExecutorTest {
     @Test
     void returnsNull_whenCepRequestedButStateIsNull() {
         CsvEnrichment cfg = new CsvEnrichment(
-                List.of(List.of("cep", "a"), List.of("inp", "b")),
+                List.of(List.of("cepState", "a"), List.of("message", "b")),
                 List.of("enriched"),
                 BASE + "sample.csv",
                 List.of("a", "b"),
@@ -174,7 +174,7 @@ class CsvEnrichmentExecutorTest {
     @Test
     void returnsNull_whenNoMatchingRowInCsv() {
         CsvEnrichment cfg = new CsvEnrichment(
-                List.of(List.of("inp", "a"), List.of("inp", "b")),
+                List.of(List.of("message", "a"), List.of("message", "b")),
                 List.of("enriched"),
                 BASE + "sample.csv",
                 List.of("a", "b"),
@@ -196,7 +196,7 @@ class CsvEnrichmentExecutorTest {
     void returnsNull_whenNoCsvResourceConfigured() {
         // No csvFileName => executor has nothing to load; by design it returns null.
         CsvEnrichment cfg = new CsvEnrichment(
-                List.of(List.of("inp", "a"), List.of("inp", "b")),
+                List.of(List.of("message", "a"), List.of("message", "b")),
                 List.of("enriched"),
                 null,               // no resource
                 List.of("a", "b"),
@@ -217,7 +217,7 @@ class CsvEnrichmentExecutorTest {
     @Test
     void repeatedCalls_useCachedLookupForSameConfigRecord() {
         CsvEnrichment cfg = new CsvEnrichment(
-                List.of(List.of("inp", "a"), List.of("inp", "b")),
+                List.of(List.of("message", "a"), List.of("message", "b")),
                 List.of("enriched"),
                 BASE + "sample.csv",
                 List.of("a", "b"),
