@@ -1,0 +1,10 @@
+module:
+  tracking:
+    arrival:
+      logic:
+        type: celinline
+        file: 'cel/track.cel' # The name of a file that holds cel logic for arrival billing    arrival:
+    departure:
+      logic:
+        type: celFile
+        file: 'cel/track.cel' # The name of a file that holds cel logic for arrival billing

@@ -1,0 +1,16 @@
+module:
+  billing:
+    departure:
+      logic:
+        - type: celInline
+          inline: |
+            input.eventType == "departed"
+              ? [{
+                  type: "billing",
+                  accountId: input.accountId,
+                  amountGBP: 0.18,
+                  code: "LTR-BASIC",
+                  description: "Bulk letter carriage (contract rate)",
+                  taxable: true
+                }]
+              : null

@@ -1,0 +1,75 @@
+package com.hcltech.rmg.common.async;
+
+import java.util.Objects;
+
+/**
+ * Array-backed lanes holder; power-of-two laneCount and laneDepth.
+ * Uses a Correlator to route items: index = correlator.laneHash(t) & (laneCount - 1).
+ * Single-threaded usage only (operator thread).
+ */
+public final class Lanes<T> implements ILanes<T>, ILanesTestHooks<T> ,ILanesIntrospect<T>{
+
+    private final Correlator<T> correlator;
+    private final ILane<T>[] lanes;
+    private final int laneCount;
+    private final int laneMask;
+    private final int laneDepth;
+
+    @SuppressWarnings("unchecked")
+    public Lanes(int laneCount, int laneDepth, Correlator<T> correlator) {
+        if (laneCount <= 0) throw new IllegalArgumentException("laneCount must be > 0");
+        if (laneDepth <= 0) throw new IllegalArgumentException("laneDepth must be > 0");
+        if (Integer.bitCount(laneCount) != 1) throw new IllegalArgumentException("laneCount must be a power of two");
+        if (Integer.bitCount(laneDepth) != 1) throw new IllegalArgumentException("laneDepth must be a power of two");
+        this.correlator = Objects.requireNonNull(correlator, "correlator");
+
+        this.laneCount = laneCount;
+        this.laneMask = laneCount - 1;
+        this.laneDepth = laneDepth;
+
+        ILane<T>[] arr = (ILane<T>[]) new ILane[laneCount];
+        for (int i = 0; i < laneCount; i++) {
+            arr[i] = new Lane<>(laneDepth);
+        }
+        this.lanes = arr;
+    }
+
+    // ------------ ILanes (prod) ------------
+
+    @Override
+    public ILane<T> lane(T t) {
+        int idx = correlator.laneHash(t) & laneMask;
+        return lanes[idx];
+    }
+
+    @Override
+    public int count() {
+        return laneCount;
+    }
+
+    // ------------ ILanesTestHooks (tests) ------------
+
+    @Override
+    public ILane<T> _laneAt(int index) {
+        return lanes[index];
+    }
+
+    @Override
+    public int _laneMask() {
+        return laneMask;
+    }
+
+    @Override
+    public int _laneDepth() {
+        return laneDepth;
+    }
+
+    @Override
+    public int _laneCount() {
+        return laneCount;
+    }
+    @Override
+    public void forEachLane(java.util.function.Consumer<ILane<T>> consumer) {
+        for (ILane<T> l : lanes) consumer.accept(l);
+    }
+}

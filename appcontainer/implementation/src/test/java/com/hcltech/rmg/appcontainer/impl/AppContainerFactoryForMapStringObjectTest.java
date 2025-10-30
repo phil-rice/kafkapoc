@@ -1,0 +1,330 @@
+package com.hcltech.rmg.appcontainer.impl;
+
+import com.hcltech.rmg.appcontainer.interfaces.AppContainer;
+import com.hcltech.rmg.common.errorsor.ErrorsOr;
+import com.hcltech.rmg.config.config.RootConfig;
+import com.hcltech.rmg.flink_metrics.FlinkMetricsParams;
+import com.hcltech.rmg.kafkaconfig.KafkaConfig;
+import com.hcltech.rmg.messages.Envelope;
+import org.apache.flink.api.common.functions.RuntimeContext;
+import org.apache.flink.util.Collector;
+import org.codehaus.stax2.validation.XMLValidationSchema;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.DisplayName;
+import org.junit.jupiter.api.Test;
+
+import java.util.List;
+import java.util.Map;
+import java.util.Properties;
+import java.util.Set;
+import java.util.concurrent.*;
+import java.util.stream.IntStream;
+
+import static org.junit.jupiter.api.Assertions.*;
+
+public final class AppContainerFactoryForMapStringObjectTest {
+
+    private static final String EVENT_HUB_CONNECTION_PROP = "eventhub.connection.string";
+    private static String originalEventHubConnection;
+
+    @BeforeAll
+    static void beforeAll() {
+        originalEventHubConnection = System.getProperty(EVENT_HUB_CONNECTION_PROP);
+        System.setProperty(EVENT_HUB_CONNECTION_PROP,
+                "Endpoint=sb://test-namespace.servicebus.windows.net/;SharedAccessKeyName=RootManageSharedAccessKey;SharedAccessKey=TEST_KEY;EntityPath=mper-input-events");
+    }
+
+    @AfterAll
+    static void afterAll() {
+        if (originalEventHubConnection == null) {
+            System.clearProperty(EVENT_HUB_CONNECTION_PROP);
+        } else {
+            System.setProperty(EVENT_HUB_CONNECTION_PROP, originalEventHubConnection);
+        }
+    }
+
+    @AfterEach
+    void tearDown() {
+        AppContainerFactoryForMapStringObject.clearCache();
+    }
+
+    // --- Core resolve/identity tests ----------------------------------------
+
+    @Test
+    @DisplayName("resolve(prod): returns same singleton for same id")
+    void resolve_sameId_sameInstance() {
+        AppContainer<?, ?, ?, ?, ?, ?, ?> a =
+                AppContainerFactoryForMapStringObject.resolve("prod").valueOrThrow();
+        AppContainer<?, ?, ?, ?, ?, ?, ?> b =
+                AppContainerFactoryForMapStringObject.resolve("prod").valueOrThrow();
+        assertSame(a, b, "Expected same cached instance for the same id");
+    }
+
+    @Test
+    @DisplayName("resolve: id normalization (trim + lowercase)")
+    void resolve_normalizesId() {
+        AppContainer<?, ?, ?, ?, ?, ?, ?> a =
+                AppContainerFactoryForMapStringObject.resolve(" prod ").valueOrThrow();
+        AppContainer<?, ?, ?, ?, ?, ?, ?> b =
+                AppContainerFactoryForMapStringObject.resolve("PROD").valueOrThrow();
+        assertSame(a, b, "Ids differing only by case/whitespace should map to same instance");
+    }
+
+    @Test
+    @DisplayName("resolve: different ids yield different instances")
+    void resolve_differentIds_differentInstances() {
+        AppContainer<?, ?, ?, ?, ?, ?, ?> prod =
+                AppContainerFactoryForMapStringObject.resolve("prod").valueOrThrow();
+        AppContainer<?, ?, ?, ?, ?, ?, ?> test =
+                AppContainerFactoryForMapStringObject.resolve("test").valueOrThrow();
+        assertNotSame(prod, test, "Different env ids should not return the same instance");
+    }
+
+    // --- prod environment characteristics -----------------------------------
+
+    @Test
+    @DisplayName("prod: timeService is close to system clock (nanos)")
+    void prod_timeService_closeToNow() {
+        AppContainer<?, ?, ?, ?, ?, ?, ?> prod =
+                AppContainerFactoryForMapStringObject.resolve("prod").valueOrThrow();
+
+        long before = System.nanoTime();
+        long t = prod.timeService().currentTimeNanos();
+        long after = System.nanoTime();
+
+        long toleranceNanos = 5_000_000L; // 5 milliseconds in nanoseconds
+        assertTrue(
+                t >= before - toleranceNanos && t <= after + toleranceNanos,
+                "prod timeService should be within " + (toleranceNanos / 1_000_000) + "ms of System.nanoTime()"
+        );
+    }
+
+    @Test
+    @DisplayName("prod: keyPath is hardcoded")
+    void prod_keyPath_isHardcoded() {
+        AppContainer<?, ?, ?, ?, ?, ?, ?> prod =
+                AppContainerFactoryForMapStringObject.resolve("prod").valueOrThrow();
+        List<String> path = prod.keyPath();
+        List<String> expected = List.of("domainId");
+        assertEquals(expected, path, "prod keyPath should be the hardcoded default");
+        assertEquals(expected, AppContainerFactoryForMapStringObject.resolve("PROD").valueOrThrow().keyPath());
+    }
+
+    @Test
+    @DisplayName("prod: uuid generator yields different values across calls")
+    void prod_uuid_isRandomEnough() {
+        AppContainer<?, ?, ?, ?, ?, ?, ?> prod =
+                AppContainerFactoryForMapStringObject.resolve("prod").valueOrThrow();
+        String u1 = prod.uuid().generate();
+        String u2 = prod.uuid().generate();
+        assertNotNull(u1);
+        assertNotNull(u2);
+        assertNotEquals(u1, u2, "Two consecutive UUIDs should differ");
+    }
+
+    @Test
+    @DisplayName("XML: xml.extractId works on a simple path")
+    void prod_xml_services_present_and_work() {
+        AppContainer<?, ?, ?, ?, ?, ?, ?> prod =
+                AppContainerFactoryForMapStringObject.resolve("prod").valueOrThrow();
+        var xml = prod.xml();
+        assertNotNull(xml, "xml typeclass should be provided");
+
+        ErrorsOr<String> id = xml.extractId(
+                "<Envelope><Body><Order><Id>ABC-123</Id></Order></Body></Envelope>",
+                List.of("Envelope", "Body", "Order", "Id")
+        );
+        assertTrue(id.isValue(), "Expected xml.extractId to succeed on simple XML");
+        assertEquals("ABC-123", id.valueOrThrow());
+    }
+
+    @Test
+    @DisplayName("prod: eventSourceConfig (Kafka) is constructed")
+    void prod_eventSourceConfig_present() {
+        AppContainer<?, ?, ?, ?, ?, ?, ?> prod =
+                AppContainerFactoryForMapStringObject.resolve("prod").valueOrThrow();
+        KafkaConfig cfg = (KafkaConfig) prod.eventSourceConfig(); // safe cast by contract
+        assertNotNull(cfg, "KafkaConfig should be present");
+
+        assertNotNull(cfg.bootstrapServer(), "bootstrapServer should be set");
+        assertNotNull(cfg.topic(), "topic should be set");
+        assertFalse(cfg.topic().isBlank(), "topic should not be blank");
+        assertEquals("test-namespace.servicebus.windows.net:9093", cfg.bootstrapServer());
+        assertEquals("mper-input-events", cfg.topic());
+
+        assertNotNull(cfg.startingOffsets(), "startingOffsets should be set");
+        assertTrue(
+                "earliest".equals(cfg.startingOffsets()) || "latest".equals(cfg.startingOffsets()),
+                "startingOffsets should be 'earliest' or 'latest'"
+        );
+
+        assertNotNull(cfg.toOffsetsInitializer(), "toOffsetsInitializer should map to a valid OffsetsInitializer");
+    }
+
+    @Test
+    @DisplayName("prod: Azure Event Hub SASL configuration is applied")
+    void prod_eventHubSaslConfiguration_applied() {
+        AppContainer<?, ?, ?, ?, ?, ?, ?> prod =
+                AppContainerFactoryForMapStringObject.resolve("prod").valueOrThrow();
+        KafkaConfig cfg = (KafkaConfig) prod.eventSourceConfig();
+        Properties extra = cfg.extra();
+
+        assertEquals("SASL_SSL", extra.getProperty("security.protocol"));
+        assertEquals("PLAIN", extra.getProperty("sasl.mechanism"));
+        assertEquals("$ConnectionString", extra.getProperty("sasl.username"));
+        assertEquals(System.getProperty(EVENT_HUB_CONNECTION_PROP), extra.getProperty("sasl.password"));
+        String jaas = extra.getProperty("sasl.jaas.config");
+        assertNotNull(jaas);
+        assertTrue(jaas.contains("PlainLoginModule"));
+        assertTrue(jaas.contains("$ConnectionString"));
+        assertEquals(System.getProperty(EVENT_HUB_CONNECTION_PROP), extra.getProperty("eventhub.connection.string"));
+        assertEquals("sb://test-namespace.servicebus.windows.net/", extra.getProperty("eventhub.endpoint"));
+        assertEquals("test-namespace.servicebus.windows.net:9093", extra.getProperty("eventhub.bootstrap.server"));
+        assertEquals("test-namespace", extra.getProperty("eventhub.namespace"));
+        assertEquals("mper-input-events", extra.getProperty("eventhub.entity.path"));
+        assertEquals("test-namespace.servicebus.windows.net", extra.getProperty("eventhub.host"));
+        assertEquals("RootManageSharedAccessKey", extra.getProperty("eventhub.shared.access.key.name"));
+        assertEquals("TEST_KEY", extra.getProperty("eventhub.shared.access.key"));
+    }
+
+    @Test
+    @DisplayName("prod: rootConfig is loaded, schema map contains schema, and env marker is prod")
+    void prod_rootConfig_loaded() {
+        AppContainer<?, ?, ?, ?, ?, ?, ?> prod =
+                AppContainerFactoryForMapStringObject.resolve("prod").valueOrThrow();
+        RootConfig rc = prod.rootConfig();
+        assertNotNull(rc, "rootConfig should be loaded for prod");
+
+        String schemaName = rc.xmlSchemaPath();
+        if (schemaName != null && !schemaName.isBlank()) {
+            assertTrue(prod.nameToSchemaMap().containsKey(schemaName),
+                    "nameToSchemaMap should contain " + schemaName);
+        }
+
+        var params = rc.parameterConfig().parameters();
+        assertFalse(params.isEmpty());
+        assertEquals("prod", params.get(0).defaultValue(), "prod env should default to 'prod'");
+    }
+
+//    @Test
+
+    @DisplayName("prod: extractors are wired and non-null")
+    void prod_extractors_present() {
+        AppContainer<KafkaConfig, Map<String, Object>, Map<String, Object>, XMLValidationSchema, RuntimeContext, ?, FlinkMetricsParams> prod =
+                AppContainerFactoryForMapStringObject.resolve("prod").valueOrThrow();
+
+        assertNotNull(prod.eventTypeExtractor(), "eventTypeExtractor should be present");
+
+        // prod extractor expects ["msg","eventType"]
+        String evt = prod.eventTypeExtractor().extractEventType(
+                Map.of("msg", Map.of("eventType", "Arrived"))
+        );
+        assertEquals("Arrived", evt);
+
+        assertNotNull(prod.domainTypeExtractor(), "domainTypeExtractor should be present");
+        String dom = prod.domainTypeExtractor().extractDomainType(Map.of());
+        assertEquals("parcel", dom);
+    }
+
+    // --- test environment characteristics -----------------------------------
+
+    @Test
+    @DisplayName("test env: deterministic defaults are returned")
+    void test_env_defaults() {
+        AppContainer<?, ?, ?, ?, ?, ?, ?> test =
+                AppContainerFactoryForMapStringObject.resolve("test").valueOrThrow();
+        assertEquals(1_726_000_000_000L, test.timeService().currentTimeNanos());
+        assertEquals("11111111-2222-3333-4444-555555555555", test.uuid().generate());
+        assertNotNull(test.xml());
+    }
+
+    @Test
+    @DisplayName("test env: eventSourceConfig (Kafka) is constructed")
+    void test_eventSourceConfig_present() {
+        AppContainer<?, ?, ?, ?, ?, ?, ?> test =
+                AppContainerFactoryForMapStringObject.resolve("test").valueOrThrow();
+        KafkaConfig cfg = (KafkaConfig) test.eventSourceConfig(); // safe cast by contract
+        assertNotNull(cfg, "KafkaConfig should be present");
+
+        assertNotNull(cfg.bootstrapServer(), "bootstrapServer should be set");
+        assertNotNull(cfg.topic(), "topic should be set");
+        assertFalse(cfg.topic().isBlank(), "topic should not be blank");
+
+        assertNotNull(cfg.startingOffsets(), "startingOffsets should be set");
+        assertTrue(
+                "earliest".equals(cfg.startingOffsets()) || "latest".equals(cfg.startingOffsets()),
+                "startingOffsets should be 'earliest' or 'latest'"
+        );
+
+        assertNotNull(cfg.toOffsetsInitializer(), "toOffsetsInitializer should map to a valid OffsetsInitializer");
+    }
+
+    @Test
+    @DisplayName("test env: rootConfig is loaded from classpath and env marker is dev")
+    void test_rootConfig_loaded() {
+        AppContainer<?, ?, ?, ?, ?, ?, ?> test =
+                AppContainerFactoryForMapStringObject.resolve("test").valueOrThrow();
+        RootConfig rc = test.rootConfig();
+        assertNotNull(rc, "rootConfig should be loaded for test");
+
+        var params = rc.parameterConfig().parameters();
+        assertFalse(params.isEmpty());
+        assertEquals("dev", params.get(0).defaultValue(), "test env should default to 'dev'");
+    }
+
+    // --- concurrency / lifecycle --------------------------------------------
+
+    @Test
+    @DisplayName("concurrency: resolve is thread-safe and returns the same instance")
+    void resolve_threadSafe_singletonPerId() throws Exception {
+        int threads = Math.max(4, Runtime.getRuntime().availableProcessors());
+        ExecutorService pool = Executors.newFixedThreadPool(threads);
+        try {
+            Set<AppContainer<?, ?, ?, ?, ?, ?, ?>> results = ConcurrentHashMap.newKeySet();
+            CountDownLatch start = new CountDownLatch(1);
+
+            var tasks = IntStream.range(0, 64).mapToObj(i -> pool.submit(() -> {
+                start.await();
+                return AppContainerFactoryForMapStringObject.resolve("prod").valueOrThrow();
+            })).toList();
+
+            start.countDown();
+            for (Future<AppContainer<KafkaConfig, Map<String, Object>, Map<String, Object>, XMLValidationSchema, RuntimeContext, Collector<Envelope<Map<String, Object>, Map<String, Object>>>, FlinkMetricsParams>> f : tasks) {
+                results.add(f.get(3, TimeUnit.SECONDS));
+            }
+
+            assertEquals(1, results.size(), "All concurrent resolves for same id should return the same instance");
+        } finally {
+            pool.shutdownNow();
+            pool.awaitTermination(2, TimeUnit.SECONDS);
+        }
+    }
+
+    @Test
+    @DisplayName("clearCache: clears cache; next resolve produces a fresh instance")
+    void clearCache_createsFreshInstance() {
+        AppContainer<?, ?, ?, ?, ?, ?, ?> a =
+                AppContainerFactoryForMapStringObject.resolve("prod",null).valueOrThrow();
+        AppContainerFactoryForMapStringObject.clearCache();
+        AppContainer<?, ?, ?, ?, ?, ?, ?> b =
+                AppContainerFactoryForMapStringObject.resolve("prod",null).valueOrThrow();
+        assertNotSame(a, b, "After clearCache, a fresh instance should be created on next resolve");
+    }
+
+    // --- argument validation / error paths -----------------------------------
+
+    @Test
+    @DisplayName("resolve: null id throws NPE")
+    void resolve_nullId_throws() {
+        assertThrows(NullPointerException.class, () -> AppContainerFactoryForMapStringObject.resolve(null));
+    }
+
+    @Test
+    @DisplayName("resolve: unknown id yields ErrorsOr.error")
+    void resolve_unknown_returnsError() {
+        var errors = AppContainerFactoryForMapStringObject.resolve("nope").errorsOrThrow();
+        assertEquals(List.of("Unknown container id: nope"), errors);
+    }
+}

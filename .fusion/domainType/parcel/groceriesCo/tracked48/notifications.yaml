@@ -1,0 +1,14 @@
+module:
+  notification:
+    cancelled:
+      logic:
+        - type: celInline
+          inline: |
+            input.eventType == "cancelled"
+              ? [{
+                  type: "notification",
+                  channel: "email",
+                  to: "sender",
+                  message: "Shipment cancelled before pickup. No movement charges applied."
+                }]
+              : null

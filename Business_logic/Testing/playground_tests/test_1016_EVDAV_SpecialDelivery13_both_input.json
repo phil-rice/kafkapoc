@@ -1,0 +1,75 @@
+{
+  "message.MPE": {
+    "mailPiece": {
+      "mailPieceBarcode": {
+        "royalMailSegment": {
+          "mailTypeCode": "A",
+          "UPUCountry": "JGB",
+          "informationCode": "8",
+          "versionId": "2",
+          "mailItemFormatCode": "15",
+          "mailClassCode": "F"
+        },
+        "channelSegment": {
+          "uniqueItemId": "11000000001016001091111",
+          "weightCode": "1",
+          "pricePaid": "123",
+          "barcodeCreationDate": "2024-10-24",
+          "productId": "103",
+          "address": {
+            "buildingNumber": "1"
+          },
+          "destinationPostcodeDPS": {
+            "postcode": "EC1A1BB"
+          },
+          "mailPieceWeight": "1",
+          "UPUTrackingNumber": "YA000001016GB",
+          "destinationCountry": "GB",
+          "requiredAtDeliveryCode": "S"
+        }
+      }
+    },
+    "manualScan": {
+      "messageId": "msg-1016",
+      "userId": "user1016",
+      "eventTimestamp": "2024-10-24T19:35:51+01:00",
+      "transmissionCompleteTimestamp": "2024-10-24T19:35:59+01:00",
+      "auxiliaryData": {
+        "data": [
+          {
+            "name": "RECIPIENT_EMAILID",
+            "value": "test1016@example.com"
+          },
+          {
+            "name": "RECIPIENT_MOBILENO",
+            "value": "07088111016"
+          }
+        ]
+      },
+      "trackEventId": "5934652298366588",
+      "scanLocation": {
+        "altitude": "0.0",
+        "longitude": "0.0",
+        "latitude": "0.0"
+      },
+      "scanTimestamp": "2024-10-24T19:35:51+01:00",
+      "deviceId": "4789568638361016",
+      "RMGLocation": {
+        "functionalLocationId": "356",
+        "siteId": "000175"
+      },
+      "trackedEventCode": "EVDAV",
+      "transmissionTimestamp": "2024-10-24T19:35:59+01:00",
+      "eventReceivedTimestamp": "2024-10-24T19:35:59+01:00",
+      "eventReason": "11",
+      "manualScanIndicator": "false",
+      "workProcessCode": "100"
+    }
+  },
+  "enrichment": {
+    "productCategory": {
+      "productCategory": "SpecialDelivery13"
+    },
+    "postcodeRegion": "London"
+  }
+}

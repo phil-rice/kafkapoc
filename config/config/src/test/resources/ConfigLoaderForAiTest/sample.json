@@ -1,0 +1,53 @@
+{
+  "config": {
+    "param1a:param2a": {
+      "events": {
+        "test-event": {
+          "bizlogic": {
+            "notification": {
+              "type": "cel",
+              "cel": "{'out': [message]}"
+            }
+          }
+        }
+      }
+    },
+    "param1a:param2b": {
+      "events": {
+        "test-event": {
+          "bizlogic": {
+            "notification": {
+              "type": "cel",
+              "cel": "{'out': [message]}"
+            }
+          }
+        }
+      }
+    },
+    "param1b:param2a": {
+      "events": {
+        "test-event": {
+          "bizlogic": {
+            "notification": {
+              "type": "cel",
+              "cel": "{'out': [message]}"
+            }
+          }
+        }
+      }
+    }
+  },
+  "cel": "the projection",
+  "rootConfig": {
+    "parameterConfig": {
+      "parameters": [
+        {
+          "legalValue": ["A", "B", "C"],
+          "defaultValue": "A",
+          "description": "example parameter"
+        }
+      ]
+    },
+    "xmlSchemaPath": "/xsd/schema.xsd"
+  }
+}

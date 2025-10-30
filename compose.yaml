@@ -1,0 +1,66 @@
+version: "3.8"
+
+services:
+  kafka:
+    image: apache/kafka:4.0.0
+    container_name: kafka
+    ports:
+      - "9092:9092"  # host apps use localhost:9092
+    environment:
+      # Single-node KRaft (no ZooKeeper)
+      KAFKA_PROCESS_ROLES: broker,controller
+      KAFKA_NODE_ID: 1
+      KAFKA_LISTENERS: CONTROLLER://:9091,HOST://:9092,DOCKER://:9093
+      KAFKA_ADVERTISED_LISTENERS: HOST://localhost:9092,DOCKER://kafka:9093
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: CONTROLLER:PLAINTEXT,HOST:PLAINTEXT,DOCKER:PLAINTEXT
+      KAFKA_CONTROLLER_LISTENER_NAMES: CONTROLLER
+      KAFKA_CONTROLLER_QUORUM_VOTERS: 1@kafka:9091
+      KAFKA_INTER_BROKER_LISTENER_NAME: DOCKER
+      # Persist logs in the mounted volume
+      KAFKA_LOG_DIRS: /var/lib/kafka/data
+      # Dev-friendly single broker
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
+      KAFKA_AUTO_CREATE_TOPICS_ENABLE: "true"
+    volumes:
+      - kafka-data:/var/lib/kafka/data
+    healthcheck:
+      test: [ "CMD", "/opt/kafka/bin/kafka-broker-api-versions.sh", "--bootstrap-server", "localhost:9093" ]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+
+  rp-console:
+    image: redpandadata/console:latest
+    container_name: rp-console
+    ports:
+      - "8081:8080"  # UI at http://localhost:8081
+    environment:
+      KAFKA_BROKERS: "kafka:9093"
+    depends_on:
+      kafka:
+        condition: service_healthy
+    restart: unless-stopped
+
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: prometheus
+    ports:
+      - "9090:9090"  # UI: http://localhost:9090/graph
+    volumes:
+      - ./prometheus.yml:/etc/prometheus/prometheus.yml:ro
+    command:
+      - --config.file=/etc/prometheus/prometheus.yml
+      - --web.enable-lifecycle      # allows POST /-/reload if you edit config
+    restart: unless-stopped
+    extra_hosts:
+      - "host.docker.internal:host-gateway"   # makes host visible to Prometheus
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:9090/-/ready"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+
+volumes:
+  kafka-data:

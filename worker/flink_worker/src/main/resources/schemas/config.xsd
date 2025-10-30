@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema" elementFormDefault="qualified">
+
+    <!-- Root element for TestDomainMessage -->
+    <xs:element name="msg">
+        <xs:complexType>
+            <xs:sequence>
+                <xs:element name="domainId"   type="xs:string"/>
+                <xs:element name="eventType"  type="xs:string"/>
+                <xs:element name="productType" type="xs:string"/>
+                <xs:element name="company"     type="xs:string"/>
+                <!-- Use xs:long to match Java long; change to xs:integer if you prefer arbitrary precision -->
+                <xs:element name="count"      type="xs:long"/>
+            </xs:sequence>
+        </xs:complexType>
+    </xs:element>
+
+</xs:schema>

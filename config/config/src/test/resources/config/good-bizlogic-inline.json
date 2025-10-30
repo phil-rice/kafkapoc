@@ -1,0 +1,12 @@
+{
+  "events": {
+    "E": {
+      "bizlogic": {
+        "notification": {
+          "type": "cel",
+          "cel": "true?[]:null"
+        }
+      }
+    }
+  }
+}

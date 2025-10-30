@@ -1,0 +1,16 @@
+module:
+  billing:
+    cancelled:
+      logic:
+        - type: celInline
+          inline: |
+            input.eventType == "cancelled"
+              ? [{
+                  type: "billing",
+                  accountId: input.accountId,
+                  amountGBP: 0.05,
+                  code: "CXL-RSTK",
+                  description: "Restocking/stamps reversal handling",
+                  taxable: true
+                }]
+              : null

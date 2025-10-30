@@ -1,0 +1,13 @@
+{
+  "events": {
+    "readyForDelivery": {
+      "validation": {
+        "notification": {
+          "type": "cel",
+          "cel": "somecel",
+          "unknown": "something"
+        }
+      }
+    }
+  }
+}

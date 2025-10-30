@@ -1,0 +1,4 @@
+{
+   "type": "billing",
+  "amount": {{ msg.weight_kg }} * 2.5 + ( {{msg.express}} ? 500 : 0)
+}

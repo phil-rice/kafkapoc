@@ -1,0 +1,23 @@
+# A file in which we define the tasks that are needed
+# We can have one or many files, but this is meant to be the main one for tasks.
+# We just define the interface. Not the implementation (tasks are implemented by services
+
+tasks:
+  send_notification:
+    description: |
+      This task sends a notification to the recipient. It is used to notify the recipient of the status of their parcel, vehicle or other item.
+      The notification can be sent via email, SMS, or other means.
+    service: send_notification_default  # This is the default service that we will call to send the notification
+    params: # These are the parameters that we pass to the service. Note that these are default values and can be overridden at point of usage, or by geo/product/domain etc
+      recipient_email: "{{ recipient_email }}"  # This is the email of the recipient. It is taken from the message or CEP state
+      recipient_name: "{{ recipient_name }}"  # This is the name of the recipient. It is taken from the message or CEP state
+      recipient_phone: "{{ recipient_phone }}"  # This is the phone number of the recipient. It is taken from the message or CEP state
+      recipient_address: "{{ recipient_address }}"  # This is the address of the recipient. It is taken from the message or CEP state ... in practice probably several lines
+
+  look_up_address:
+    description: |
+      This task looks up the address of the recipient. It will be used to enrich the message with the address of the recipient.
+    service: look_up_address_default  # This is the default service that we will call to look up the address of the recipient
+    params: # These are the parameters that we pass to the service. Note that these are default values and can be overridden at point of usage, or by geo/product/domain etc
+      recipient_address: "{{ recipient_address }}"  # This is the address of the recipient. It is taken from the message or CEP state ... in practice probably several lines
+

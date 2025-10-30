@@ -1,0 +1,16 @@
+module:
+  billing:
+    arrival:
+      logic:
+        - type: celInline
+          inline: |
+            input.eventType == "arrived"
+              ? [{
+                  type: "billing",
+                  accountId: input.accountId,
+                  amountGBP: 25,
+                  code: "BULKY-HND",
+                  description: "Bulky handling fee (furniture)",
+                  taxable: true
+                }]
+              : null

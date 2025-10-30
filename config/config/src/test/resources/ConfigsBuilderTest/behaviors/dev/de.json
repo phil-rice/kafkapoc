@@ -1,0 +1,10 @@
+{
+  "events": {
+    "evt-dev-de": {
+      "validation": {},
+      "transformation": {},
+      "enrichment": {},
+      "bizlogic": {}
+    }
+  }
+}

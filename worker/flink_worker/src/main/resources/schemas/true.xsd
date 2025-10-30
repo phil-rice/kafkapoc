@@ -1,0 +1,228 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- mpe_input_schema.xsd
+     XSD for the input scan MPE files produced by generate_rm_full_dataset.py
+-->
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
+           targetNamespace="http://www.royalmailgroup.com/cm/ptpMailPiece/V1"
+           xmlns:ptp="http://www.royalmailgroup.com/cm/ptpMailPiece/V1"
+           elementFormDefault="qualified"
+           attributeFormDefault="unqualified">
+
+    <!-- Simple types -->
+
+    <!-- uniqueItemId: either 11 digits OR 21-digit account format: 11 + 10 digits (account) + 001091111 -->
+    <xs:simpleType name="uniqueItemIdType">
+        <xs:union memberTypes="uid11 uid21"/>
+    </xs:simpleType>
+
+    <xs:simpleType name="uid11">
+        <xs:restriction base="xs:string">
+            <xs:pattern value="\d{11}"/>
+        </xs:restriction>
+    </xs:simpleType>
+
+    <xs:simpleType name="uid21">
+        <xs:restriction base="xs:string">
+            <xs:pattern value="11\d{10}001091111"/>
+        </xs:restriction>
+    </xs:simpleType>
+
+    <!-- UPU tracking number: YA + 9 digits + GB -->
+    <xs:simpleType name="upuTrackingType">
+        <xs:restriction base="xs:string">
+            <xs:pattern value="YA\d{9}GB"/>
+        </xs:restriction>
+    </xs:simpleType>
+
+    <!-- postcode (simplified): uppercase alphanum 5..7 chars (no space) -->
+    <xs:simpleType name="postcodeType">
+        <xs:restriction base="xs:string">
+            <xs:pattern value="[A-Z0-9]{5,7}"/>
+        </xs:restriction>
+    </xs:simpleType>
+
+    <!-- event codes allowed in inputs -->
+    <xs:simpleType name="trackedEventCodeType">
+        <xs:restriction base="xs:string">
+            <xs:enumeration value="EVDAV"/>
+            <xs:enumeration value="EVIMC"/>
+            <xs:enumeration value="EVGPD"/>
+            <xs:enumeration value="ENKDN"/>
+        </xs:restriction>
+    </xs:simpleType>
+
+    <!-- work process codes -->
+    <xs:simpleType name="workProcessCodeType">
+        <xs:restriction base="xs:integer">
+            <xs:enumeration value="100"/>
+            <xs:enumeration value="200"/>
+            <xs:enumeration value="300"/>
+            <xs:enumeration value="400"/>
+        </xs:restriction>
+    </xs:simpleType>
+
+    <!-- boolean for manualScanIndicator (allow true/false/textual) -->
+    <xs:simpleType name="booleanText">
+        <xs:restriction base="xs:string">
+            <xs:pattern value="(true|false|1|0)"/>
+        </xs:restriction>
+    </xs:simpleType>
+
+    <!-- trackEventId numeric-ish -->
+    <xs:simpleType name="trackEventIdType">
+        <xs:restriction base="xs:string">
+            <xs:pattern value="\d{8,24}"/>
+        </xs:restriction>
+    </xs:simpleType>
+
+    <!-- deviceId numeric-ish, allow 6..20 digits -->
+    <xs:simpleType name="deviceIdType">
+        <xs:restriction base="xs:string">
+            <xs:pattern value="\d{6,20}"/>
+        </xs:restriction>
+    </xs:simpleType>
+
+    <!-- messageId: allow UUID-like string -->
+    <xs:simpleType name="messageIdType">
+        <xs:restriction base="xs:string">
+            <xs:pattern value="[A-Za-z0-9\-]{8,64}"/>
+        </xs:restriction>
+    </xs:simpleType>
+
+    <!-- auxiliary data name -->
+    <xs:simpleType name="auxNameType">
+        <xs:restriction base="xs:string">
+            <xs:enumeration value="RECIPIENT_EMAILID"/>
+            <xs:enumeration value="RECIPIENT_MOBILENO"/>
+        </xs:restriction>
+    </xs:simpleType>
+
+    <!-- Root element -->
+    <xs:element name="MPE" type="ptp:MPEType"/>
+
+    <!-- Complex types -->
+
+    <xs:complexType name="MPEType">
+        <xs:sequence>
+            <xs:element name="mailPiece" type="ptp:MailPieceType"/>
+            <xs:element name="manualScan" type="ptp:ManualScanType"/>
+        </xs:sequence>
+    </xs:complexType>
+
+    <!-- mailPiece -->
+    <xs:complexType name="MailPieceType">
+        <xs:sequence>
+            <xs:element name="mailPieceBarcode" type="ptp:MailPieceBarcodeType"/>
+        </xs:sequence>
+    </xs:complexType>
+
+    <xs:complexType name="MailPieceBarcodeType">
+        <xs:sequence>
+            <xs:element name="royalMailSegment" type="ptp:RoyalMailSegmentType"/>
+            <xs:element name="channelSegment" type="ptp:ChannelSegmentType"/>
+        </xs:sequence>
+    </xs:complexType>
+
+    <xs:complexType name="RoyalMailSegmentType">
+        <xs:sequence>
+            <xs:element name="UPUCountry" type="xs:string"/>
+            <xs:element name="informationCode" type="xs:integer"/>
+            <xs:element name="versionId" type="xs:integer"/>
+            <xs:element name="mailItemFormatCode" type="xs:integer"/>
+            <xs:element name="mailClassCode" type="xs:string"/>
+            <xs:element name="mailTypeCode" type="xs:string"/>
+        </xs:sequence>
+    </xs:complexType>
+
+    <xs:complexType name="ChannelSegmentType">
+        <xs:sequence>
+            <xs:element name="uniqueItemId" type="ptp:uniqueItemIdType"/>
+            <xs:element name="mailPieceWeight" type="xs:decimal"/>
+            <xs:element name="weightCode" type="xs:string"/>
+            <xs:element name="pricePaid" type="xs:decimal"/>
+            <xs:element name="barcodeCreationDate" type="xs:date"/>
+            <xs:element name="productId" type="xs:string"/>
+            <xs:element name="UPUTrackingNumber" type="ptp:upuTrackingType"/>
+            <xs:element name="address" type="ptp:AddressType" minOccurs="0"/>
+            <xs:element name="destinationPostcodeDPS" type="ptp:DestinationPostcodeType"/>
+            <xs:element name="destinationCountry" type="xs:string"/>
+            <xs:element name="requiredAtDeliveryCode" type="xs:string" minOccurs="0"/>
+        </xs:sequence>
+    </xs:complexType>
+
+    <xs:complexType name="AddressType">
+        <xs:sequence>
+            <xs:element name="buildingNumber" type="xs:string" minOccurs="0"/>
+            <xs:element name="buildingName" type="xs:string" minOccurs="0"/>
+            <xs:element name="street" type="xs:string" minOccurs="0"/>
+        </xs:sequence>
+    </xs:complexType>
+
+    <xs:complexType name="DestinationPostcodeType">
+        <xs:sequence>
+            <xs:element name="postcode" type="ptp:postcodeType"/>
+        </xs:sequence>
+    </xs:complexType>
+
+    <!-- manualScan -->
+    <xs:complexType name="ManualScanType">
+        <xs:sequence>
+            <xs:element name="routeOrWalkNumber" type="xs:string" minOccurs="0"/>
+            <xs:element name="messageId" type="ptp:messageIdType"/>
+            <xs:element name="trackEventId" type="ptp:trackEventIdType"/>
+            <xs:element name="deviceId" type="ptp:deviceIdType"/>
+            <xs:element name="userId" type="xs:string" minOccurs="0"/>
+            <xs:element name="RMGLocation" type="ptp:RMGLocationType"/>
+            <xs:element name="scanLocation" type="ptp:ScanLocationType" minOccurs="0"/>
+            <xs:element name="trackedEventCode" type="ptp:trackedEventCodeType"/>
+            <xs:element name="scanTimestamp" type="xs:dateTime"/>
+            <xs:element name="eventTimestamp" type="xs:dateTime"/>
+            <xs:element name="transmissionTimestamp" type="xs:dateTime"/>
+            <xs:element name="transmissionCompleteTimestamp" type="xs:dateTime" minOccurs="0"/>
+            <xs:element name="eventReceivedTimestamp" type="xs:dateTime" minOccurs="0"/>
+            <xs:element name="eventReason" type="xs:integer" minOccurs="0"/>
+            <xs:element name="manualScanIndicator" type="ptp:booleanText"/>
+            <xs:element name="workProcessCode" type="ptp:workProcessCodeType"/>
+            <xs:element name="auxiliaryData" type="ptp:AuxiliaryDataType" minOccurs="0"/>
+            <xs:element name="neighbourName" type="xs:string" minOccurs="0"/>
+            <xs:element name="neighbourAddress" type="ptp:NeighbourAddressType" minOccurs="0"/>
+        </xs:sequence>
+    </xs:complexType>
+
+    <xs:complexType name="RMGLocationType">
+        <xs:sequence>
+            <xs:element name="functionalLocationId" type="xs:string"/>
+            <xs:element name="siteId" type="xs:string"/>
+        </xs:sequence>
+    </xs:complexType>
+
+    <xs:complexType name="ScanLocationType">
+        <xs:sequence>
+            <xs:element name="altitude" type="xs:decimal" minOccurs="0"/>
+            <xs:element name="longitude" type="xs:decimal" minOccurs="0"/>
+            <xs:element name="latitude" type="xs:decimal" minOccurs="0"/>
+        </xs:sequence>
+    </xs:complexType>
+
+    <xs:complexType name="AuxiliaryDataType">
+        <xs:sequence>
+            <xs:element name="data" type="ptp:AuxDataType" maxOccurs="unbounded"/>
+        </xs:sequence>
+    </xs:complexType>
+
+    <xs:complexType name="AuxDataType">
+        <xs:sequence>
+            <xs:element name="name" type="ptp:auxNameType"/>
+            <xs:element name="value" type="xs:string"/>
+        </xs:sequence>
+    </xs:complexType>
+
+    <xs:complexType name="NeighbourAddressType">
+        <xs:sequence>
+            <xs:element name="buildingName" type="xs:string" minOccurs="0"/>
+            <xs:element name="street" type="xs:string" minOccurs="0"/>
+        </xs:sequence>
+    </xs:complexType>
+
+    <!-- end of schema -->
+</xs:schema>

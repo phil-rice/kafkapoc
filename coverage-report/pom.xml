@@ -1,0 +1,74 @@
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+
+    <parent>
+        <groupId>com.hcltech.rmg</groupId>
+        <artifactId>hcltech-rmg-poc</artifactId>
+        <version>1.0.0-SNAPSHOT</version>
+        <relativePath>../pom.xml</relativePath>
+    </parent>
+
+    <artifactId>coverage-report</artifactId>
+    <packaging>pom</packaging>
+    <name>Coverage Report</name>
+    <description>Aggregate JaCoCo coverage across all modules.</description>
+
+    <!-- IMPORTANT: declare dependencies on the modules to aggregate -->
+    <dependencies>
+        <dependency><groupId>com.hcltech.rmg</groupId><artifactId>common</artifactId><version>${project.version}</version></dependency>
+        <dependency><groupId>com.hcltech.rmg</groupId><artifactId>dag</artifactId><version>${project.version}</version></dependency>
+
+        <dependency><groupId>com.hcltech.rmg</groupId><artifactId>appcontainer_interfaces</artifactId><version>${project.version}</version></dependency>
+        <dependency><groupId>com.hcltech.rmg</groupId><artifactId>appcontainer_implementation</artifactId><version>${project.version}</version></dependency>
+
+        <dependency><groupId>com.hcltech.rmg</groupId><artifactId>celcore</artifactId><version>${project.version}</version></dependency>
+        <dependency><groupId>com.hcltech.rmg</groupId><artifactId>celimpl</artifactId><version>${project.version}</version></dependency>
+
+        <dependency><groupId>com.hcltech.rmg</groupId><artifactId>cepstate</artifactId><version>${project.version}</version></dependency>
+
+        <dependency><groupId>com.hcltech.rmg</groupId><artifactId>config</artifactId><version>${project.version}</version></dependency>
+
+        <dependency><groupId>com.hcltech.rmg</groupId><artifactId>all_execution</artifactId><version>${project.version}</version></dependency>
+        <dependency><groupId>com.hcltech.rmg</groupId><artifactId>bizlogic</artifactId><version>${project.version}</version></dependency>
+        <dependency><groupId>com.hcltech.rmg</groupId><artifactId>enrichment</artifactId><version>${project.version}</version></dependency>
+        <dependency><groupId>com.hcltech.rmg</groupId><artifactId>execution</artifactId><version>${project.version}</version></dependency>
+        <dependency><groupId>com.hcltech.rmg</groupId><artifactId>messages</artifactId><version>${project.version}</version></dependency>
+        <dependency><groupId>com.hcltech.rmg</groupId><artifactId>parameters</artifactId><version>${project.version}</version></dependency>
+        <dependency><groupId>com.hcltech.rmg</groupId><artifactId>transformation</artifactId><version>${project.version}</version></dependency>
+        <dependency><groupId>com.hcltech.rmg</groupId><artifactId>validation</artifactId><version>${project.version}</version></dependency>
+
+        <dependency><groupId>com.hcltech.rmg</groupId><artifactId>flinkadapter</artifactId><version>${project.version}</version></dependency>
+
+        <dependency><groupId>com.hcltech.rmg</groupId><artifactId>optics</artifactId><version>${project.version}</version></dependency>
+        <dependency><groupId>com.hcltech.rmg</groupId><artifactId>performance</artifactId><version>${project.version}</version></dependency>
+
+        <dependency><groupId>com.hcltech.rmg</groupId><artifactId>kafkaconfig</artifactId><version>${project.version}</version></dependency>
+        <dependency><groupId>com.hcltech.rmg</groupId><artifactId>kafka</artifactId><version>${project.version}</version></dependency>
+
+        <dependency><groupId>com.hcltech.rmg</groupId><artifactId>producer</artifactId><version>${project.version}</version></dependency>
+
+        <dependency><groupId>com.hcltech.rmg</groupId><artifactId>xml</artifactId><version>${project.version}</version></dependency>
+        <dependency><groupId>com.hcltech.rmg</groupId><artifactId>woodstox</artifactId><version>${project.version}</version></dependency>
+    </dependencies>
+
+    <build>
+        <plugins>
+            <plugin>
+                <groupId>org.jacoco</groupId>
+                <artifactId>jacoco-maven-plugin</artifactId>
+                <version>${jacoco.version}</version>
+                <executions>
+                    <!-- ONE combined HTML/XML/CSV for the whole reactor -->
+                    <execution>
+                        <id>aggregate</id>
+                        <phase>verify</phase>
+                        <inherited>false</inherited>
+                        <goals><goal>report-aggregate</goal></goals>
+                    </execution>
+                </executions>
+            </plugin>
+        </plugins>
+    </build>
+</project>

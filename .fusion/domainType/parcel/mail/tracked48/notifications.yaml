@@ -1,0 +1,27 @@
+module:
+  notification:
+    departure:
+      logic:
+        - type: celInline
+          inline: |
+            input.eventType == "departed"
+              ? [{
+                  type: "notification",
+                  channel: "email",
+                  to: "recipient",
+                  message: "Tracked 48 parcel departed hub; ETA 2 working days."
+                }]
+              : null
+
+    delayed:
+      logic:
+        - type: celInline
+          inline: |
+            input.eventType == "delayed"
+              ? [{
+                  type: "notification",
+                  channel: "sms",
+                  to: "recipient",
+                  message: "Tracked 48 parcel delayed by 1 day. Sorry!"
+                }]
+              : null

@@ -1,0 +1,5104 @@
+[
+  {
+    "id": 1001,
+    "event": "EVDAV",
+    "product": "Tracked24",
+    "contact": "No contact info",
+    "input": {
+      "message.MPE": {
+        "mailPiece": {
+          "mailPieceBarcode": {
+            "royalMailSegment": {
+              "mailTypeCode": "A",
+              "UPUCountry": "JGB",
+              "informationCode": "8",
+              "versionId": "2",
+              "mailItemFormatCode": "15",
+              "mailClassCode": "F"
+            },
+            "channelSegment": {
+              "uniqueItemId": "11000000001001001091111",
+              "weightCode": "1",
+              "pricePaid": "123",
+              "barcodeCreationDate": "2024-10-24",
+              "productId": "100",
+              "address": {
+                "buildingNumber": "1"
+              },
+              "destinationPostcodeDPS": {
+                "postcode": "EC1A1BB"
+              },
+              "mailPieceWeight": "1",
+              "UPUTrackingNumber": "YA000001001GB",
+              "destinationCountry": "GB",
+              "requiredAtDeliveryCode": "S"
+            }
+          }
+        },
+        "manualScan": {
+          "messageId": "msg-1001",
+          "userId": "user1001",
+          "eventTimestamp": "2024-10-24T19:35:51+01:00",
+          "transmissionCompleteTimestamp": "2024-10-24T19:35:59+01:00",
+          "auxiliaryData": {
+            "data": []
+          },
+          "trackEventId": "5934652298366573",
+          "scanLocation": {
+            "altitude": "0.0",
+            "longitude": "0.0",
+            "latitude": "0.0"
+          },
+          "scanTimestamp": "2024-10-24T19:35:51+01:00",
+          "deviceId": "4789568638361001",
+          "RMGLocation": {
+            "functionalLocationId": "356",
+            "siteId": "000175"
+          },
+          "trackedEventCode": "EVDAV",
+          "transmissionTimestamp": "2024-10-24T19:35:59+01:00",
+          "eventReceivedTimestamp": "2024-10-24T19:35:59+01:00",
+          "eventReason": "11",
+          "manualScanIndicator": "false",
+          "workProcessCode": "100"
+        }
+      },
+      "enrichment": {
+        "productCategory": {
+          "productCategory": "Tracked24"
+        },
+        "postcodeRegion": "London"
+      }
+    },
+    "expected_notifications": [],
+    "expected_tracking": 1
+  },
+  {
+    "id": 1002,
+    "event": "EVDAV",
+    "product": "Tracked24",
+    "contact": "Email only",
+    "input": {
+      "message.MPE": {
+        "mailPiece": {
+          "mailPieceBarcode": {
+            "royalMailSegment": {
+              "mailTypeCode": "A",
+              "UPUCountry": "JGB",
+              "informationCode": "8",
+              "versionId": "2",
+              "mailItemFormatCode": "15",
+              "mailClassCode": "F"
+            },
+            "channelSegment": {
+              "uniqueItemId": "11000000001002001091111",
+              "weightCode": "1",
+              "pricePaid": "123",
+              "barcodeCreationDate": "2024-10-24",
+              "productId": "100",
+              "address": {
+                "buildingNumber": "1"
+              },
+              "destinationPostcodeDPS": {
+                "postcode": "EC1A1BB"
+              },
+              "mailPieceWeight": "1",
+              "UPUTrackingNumber": "YA000001002GB",
+              "destinationCountry": "GB",
+              "requiredAtDeliveryCode": "S"
+            }
+          }
+        },
+        "manualScan": {
+          "messageId": "msg-1002",
+          "userId": "user1002",
+          "eventTimestamp": "2024-10-24T19:35:51+01:00",
+          "transmissionCompleteTimestamp": "2024-10-24T19:35:59+01:00",
+          "auxiliaryData": {
+            "data": [
+              {
+                "name": "RECIPIENT_EMAILID",
+                "value": "test1002@example.com"
+              }
+            ]
+          },
+          "trackEventId": "5934652298366574",
+          "scanLocation": {
+            "altitude": "0.0",
+            "longitude": "0.0",
+            "latitude": "0.0"
+          },
+          "scanTimestamp": "2024-10-24T19:35:51+01:00",
+          "deviceId": "4789568638361002",
+          "RMGLocation": {
+            "functionalLocationId": "356",
+            "siteId": "000175"
+          },
+          "trackedEventCode": "EVDAV",
+          "transmissionTimestamp": "2024-10-24T19:35:59+01:00",
+          "eventReceivedTimestamp": "2024-10-24T19:35:59+01:00",
+          "eventReason": "11",
+          "manualScanIndicator": "false",
+          "workProcessCode": "100"
+        }
+      },
+      "enrichment": {
+        "productCategory": {
+          "productCategory": "Tracked24"
+        },
+        "postcodeRegion": "London"
+      }
+    },
+    "expected_notifications": [
+      "NRARS (Email)"
+    ],
+    "expected_tracking": 1
+  },
+  {
+    "id": 1003,
+    "event": "EVDAV",
+    "product": "Tracked24",
+    "contact": "Mobile only",
+    "input": {
+      "message.MPE": {
+        "mailPiece": {
+          "mailPieceBarcode": {
+            "royalMailSegment": {
+              "mailTypeCode": "A",
+              "UPUCountry": "JGB",
+              "informationCode": "8",
+              "versionId": "2",
+              "mailItemFormatCode": "15",
+              "mailClassCode": "F"
+            },
+            "channelSegment": {
+              "uniqueItemId": "11000000001003001091111",
+              "weightCode": "1",
+              "pricePaid": "123",
+              "barcodeCreationDate": "2024-10-24",
+              "productId": "100",
+              "address": {
+                "buildingNumber": "1"
+              },
+              "destinationPostcodeDPS": {
+                "postcode": "EC1A1BB"
+              },
+              "mailPieceWeight": "1",
+              "UPUTrackingNumber": "YA000001003GB",
+              "destinationCountry": "GB",
+              "requiredAtDeliveryCode": "S"
+            }
+          }
+        },
+        "manualScan": {
+          "messageId": "msg-1003",
+          "userId": "user1003",
+          "eventTimestamp": "2024-10-24T19:35:51+01:00",
+          "transmissionCompleteTimestamp": "2024-10-24T19:35:59+01:00",
+          "auxiliaryData": {
+            "data": [
+              {
+                "name": "RECIPIENT_MOBILENO",
+                "value": "07088111003"
+              }
+            ]
+          },
+          "trackEventId": "5934652298366575",
+          "scanLocation": {
+            "altitude": "0.0",
+            "longitude": "0.0",
+            "latitude": "0.0"
+          },
+          "scanTimestamp": "2024-10-24T19:35:51+01:00",
+          "deviceId": "4789568638361003",
+          "RMGLocation": {
+            "functionalLocationId": "356",
+            "siteId": "000175"
+          },
+          "trackedEventCode": "EVDAV",
+          "transmissionTimestamp": "2024-10-24T19:35:59+01:00",
+          "eventReceivedTimestamp": "2024-10-24T19:35:59+01:00",
+          "eventReason": "11",
+          "manualScanIndicator": "false",
+          "workProcessCode": "100"
+        }
+      },
+      "enrichment": {
+        "productCategory": {
+          "productCategory": "Tracked24"
+        },
+        "postcodeRegion": "London"
+      }
+    },
+    "expected_notifications": [],
+    "expected_tracking": 1
+  },
+  {
+    "id": 1004,
+    "event": "EVDAV",
+    "product": "Tracked24",
+    "contact": "Both email and mobile",
+    "input": {
+      "message.MPE": {
+        "mailPiece": {
+          "mailPieceBarcode": {
+            "royalMailSegment": {
+              "mailTypeCode": "A",
+              "UPUCountry": "JGB",
+              "informationCode": "8",
+              "versionId": "2",
+              "mailItemFormatCode": "15",
+              "mailClassCode": "F"
+            },
+            "channelSegment": {
+              "uniqueItemId": "11000000001004001091111",
+              "weightCode": "1",
+              "pricePaid": "123",
+              "barcodeCreationDate": "2024-10-24",
+              "productId": "100",
+              "address": {
+                "buildingNumber": "1"
+              },
+              "destinationPostcodeDPS": {
+                "postcode": "EC1A1BB"
+              },
+              "mailPieceWeight": "1",
+              "UPUTrackingNumber": "YA000001004GB",
+              "destinationCountry": "GB",
+              "requiredAtDeliveryCode": "S"
+            }
+          }
+        },
+        "manualScan": {
+          "messageId": "msg-1004",
+          "userId": "user1004",
+          "eventTimestamp": "2024-10-24T19:35:51+01:00",
+          "transmissionCompleteTimestamp": "2024-10-24T19:35:59+01:00",
+          "auxiliaryData": {
+            "data": [
+              {
+                "name": "RECIPIENT_EMAILID",
+                "value": "test1004@example.com"
+              },
+              {
+                "name": "RECIPIENT_MOBILENO",
+                "value": "07088111004"
+              }
+            ]
+          },
+          "trackEventId": "5934652298366576",
+          "scanLocation": {
+            "altitude": "0.0",
+            "longitude": "0.0",
+            "latitude": "0.0"
+          },
+          "scanTimestamp": "2024-10-24T19:35:51+01:00",
+          "deviceId": "4789568638361004",
+          "RMGLocation": {
+            "functionalLocationId": "356",
+            "siteId": "000175"
+          },
+          "trackedEventCode": "EVDAV",
+          "transmissionTimestamp": "2024-10-24T19:35:59+01:00",
+          "eventReceivedTimestamp": "2024-10-24T19:35:59+01:00",
+          "eventReason": "11",
+          "manualScanIndicator": "false",
+          "workProcessCode": "100"
+        }
+      },
+      "enrichment": {
+        "productCategory": {
+          "productCategory": "Tracked24"
+        },
+        "postcodeRegion": "London"
+      }
+    },
+    "expected_notifications": [
+      "NRARS (Email)"
+    ],
+    "expected_tracking": 1
+  },
+  {
+    "id": 1005,
+    "event": "EVDAV",
+    "product": "Tracked48",
+    "contact": "No contact info",
+    "input": {
+      "message.MPE": {
+        "mailPiece": {
+          "mailPieceBarcode": {
+            "royalMailSegment": {
+              "mailTypeCode": "A",
+              "UPUCountry": "JGB",
+              "informationCode": "8",
+              "versionId": "2",
+              "mailItemFormatCode": "15",
+              "mailClassCode": "F"
+            },
+            "channelSegment": {
+              "uniqueItemId": "11000000001005001091111",
+              "weightCode": "1",
+              "pricePaid": "123",
+              "barcodeCreationDate": "2024-10-24",
+              "productId": "101",
+              "address": {
+                "buildingNumber": "1"
+              },
+              "destinationPostcodeDPS": {
+                "postcode": "EC1A1BB"
+              },
+              "mailPieceWeight": "1",
+              "UPUTrackingNumber": "YA000001005GB",
+              "destinationCountry": "GB",
+              "requiredAtDeliveryCode": "S"
+            }
+          }
+        },
+        "manualScan": {
+          "messageId": "msg-1005",
+          "userId": "user1005",
+          "eventTimestamp": "2024-10-24T19:35:51+01:00",
+          "transmissionCompleteTimestamp": "2024-10-24T19:35:59+01:00",
+          "auxiliaryData": {
+            "data": []
+          },
+          "trackEventId": "5934652298366577",
+          "scanLocation": {
+            "altitude": "0.0",
+            "longitude": "0.0",
+            "latitude": "0.0"
+          },
+          "scanTimestamp": "2024-10-24T19:35:51+01:00",
+          "deviceId": "4789568638361005",
+          "RMGLocation": {
+            "functionalLocationId": "356",
+            "siteId": "000175"
+          },
+          "trackedEventCode": "EVDAV",
+          "transmissionTimestamp": "2024-10-24T19:35:59+01:00",
+          "eventReceivedTimestamp": "2024-10-24T19:35:59+01:00",
+          "eventReason": "11",
+          "manualScanIndicator": "false",
+          "workProcessCode": "100"
+        }
+      },
+      "enrichment": {
+        "productCategory": {
+          "productCategory": "Tracked48"
+        },
+        "postcodeRegion": "London"
+      }
+    },
+    "expected_notifications": [],
+    "expected_tracking": 1
+  },
+  {
+    "id": 1006,
+    "event": "EVDAV",
+    "product": "Tracked48",
+    "contact": "Email only",
+    "input": {
+      "message.MPE": {
+        "mailPiece": {
+          "mailPieceBarcode": {
+            "royalMailSegment": {
+              "mailTypeCode": "A",
+              "UPUCountry": "JGB",
+              "informationCode": "8",
+              "versionId": "2",
+              "mailItemFormatCode": "15",
+              "mailClassCode": "F"
+            },
+            "channelSegment": {
+              "uniqueItemId": "11000000001006001091111",
+              "weightCode": "1",
+              "pricePaid": "123",
+              "barcodeCreationDate": "2024-10-24",
+              "productId": "101",
+              "address": {
+                "buildingNumber": "1"
+              },
+              "destinationPostcodeDPS": {
+                "postcode": "EC1A1BB"
+              },
+              "mailPieceWeight": "1",
+              "UPUTrackingNumber": "YA000001006GB",
+              "destinationCountry": "GB",
+              "requiredAtDeliveryCode": "S"
+            }
+          }
+        },
+        "manualScan": {
+          "messageId": "msg-1006",
+          "userId": "user1006",
+          "eventTimestamp": "2024-10-24T19:35:51+01:00",
+          "transmissionCompleteTimestamp": "2024-10-24T19:35:59+01:00",
+          "auxiliaryData": {
+            "data": [
+              {
+                "name": "RECIPIENT_EMAILID",
+                "value": "test1006@example.com"
+              }
+            ]
+          },
+          "trackEventId": "5934652298366578",
+          "scanLocation": {
+            "altitude": "0.0",
+            "longitude": "0.0",
+            "latitude": "0.0"
+          },
+          "scanTimestamp": "2024-10-24T19:35:51+01:00",
+          "deviceId": "4789568638361006",
+          "RMGLocation": {
+            "functionalLocationId": "356",
+            "siteId": "000175"
+          },
+          "trackedEventCode": "EVDAV",
+          "transmissionTimestamp": "2024-10-24T19:35:59+01:00",
+          "eventReceivedTimestamp": "2024-10-24T19:35:59+01:00",
+          "eventReason": "11",
+          "manualScanIndicator": "false",
+          "workProcessCode": "100"
+        }
+      },
+      "enrichment": {
+        "productCategory": {
+          "productCategory": "Tracked48"
+        },
+        "postcodeRegion": "London"
+      }
+    },
+    "expected_notifications": [],
+    "expected_tracking": 1
+  },
+  {
+    "id": 1007,
+    "event": "EVDAV",
+    "product": "Tracked48",
+    "contact": "Mobile only",
+    "input": {
+      "message.MPE": {
+        "mailPiece": {
+          "mailPieceBarcode": {
+            "royalMailSegment": {
+              "mailTypeCode": "A",
+              "UPUCountry": "JGB",
+              "informationCode": "8",
+              "versionId": "2",
+              "mailItemFormatCode": "15",
+              "mailClassCode": "F"
+            },
+            "channelSegment": {
+              "uniqueItemId": "11000000001007001091111",
+              "weightCode": "1",
+              "pricePaid": "123",
+              "barcodeCreationDate": "2024-10-24",
+              "productId": "101",
+              "address": {
+                "buildingNumber": "1"
+              },
+              "destinationPostcodeDPS": {
+                "postcode": "EC1A1BB"
+              },
+              "mailPieceWeight": "1",
+              "UPUTrackingNumber": "YA000001007GB",
+              "destinationCountry": "GB",
+              "requiredAtDeliveryCode": "S"
+            }
+          }
+        },
+        "manualScan": {
+          "messageId": "msg-1007",
+          "userId": "user1007",
+          "eventTimestamp": "2024-10-24T19:35:51+01:00",
+          "transmissionCompleteTimestamp": "2024-10-24T19:35:59+01:00",
+          "auxiliaryData": {
+            "data": [
+              {
+                "name": "RECIPIENT_MOBILENO",
+                "value": "07088111007"
+              }
+            ]
+          },
+          "trackEventId": "5934652298366579",
+          "scanLocation": {
+            "altitude": "0.0",
+            "longitude": "0.0",
+            "latitude": "0.0"
+          },
+          "scanTimestamp": "2024-10-24T19:35:51+01:00",
+          "deviceId": "4789568638361007",
+          "RMGLocation": {
+            "functionalLocationId": "356",
+            "siteId": "000175"
+          },
+          "trackedEventCode": "EVDAV",
+          "transmissionTimestamp": "2024-10-24T19:35:59+01:00",
+          "eventReceivedTimestamp": "2024-10-24T19:35:59+01:00",
+          "eventReason": "11",
+          "manualScanIndicator": "false",
+          "workProcessCode": "100"
+        }
+      },
+      "enrichment": {
+        "productCategory": {
+          "productCategory": "Tracked48"
+        },
+        "postcodeRegion": "London"
+      }
+    },
+    "expected_notifications": [],
+    "expected_tracking": 1
+  },
+  {
+    "id": 1008,
+    "event": "EVDAV",
+    "product": "Tracked48",
+    "contact": "Both email and mobile",
+    "input": {
+      "message.MPE": {
+        "mailPiece": {
+          "mailPieceBarcode": {
+            "royalMailSegment": {
+              "mailTypeCode": "A",
+              "UPUCountry": "JGB",
+              "informationCode": "8",
+              "versionId": "2",
+              "mailItemFormatCode": "15",
+              "mailClassCode": "F"
+            },
+            "channelSegment": {
+              "uniqueItemId": "11000000001008001091111",
+              "weightCode": "1",
+              "pricePaid": "123",
+              "barcodeCreationDate": "2024-10-24",
+              "productId": "101",
+              "address": {
+                "buildingNumber": "1"
+              },
+              "destinationPostcodeDPS": {
+                "postcode": "EC1A1BB"
+              },
+              "mailPieceWeight": "1",
+              "UPUTrackingNumber": "YA000001008GB",
+              "destinationCountry": "GB",
+              "requiredAtDeliveryCode": "S"
+            }
+          }
+        },
+        "manualScan": {
+          "messageId": "msg-1008",
+          "userId": "user1008",
+          "eventTimestamp": "2024-10-24T19:35:51+01:00",
+          "transmissionCompleteTimestamp": "2024-10-24T19:35:59+01:00",
+          "auxiliaryData": {
+            "data": [
+              {
+                "name": "RECIPIENT_EMAILID",
+                "value": "test1008@example.com"
+              },
+              {
+                "name": "RECIPIENT_MOBILENO",
+                "value": "07088111008"
+              }
+            ]
+          },
+          "trackEventId": "5934652298366580",
+          "scanLocation": {
+            "altitude": "0.0",
+            "longitude": "0.0",
+            "latitude": "0.0"
+          },
+          "scanTimestamp": "2024-10-24T19:35:51+01:00",
+          "deviceId": "4789568638361008",
+          "RMGLocation": {
+            "functionalLocationId": "356",
+            "siteId": "000175"
+          },
+          "trackedEventCode": "EVDAV",
+          "transmissionTimestamp": "2024-10-24T19:35:59+01:00",
+          "eventReceivedTimestamp": "2024-10-24T19:35:59+01:00",
+          "eventReason": "11",
+          "manualScanIndicator": "false",
+          "workProcessCode": "100"
+        }
+      },
+      "enrichment": {
+        "productCategory": {
+          "productCategory": "Tracked48"
+        },
+        "postcodeRegion": "London"
+      }
+    },
+    "expected_notifications": [],
+    "expected_tracking": 1
+  },
+  {
+    "id": 1009,
+    "event": "EVDAV",
+    "product": "SpecialDelivery09",
+    "contact": "No contact info",
+    "input": {
+      "message.MPE": {
+        "mailPiece": {
+          "mailPieceBarcode": {
+            "royalMailSegment": {
+              "mailTypeCode": "A",
+              "UPUCountry": "JGB",
+              "informationCode": "8",
+              "versionId": "2",
+              "mailItemFormatCode": "15",
+              "mailClassCode": "F"
+            },
+            "channelSegment": {
+              "uniqueItemId": "11000000001009001091111",
+              "weightCode": "1",
+              "pricePaid": "123",
+              "barcodeCreationDate": "2024-10-24",
+              "productId": "102",
+              "address": {
+                "buildingNumber": "1"
+              },
+              "destinationPostcodeDPS": {
+                "postcode": "EC1A1BB"
+              },
+              "mailPieceWeight": "1",
+              "UPUTrackingNumber": "YA000001009GB",
+              "destinationCountry": "GB",
+              "requiredAtDeliveryCode": "S"
+            }
+          }
+        },
+        "manualScan": {
+          "messageId": "msg-1009",
+          "userId": "user1009",
+          "eventTimestamp": "2024-10-24T19:35:51+01:00",
+          "transmissionCompleteTimestamp": "2024-10-24T19:35:59+01:00",
+          "auxiliaryData": {
+            "data": []
+          },
+          "trackEventId": "5934652298366581",
+          "scanLocation": {
+            "altitude": "0.0",
+            "longitude": "0.0",
+            "latitude": "0.0"
+          },
+          "scanTimestamp": "2024-10-24T19:35:51+01:00",
+          "deviceId": "4789568638361009",
+          "RMGLocation": {
+            "functionalLocationId": "356",
+            "siteId": "000175"
+          },
+          "trackedEventCode": "EVDAV",
+          "transmissionTimestamp": "2024-10-24T19:35:59+01:00",
+          "eventReceivedTimestamp": "2024-10-24T19:35:59+01:00",
+          "eventReason": "11",
+          "manualScanIndicator": "false",
+          "workProcessCode": "100"
+        }
+      },
+      "enrichment": {
+        "productCategory": {
+          "productCategory": "SpecialDelivery09"
+        },
+        "postcodeRegion": "London"
+      }
+    },
+    "expected_notifications": [],
+    "expected_tracking": 1
+  },
+  {
+    "id": 1010,
+    "event": "EVDAV",
+    "product": "SpecialDelivery09",
+    "contact": "Email only",
+    "input": {
+      "message.MPE": {
+        "mailPiece": {
+          "mailPieceBarcode": {
+            "royalMailSegment": {
+              "mailTypeCode": "A",
+              "UPUCountry": "JGB",
+              "informationCode": "8",
+              "versionId": "2",
+              "mailItemFormatCode": "15",
+              "mailClassCode": "F"
+            },
+            "channelSegment": {
+              "uniqueItemId": "11000000001010001091111",
+              "weightCode": "1",
+              "pricePaid": "123",
+              "barcodeCreationDate": "2024-10-24",
+              "productId": "102",
+              "address": {
+                "buildingNumber": "1"
+              },
+              "destinationPostcodeDPS": {
+                "postcode": "EC1A1BB"
+              },
+              "mailPieceWeight": "1",
+              "UPUTrackingNumber": "YA000001010GB",
+              "destinationCountry": "GB",
+              "requiredAtDeliveryCode": "S"
+            }
+          }
+        },
+        "manualScan": {
+          "messageId": "msg-1010",
+          "userId": "user1010",
+          "eventTimestamp": "2024-10-24T19:35:51+01:00",
+          "transmissionCompleteTimestamp": "2024-10-24T19:35:59+01:00",
+          "auxiliaryData": {
+            "data": [
+              {
+                "name": "RECIPIENT_EMAILID",
+                "value": "test1010@example.com"
+              }
+            ]
+          },
+          "trackEventId": "5934652298366582",
+          "scanLocation": {
+            "altitude": "0.0",
+            "longitude": "0.0",
+            "latitude": "0.0"
+          },
+          "scanTimestamp": "2024-10-24T19:35:51+01:00",
+          "deviceId": "4789568638361010",
+          "RMGLocation": {
+            "functionalLocationId": "356",
+            "siteId": "000175"
+          },
+          "trackedEventCode": "EVDAV",
+          "transmissionTimestamp": "2024-10-24T19:35:59+01:00",
+          "eventReceivedTimestamp": "2024-10-24T19:35:59+01:00",
+          "eventReason": "11",
+          "manualScanIndicator": "false",
+          "workProcessCode": "100"
+        }
+      },
+      "enrichment": {
+        "productCategory": {
+          "productCategory": "SpecialDelivery09"
+        },
+        "postcodeRegion": "London"
+      }
+    },
+    "expected_notifications": [
+      "NRGRS (Email)"
+    ],
+    "expected_tracking": 1
+  },
+  {
+    "id": 1011,
+    "event": "EVDAV",
+    "product": "SpecialDelivery09",
+    "contact": "Mobile only",
+    "input": {
+      "message.MPE": {
+        "mailPiece": {
+          "mailPieceBarcode": {
+            "royalMailSegment": {
+              "mailTypeCode": "A",
+              "UPUCountry": "JGB",
+              "informationCode": "8",
+              "versionId": "2",
+              "mailItemFormatCode": "15",
+              "mailClassCode": "F"
+            },
+            "channelSegment": {
+              "uniqueItemId": "11000000001011001091111",
+              "weightCode": "1",
+              "pricePaid": "123",
+              "barcodeCreationDate": "2024-10-24",
+              "productId": "102",
+              "address": {
+                "buildingNumber": "1"
+              },
+              "destinationPostcodeDPS": {
+                "postcode": "EC1A1BB"
+              },
+              "mailPieceWeight": "1",
+              "UPUTrackingNumber": "YA000001011GB",
+              "destinationCountry": "GB",
+              "requiredAtDeliveryCode": "S"
+            }
+          }
+        },
+        "manualScan": {
+          "messageId": "msg-1011",
+          "userId": "user1011",
+          "eventTimestamp": "2024-10-24T19:35:51+01:00",
+          "transmissionCompleteTimestamp": "2024-10-24T19:35:59+01:00",
+          "auxiliaryData": {
+            "data": [
+              {
+                "name": "RECIPIENT_MOBILENO",
+                "value": "07088111011"
+              }
+            ]
+          },
+          "trackEventId": "5934652298366583",
+          "scanLocation": {
+            "altitude": "0.0",
+            "longitude": "0.0",
+            "latitude": "0.0"
+          },
+          "scanTimestamp": "2024-10-24T19:35:51+01:00",
+          "deviceId": "4789568638361011",
+          "RMGLocation": {
+            "functionalLocationId": "356",
+            "siteId": "000175"
+          },
+          "trackedEventCode": "EVDAV",
+          "transmissionTimestamp": "2024-10-24T19:35:59+01:00",
+          "eventReceivedTimestamp": "2024-10-24T19:35:59+01:00",
+          "eventReason": "11",
+          "manualScanIndicator": "false",
+          "workProcessCode": "100"
+        }
+      },
+      "enrichment": {
+        "productCategory": {
+          "productCategory": "SpecialDelivery09"
+        },
+        "postcodeRegion": "London"
+      }
+    },
+    "expected_notifications": [
+      "NRGRS (SMS)"
+    ],
+    "expected_tracking": 1
+  },
+  {
+    "id": 1012,
+    "event": "EVDAV",
+    "product": "SpecialDelivery09",
+    "contact": "Both email and mobile",
+    "input": {
+      "message.MPE": {
+        "mailPiece": {
+          "mailPieceBarcode": {
+            "royalMailSegment": {
+              "mailTypeCode": "A",
+              "UPUCountry": "JGB",
+              "informationCode": "8",
+              "versionId": "2",
+              "mailItemFormatCode": "15",
+              "mailClassCode": "F"
+            },
+            "channelSegment": {
+              "uniqueItemId": "11000000001012001091111",
+              "weightCode": "1",
+              "pricePaid": "123",
+              "barcodeCreationDate": "2024-10-24",
+              "productId": "102",
+              "address": {
+                "buildingNumber": "1"
+              },
+              "destinationPostcodeDPS": {
+                "postcode": "EC1A1BB"
+              },
+              "mailPieceWeight": "1",
+              "UPUTrackingNumber": "YA000001012GB",
+              "destinationCountry": "GB",
+              "requiredAtDeliveryCode": "S"
+            }
+          }
+        },
+        "manualScan": {
+          "messageId": "msg-1012",
+          "userId": "user1012",
+          "eventTimestamp": "2024-10-24T19:35:51+01:00",
+          "transmissionCompleteTimestamp": "2024-10-24T19:35:59+01:00",
+          "auxiliaryData": {
+            "data": [
+              {
+                "name": "RECIPIENT_EMAILID",
+                "value": "test1012@example.com"
+              },
+              {
+                "name": "RECIPIENT_MOBILENO",
+                "value": "07088111012"
+              }
+            ]
+          },
+          "trackEventId": "5934652298366584",
+          "scanLocation": {
+            "altitude": "0.0",
+            "longitude": "0.0",
+            "latitude": "0.0"
+          },
+          "scanTimestamp": "2024-10-24T19:35:51+01:00",
+          "deviceId": "4789568638361012",
+          "RMGLocation": {
+            "functionalLocationId": "356",
+            "siteId": "000175"
+          },
+          "trackedEventCode": "EVDAV",
+          "transmissionTimestamp": "2024-10-24T19:35:59+01:00",
+          "eventReceivedTimestamp": "2024-10-24T19:35:59+01:00",
+          "eventReason": "11",
+          "manualScanIndicator": "false",
+          "workProcessCode": "100"
+        }
+      },
+      "enrichment": {
+        "productCategory": {
+          "productCategory": "SpecialDelivery09"
+        },
+        "postcodeRegion": "London"
+      }
+    },
+    "expected_notifications": [
+      "NRGRS (Email)",
+      "NRGRS (SMS)"
+    ],
+    "expected_tracking": 1
+  },
+  {
+    "id": 1013,
+    "event": "EVDAV",
+    "product": "SpecialDelivery13",
+    "contact": "No contact info",
+    "input": {
+      "message.MPE": {
+        "mailPiece": {
+          "mailPieceBarcode": {
+            "royalMailSegment": {
+              "mailTypeCode": "A",
+              "UPUCountry": "JGB",
+              "informationCode": "8",
+              "versionId": "2",
+              "mailItemFormatCode": "15",
+              "mailClassCode": "F"
+            },
+            "channelSegment": {
+              "uniqueItemId": "11000000001013001091111",
+              "weightCode": "1",
+              "pricePaid": "123",
+              "barcodeCreationDate": "2024-10-24",
+              "productId": "103",
+              "address": {
+                "buildingNumber": "1"
+              },
+              "destinationPostcodeDPS": {
+                "postcode": "EC1A1BB"
+              },
+              "mailPieceWeight": "1",
+              "UPUTrackingNumber": "YA000001013GB",
+              "destinationCountry": "GB",
+              "requiredAtDeliveryCode": "S"
+            }
+          }
+        },
+        "manualScan": {
+          "messageId": "msg-1013",
+          "userId": "user1013",
+          "eventTimestamp": "2024-10-24T19:35:51+01:00",
+          "transmissionCompleteTimestamp": "2024-10-24T19:35:59+01:00",
+          "auxiliaryData": {
+            "data": []
+          },
+          "trackEventId": "5934652298366585",
+          "scanLocation": {
+            "altitude": "0.0",
+            "longitude": "0.0",
+            "latitude": "0.0"
+          },
+          "scanTimestamp": "2024-10-24T19:35:51+01:00",
+          "deviceId": "4789568638361013",
+          "RMGLocation": {
+            "functionalLocationId": "356",
+            "siteId": "000175"
+          },
+          "trackedEventCode": "EVDAV",
+          "transmissionTimestamp": "2024-10-24T19:35:59+01:00",
+          "eventReceivedTimestamp": "2024-10-24T19:35:59+01:00",
+          "eventReason": "11",
+          "manualScanIndicator": "false",
+          "workProcessCode": "100"
+        }
+      },
+      "enrichment": {
+        "productCategory": {
+          "productCategory": "SpecialDelivery13"
+        },
+        "postcodeRegion": "London"
+      }
+    },
+    "expected_notifications": [],
+    "expected_tracking": 1
+  },
+  {
+    "id": 1014,
+    "event": "EVDAV",
+    "product": "SpecialDelivery13",
+    "contact": "Email only",
+    "input": {
+      "message.MPE": {
+        "mailPiece": {
+          "mailPieceBarcode": {
+            "royalMailSegment": {
+              "mailTypeCode": "A",
+              "UPUCountry": "JGB",
+              "informationCode": "8",
+              "versionId": "2",
+              "mailItemFormatCode": "15",
+              "mailClassCode": "F"
+            },
+            "channelSegment": {
+              "uniqueItemId": "11000000001014001091111",
+              "weightCode": "1",
+              "pricePaid": "123",
+              "barcodeCreationDate": "2024-10-24",
+              "productId": "103",
+              "address": {
+                "buildingNumber": "1"
+              },
+              "destinationPostcodeDPS": {
+                "postcode": "EC1A1BB"
+              },
+              "mailPieceWeight": "1",
+              "UPUTrackingNumber": "YA000001014GB",
+              "destinationCountry": "GB",
+              "requiredAtDeliveryCode": "S"
+            }
+          }
+        },
+        "manualScan": {
+          "messageId": "msg-1014",
+          "userId": "user1014",
+          "eventTimestamp": "2024-10-24T19:35:51+01:00",
+          "transmissionCompleteTimestamp": "2024-10-24T19:35:59+01:00",
+          "auxiliaryData": {
+            "data": [
+              {
+                "name": "RECIPIENT_EMAILID",
+                "value": "test1014@example.com"
+              }
+            ]
+          },
+          "trackEventId": "5934652298366586",
+          "scanLocation": {
+            "altitude": "0.0",
+            "longitude": "0.0",
+            "latitude": "0.0"
+          },
+          "scanTimestamp": "2024-10-24T19:35:51+01:00",
+          "deviceId": "4789568638361014",
+          "RMGLocation": {
+            "functionalLocationId": "356",
+            "siteId": "000175"
+          },
+          "trackedEventCode": "EVDAV",
+          "transmissionTimestamp": "2024-10-24T19:35:59+01:00",
+          "eventReceivedTimestamp": "2024-10-24T19:35:59+01:00",
+          "eventReason": "11",
+          "manualScanIndicator": "false",
+          "workProcessCode": "100"
+        }
+      },
+      "enrichment": {
+        "productCategory": {
+          "productCategory": "SpecialDelivery13"
+        },
+        "postcodeRegion": "London"
+      }
+    },
+    "expected_notifications": [],
+    "expected_tracking": 1
+  },
+  {
+    "id": 1015,
+    "event": "EVDAV",
+    "product": "SpecialDelivery13",
+    "contact": "Mobile only",
+    "input": {
+      "message.MPE": {
+        "mailPiece": {
+          "mailPieceBarcode": {
+            "royalMailSegment": {
+              "mailTypeCode": "A",
+              "UPUCountry": "JGB",
+              "informationCode": "8",
+              "versionId": "2",
+              "mailItemFormatCode": "15",
+              "mailClassCode": "F"
+            },
+            "channelSegment": {
+              "uniqueItemId": "11000000001015001091111",
+              "weightCode": "1",
+              "pricePaid": "123",
+              "barcodeCreationDate": "2024-10-24",
+              "productId": "103",
+              "address": {
+                "buildingNumber": "1"
+              },
+              "destinationPostcodeDPS": {
+                "postcode": "EC1A1BB"
+              },
+              "mailPieceWeight": "1",
+              "UPUTrackingNumber": "YA000001015GB",
+              "destinationCountry": "GB",
+              "requiredAtDeliveryCode": "S"
+            }
+          }
+        },
+        "manualScan": {
+          "messageId": "msg-1015",
+          "userId": "user1015",
+          "eventTimestamp": "2024-10-24T19:35:51+01:00",
+          "transmissionCompleteTimestamp": "2024-10-24T19:35:59+01:00",
+          "auxiliaryData": {
+            "data": [
+              {
+                "name": "RECIPIENT_MOBILENO",
+                "value": "07088111015"
+              }
+            ]
+          },
+          "trackEventId": "5934652298366587",
+          "scanLocation": {
+            "altitude": "0.0",
+            "longitude": "0.0",
+            "latitude": "0.0"
+          },
+          "scanTimestamp": "2024-10-24T19:35:51+01:00",
+          "deviceId": "4789568638361015",
+          "RMGLocation": {
+            "functionalLocationId": "356",
+            "siteId": "000175"
+          },
+          "trackedEventCode": "EVDAV",
+          "transmissionTimestamp": "2024-10-24T19:35:59+01:00",
+          "eventReceivedTimestamp": "2024-10-24T19:35:59+01:00",
+          "eventReason": "11",
+          "manualScanIndicator": "false",
+          "workProcessCode": "100"
+        }
+      },
+      "enrichment": {
+        "productCategory": {
+          "productCategory": "SpecialDelivery13"
+        },
+        "postcodeRegion": "London"
+      }
+    },
+    "expected_notifications": [
+      "NRJRS (SMS)"
+    ],
+    "expected_tracking": 1
+  },
+  {
+    "id": 1016,
+    "event": "EVDAV",
+    "product": "SpecialDelivery13",
+    "contact": "Both email and mobile",
+    "input": {
+      "message.MPE": {
+        "mailPiece": {
+          "mailPieceBarcode": {
+            "royalMailSegment": {
+              "mailTypeCode": "A",
+              "UPUCountry": "JGB",
+              "informationCode": "8",
+              "versionId": "2",
+              "mailItemFormatCode": "15",
+              "mailClassCode": "F"
+            },
+            "channelSegment": {
+              "uniqueItemId": "11000000001016001091111",
+              "weightCode": "1",
+              "pricePaid": "123",
+              "barcodeCreationDate": "2024-10-24",
+              "productId": "103",
+              "address": {
+                "buildingNumber": "1"
+              },
+              "destinationPostcodeDPS": {
+                "postcode": "EC1A1BB"
+              },
+              "mailPieceWeight": "1",
+              "UPUTrackingNumber": "YA000001016GB",
+              "destinationCountry": "GB",
+              "requiredAtDeliveryCode": "S"
+            }
+          }
+        },
+        "manualScan": {
+          "messageId": "msg-1016",
+          "userId": "user1016",
+          "eventTimestamp": "2024-10-24T19:35:51+01:00",
+          "transmissionCompleteTimestamp": "2024-10-24T19:35:59+01:00",
+          "auxiliaryData": {
+            "data": [
+              {
+                "name": "RECIPIENT_EMAILID",
+                "value": "test1016@example.com"
+              },
+              {
+                "name": "RECIPIENT_MOBILENO",
+                "value": "07088111016"
+              }
+            ]
+          },
+          "trackEventId": "5934652298366588",
+          "scanLocation": {
+            "altitude": "0.0",
+            "longitude": "0.0",
+            "latitude": "0.0"
+          },
+          "scanTimestamp": "2024-10-24T19:35:51+01:00",
+          "deviceId": "4789568638361016",
+          "RMGLocation": {
+            "functionalLocationId": "356",
+            "siteId": "000175"
+          },
+          "trackedEventCode": "EVDAV",
+          "transmissionTimestamp": "2024-10-24T19:35:59+01:00",
+          "eventReceivedTimestamp": "2024-10-24T19:35:59+01:00",
+          "eventReason": "11",
+          "manualScanIndicator": "false",
+          "workProcessCode": "100"
+        }
+      },
+      "enrichment": {
+        "productCategory": {
+          "productCategory": "SpecialDelivery13"
+        },
+        "postcodeRegion": "London"
+      }
+    },
+    "expected_notifications": [
+      "NRJRS (SMS)"
+    ],
+    "expected_tracking": 1
+  },
+  {
+    "id": 1017,
+    "event": "EVIMC",
+    "product": "Tracked24",
+    "contact": "No contact info",
+    "input": {
+      "message.MPE": {
+        "mailPiece": {
+          "mailPieceBarcode": {
+            "royalMailSegment": {
+              "mailTypeCode": "A",
+              "UPUCountry": "JGB",
+              "informationCode": "8",
+              "versionId": "2",
+              "mailItemFormatCode": "15",
+              "mailClassCode": "F"
+            },
+            "channelSegment": {
+              "uniqueItemId": "11000000001017001091111",
+              "weightCode": "1",
+              "pricePaid": "123",
+              "barcodeCreationDate": "2024-10-24",
+              "productId": "100",
+              "address": {
+                "buildingNumber": "1"
+              },
+              "destinationPostcodeDPS": {
+                "postcode": "EC1A1BB"
+              },
+              "mailPieceWeight": "1",
+              "UPUTrackingNumber": "YA000001017GB",
+              "destinationCountry": "GB",
+              "requiredAtDeliveryCode": "S"
+            }
+          }
+        },
+        "manualScan": {
+          "messageId": "msg-1017",
+          "userId": "user1017",
+          "eventTimestamp": "2024-10-24T19:35:51+01:00",
+          "transmissionCompleteTimestamp": "2024-10-24T19:35:59+01:00",
+          "auxiliaryData": {
+            "data": []
+          },
+          "trackEventId": "5934652298366589",
+          "scanLocation": {
+            "altitude": "0.0",
+            "longitude": "0.0",
+            "latitude": "0.0"
+          },
+          "scanTimestamp": "2024-10-24T19:35:51+01:00",
+          "deviceId": "4789568638361017",
+          "RMGLocation": {
+            "functionalLocationId": "356",
+            "siteId": "000175"
+          },
+          "trackedEventCode": "EVIMC",
+          "transmissionTimestamp": "2024-10-24T19:35:59+01:00",
+          "eventReceivedTimestamp": "2024-10-24T19:35:59+01:00",
+          "eventReason": "11",
+          "manualScanIndicator": "false",
+          "workProcessCode": "100"
+        }
+      },
+      "enrichment": {
+        "productCategory": {
+          "productCategory": "Tracked24"
+        },
+        "postcodeRegion": "London"
+      }
+    },
+    "expected_notifications": [],
+    "expected_tracking": 1
+  },
+  {
+    "id": 1018,
+    "event": "EVIMC",
+    "product": "Tracked24",
+    "contact": "Email only",
+    "input": {
+      "message.MPE": {
+        "mailPiece": {
+          "mailPieceBarcode": {
+            "royalMailSegment": {
+              "mailTypeCode": "A",
+              "UPUCountry": "JGB",
+              "informationCode": "8",
+              "versionId": "2",
+              "mailItemFormatCode": "15",
+              "mailClassCode": "F"
+            },
+            "channelSegment": {
+              "uniqueItemId": "11000000001018001091111",
+              "weightCode": "1",
+              "pricePaid": "123",
+              "barcodeCreationDate": "2024-10-24",
+              "productId": "100",
+              "address": {
+                "buildingNumber": "1"
+              },
+              "destinationPostcodeDPS": {
+                "postcode": "EC1A1BB"
+              },
+              "mailPieceWeight": "1",
+              "UPUTrackingNumber": "YA000001018GB",
+              "destinationCountry": "GB",
+              "requiredAtDeliveryCode": "S"
+            }
+          }
+        },
+        "manualScan": {
+          "messageId": "msg-1018",
+          "userId": "user1018",
+          "eventTimestamp": "2024-10-24T19:35:51+01:00",
+          "transmissionCompleteTimestamp": "2024-10-24T19:35:59+01:00",
+          "auxiliaryData": {
+            "data": [
+              {
+                "name": "RECIPIENT_EMAILID",
+                "value": "test1018@example.com"
+              }
+            ]
+          },
+          "trackEventId": "5934652298366590",
+          "scanLocation": {
+            "altitude": "0.0",
+            "longitude": "0.0",
+            "latitude": "0.0"
+          },
+          "scanTimestamp": "2024-10-24T19:35:51+01:00",
+          "deviceId": "4789568638361018",
+          "RMGLocation": {
+            "functionalLocationId": "356",
+            "siteId": "000175"
+          },
+          "trackedEventCode": "EVIMC",
+          "transmissionTimestamp": "2024-10-24T19:35:59+01:00",
+          "eventReceivedTimestamp": "2024-10-24T19:35:59+01:00",
+          "eventReason": "11",
+          "manualScanIndicator": "false",
+          "workProcessCode": "100"
+        }
+      },
+      "enrichment": {
+        "productCategory": {
+          "productCategory": "Tracked24"
+        },
+        "postcodeRegion": "London"
+      }
+    },
+    "expected_notifications": [],
+    "expected_tracking": 1
+  },
+  {
+    "id": 1019,
+    "event": "EVIMC",
+    "product": "Tracked24",
+    "contact": "Mobile only",
+    "input": {
+      "message.MPE": {
+        "mailPiece": {
+          "mailPieceBarcode": {
+            "royalMailSegment": {
+              "mailTypeCode": "A",
+              "UPUCountry": "JGB",
+              "informationCode": "8",
+              "versionId": "2",
+              "mailItemFormatCode": "15",
+              "mailClassCode": "F"
+            },
+            "channelSegment": {
+              "uniqueItemId": "11000000001019001091111",
+              "weightCode": "1",
+              "pricePaid": "123",
+              "barcodeCreationDate": "2024-10-24",
+              "productId": "100",
+              "address": {
+                "buildingNumber": "1"
+              },
+              "destinationPostcodeDPS": {
+                "postcode": "EC1A1BB"
+              },
+              "mailPieceWeight": "1",
+              "UPUTrackingNumber": "YA000001019GB",
+              "destinationCountry": "GB",
+              "requiredAtDeliveryCode": "S"
+            }
+          }
+        },
+        "manualScan": {
+          "messageId": "msg-1019",
+          "userId": "user1019",
+          "eventTimestamp": "2024-10-24T19:35:51+01:00",
+          "transmissionCompleteTimestamp": "2024-10-24T19:35:59+01:00",
+          "auxiliaryData": {
+            "data": [
+              {
+                "name": "RECIPIENT_MOBILENO",
+                "value": "07088111019"
+              }
+            ]
+          },
+          "trackEventId": "5934652298366591",
+          "scanLocation": {
+            "altitude": "0.0",
+            "longitude": "0.0",
+            "latitude": "0.0"
+          },
+          "scanTimestamp": "2024-10-24T19:35:51+01:00",
+          "deviceId": "4789568638361019",
+          "RMGLocation": {
+            "functionalLocationId": "356",
+            "siteId": "000175"
+          },
+          "trackedEventCode": "EVIMC",
+          "transmissionTimestamp": "2024-10-24T19:35:59+01:00",
+          "eventReceivedTimestamp": "2024-10-24T19:35:59+01:00",
+          "eventReason": "11",
+          "manualScanIndicator": "false",
+          "workProcessCode": "100"
+        }
+      },
+      "enrichment": {
+        "productCategory": {
+          "productCategory": "Tracked24"
+        },
+        "postcodeRegion": "London"
+      }
+    },
+    "expected_notifications": [],
+    "expected_tracking": 1
+  },
+  {
+    "id": 1020,
+    "event": "EVIMC",
+    "product": "Tracked24",
+    "contact": "Both email and mobile",
+    "input": {
+      "message.MPE": {
+        "mailPiece": {
+          "mailPieceBarcode": {
+            "royalMailSegment": {
+              "mailTypeCode": "A",
+              "UPUCountry": "JGB",
+              "informationCode": "8",
+              "versionId": "2",
+              "mailItemFormatCode": "15",
+              "mailClassCode": "F"
+            },
+            "channelSegment": {
+              "uniqueItemId": "11000000001020001091111",
+              "weightCode": "1",
+              "pricePaid": "123",
+              "barcodeCreationDate": "2024-10-24",
+              "productId": "100",
+              "address": {
+                "buildingNumber": "1"
+              },
+              "destinationPostcodeDPS": {
+                "postcode": "EC1A1BB"
+              },
+              "mailPieceWeight": "1",
+              "UPUTrackingNumber": "YA000001020GB",
+              "destinationCountry": "GB",
+              "requiredAtDeliveryCode": "S"
+            }
+          }
+        },
+        "manualScan": {
+          "messageId": "msg-1020",
+          "userId": "user1020",
+          "eventTimestamp": "2024-10-24T19:35:51+01:00",
+          "transmissionCompleteTimestamp": "2024-10-24T19:35:59+01:00",
+          "auxiliaryData": {
+            "data": [
+              {
+                "name": "RECIPIENT_EMAILID",
+                "value": "test1020@example.com"
+              },
+              {
+                "name": "RECIPIENT_MOBILENO",
+                "value": "07088111020"
+              }
+            ]
+          },
+          "trackEventId": "5934652298366592",
+          "scanLocation": {
+            "altitude": "0.0",
+            "longitude": "0.0",
+            "latitude": "0.0"
+          },
+          "scanTimestamp": "2024-10-24T19:35:51+01:00",
+          "deviceId": "4789568638361020",
+          "RMGLocation": {
+            "functionalLocationId": "356",
+            "siteId": "000175"
+          },
+          "trackedEventCode": "EVIMC",
+          "transmissionTimestamp": "2024-10-24T19:35:59+01:00",
+          "eventReceivedTimestamp": "2024-10-24T19:35:59+01:00",
+          "eventReason": "11",
+          "manualScanIndicator": "false",
+          "workProcessCode": "100"
+        }
+      },
+      "enrichment": {
+        "productCategory": {
+          "productCategory": "Tracked24"
+        },
+        "postcodeRegion": "London"
+      }
+    },
+    "expected_notifications": [],
+    "expected_tracking": 1
+  },
+  {
+    "id": 1021,
+    "event": "EVIMC",
+    "product": "Tracked48",
+    "contact": "No contact info",
+    "input": {
+      "message.MPE": {
+        "mailPiece": {
+          "mailPieceBarcode": {
+            "royalMailSegment": {
+              "mailTypeCode": "A",
+              "UPUCountry": "JGB",
+              "informationCode": "8",
+              "versionId": "2",
+              "mailItemFormatCode": "15",
+              "mailClassCode": "F"
+            },
+            "channelSegment": {
+              "uniqueItemId": "11000000001021001091111",
+              "weightCode": "1",
+              "pricePaid": "123",
+              "barcodeCreationDate": "2024-10-24",
+              "productId": "101",
+              "address": {
+                "buildingNumber": "1"
+              },
+              "destinationPostcodeDPS": {
+                "postcode": "EC1A1BB"
+              },
+              "mailPieceWeight": "1",
+              "UPUTrackingNumber": "YA000001021GB",
+              "destinationCountry": "GB",
+              "requiredAtDeliveryCode": "S"
+            }
+          }
+        },
+        "manualScan": {
+          "messageId": "msg-1021",
+          "userId": "user1021",
+          "eventTimestamp": "2024-10-24T19:35:51+01:00",
+          "transmissionCompleteTimestamp": "2024-10-24T19:35:59+01:00",
+          "auxiliaryData": {
+            "data": []
+          },
+          "trackEventId": "5934652298366593",
+          "scanLocation": {
+            "altitude": "0.0",
+            "longitude": "0.0",
+            "latitude": "0.0"
+          },
+          "scanTimestamp": "2024-10-24T19:35:51+01:00",
+          "deviceId": "4789568638361021",
+          "RMGLocation": {
+            "functionalLocationId": "356",
+            "siteId": "000175"
+          },
+          "trackedEventCode": "EVIMC",
+          "transmissionTimestamp": "2024-10-24T19:35:59+01:00",
+          "eventReceivedTimestamp": "2024-10-24T19:35:59+01:00",
+          "eventReason": "11",
+          "manualScanIndicator": "false",
+          "workProcessCode": "100"
+        }
+      },
+      "enrichment": {
+        "productCategory": {
+          "productCategory": "Tracked48"
+        },
+        "postcodeRegion": "London"
+      }
+    },
+    "expected_notifications": [],
+    "expected_tracking": 1
+  },
+  {
+    "id": 1022,
+    "event": "EVIMC",
+    "product": "Tracked48",
+    "contact": "Email only",
+    "input": {
+      "message.MPE": {
+        "mailPiece": {
+          "mailPieceBarcode": {
+            "royalMailSegment": {
+              "mailTypeCode": "A",
+              "UPUCountry": "JGB",
+              "informationCode": "8",
+              "versionId": "2",
+              "mailItemFormatCode": "15",
+              "mailClassCode": "F"
+            },
+            "channelSegment": {
+              "uniqueItemId": "11000000001022001091111",
+              "weightCode": "1",
+              "pricePaid": "123",
+              "barcodeCreationDate": "2024-10-24",
+              "productId": "101",
+              "address": {
+                "buildingNumber": "1"
+              },
+              "destinationPostcodeDPS": {
+                "postcode": "EC1A1BB"
+              },
+              "mailPieceWeight": "1",
+              "UPUTrackingNumber": "YA000001022GB",
+              "destinationCountry": "GB",
+              "requiredAtDeliveryCode": "S"
+            }
+          }
+        },
+        "manualScan": {
+          "messageId": "msg-1022",
+          "userId": "user1022",
+          "eventTimestamp": "2024-10-24T19:35:51+01:00",
+          "transmissionCompleteTimestamp": "2024-10-24T19:35:59+01:00",
+          "auxiliaryData": {
+            "data": [
+              {
+                "name": "RECIPIENT_EMAILID",
+                "value": "test1022@example.com"
+              }
+            ]
+          },
+          "trackEventId": "5934652298366594",
+          "scanLocation": {
+            "altitude": "0.0",
+            "longitude": "0.0",
+            "latitude": "0.0"
+          },
+          "scanTimestamp": "2024-10-24T19:35:51+01:00",
+          "deviceId": "4789568638361022",
+          "RMGLocation": {
+            "functionalLocationId": "356",
+            "siteId": "000175"
+          },
+          "trackedEventCode": "EVIMC",
+          "transmissionTimestamp": "2024-10-24T19:35:59+01:00",
+          "eventReceivedTimestamp": "2024-10-24T19:35:59+01:00",
+          "eventReason": "11",
+          "manualScanIndicator": "false",
+          "workProcessCode": "100"
+        }
+      },
+      "enrichment": {
+        "productCategory": {
+          "productCategory": "Tracked48"
+        },
+        "postcodeRegion": "London"
+      }
+    },
+    "expected_notifications": [],
+    "expected_tracking": 1
+  },
+  {
+    "id": 1023,
+    "event": "EVIMC",
+    "product": "Tracked48",
+    "contact": "Mobile only",
+    "input": {
+      "message.MPE": {
+        "mailPiece": {
+          "mailPieceBarcode": {
+            "royalMailSegment": {
+              "mailTypeCode": "A",
+              "UPUCountry": "JGB",
+              "informationCode": "8",
+              "versionId": "2",
+              "mailItemFormatCode": "15",
+              "mailClassCode": "F"
+            },
+            "channelSegment": {
+              "uniqueItemId": "11000000001023001091111",
+              "weightCode": "1",
+              "pricePaid": "123",
+              "barcodeCreationDate": "2024-10-24",
+              "productId": "101",
+              "address": {
+                "buildingNumber": "1"
+              },
+              "destinationPostcodeDPS": {
+                "postcode": "EC1A1BB"
+              },
+              "mailPieceWeight": "1",
+              "UPUTrackingNumber": "YA000001023GB",
+              "destinationCountry": "GB",
+              "requiredAtDeliveryCode": "S"
+            }
+          }
+        },
+        "manualScan": {
+          "messageId": "msg-1023",
+          "userId": "user1023",
+          "eventTimestamp": "2024-10-24T19:35:51+01:00",
+          "transmissionCompleteTimestamp": "2024-10-24T19:35:59+01:00",
+          "auxiliaryData": {
+            "data": [
+              {
+                "name": "RECIPIENT_MOBILENO",
+                "value": "07088111023"
+              }
+            ]
+          },
+          "trackEventId": "5934652298366595",
+          "scanLocation": {
+            "altitude": "0.0",
+            "longitude": "0.0",
+            "latitude": "0.0"
+          },
+          "scanTimestamp": "2024-10-24T19:35:51+01:00",
+          "deviceId": "4789568638361023",
+          "RMGLocation": {
+            "functionalLocationId": "356",
+            "siteId": "000175"
+          },
+          "trackedEventCode": "EVIMC",
+          "transmissionTimestamp": "2024-10-24T19:35:59+01:00",
+          "eventReceivedTimestamp": "2024-10-24T19:35:59+01:00",
+          "eventReason": "11",
+          "manualScanIndicator": "false",
+          "workProcessCode": "100"
+        }
+      },
+      "enrichment": {
+        "productCategory": {
+          "productCategory": "Tracked48"
+        },
+        "postcodeRegion": "London"
+      }
+    },
+    "expected_notifications": [],
+    "expected_tracking": 1
+  },
+  {
+    "id": 1024,
+    "event": "EVIMC",
+    "product": "Tracked48",
+    "contact": "Both email and mobile",
+    "input": {
+      "message.MPE": {
+        "mailPiece": {
+          "mailPieceBarcode": {
+            "royalMailSegment": {
+              "mailTypeCode": "A",
+              "UPUCountry": "JGB",
+              "informationCode": "8",
+              "versionId": "2",
+              "mailItemFormatCode": "15",
+              "mailClassCode": "F"
+            },
+            "channelSegment": {
+              "uniqueItemId": "11000000001024001091111",
+              "weightCode": "1",
+              "pricePaid": "123",
+              "barcodeCreationDate": "2024-10-24",
+              "productId": "101",
+              "address": {
+                "buildingNumber": "1"
+              },
+              "destinationPostcodeDPS": {
+                "postcode": "EC1A1BB"
+              },
+              "mailPieceWeight": "1",
+              "UPUTrackingNumber": "YA000001024GB",
+              "destinationCountry": "GB",
+              "requiredAtDeliveryCode": "S"
+            }
+          }
+        },
+        "manualScan": {
+          "messageId": "msg-1024",
+          "userId": "user1024",
+          "eventTimestamp": "2024-10-24T19:35:51+01:00",
+          "transmissionCompleteTimestamp": "2024-10-24T19:35:59+01:00",
+          "auxiliaryData": {
+            "data": [
+              {
+                "name": "RECIPIENT_EMAILID",
+                "value": "test1024@example.com"
+              },
+              {
+                "name": "RECIPIENT_MOBILENO",
+                "value": "07088111024"
+              }
+            ]
+          },
+          "trackEventId": "5934652298366596",
+          "scanLocation": {
+            "altitude": "0.0",
+            "longitude": "0.0",
+            "latitude": "0.0"
+          },
+          "scanTimestamp": "2024-10-24T19:35:51+01:00",
+          "deviceId": "4789568638361024",
+          "RMGLocation": {
+            "functionalLocationId": "356",
+            "siteId": "000175"
+          },
+          "trackedEventCode": "EVIMC",
+          "transmissionTimestamp": "2024-10-24T19:35:59+01:00",
+          "eventReceivedTimestamp": "2024-10-24T19:35:59+01:00",
+          "eventReason": "11",
+          "manualScanIndicator": "false",
+          "workProcessCode": "100"
+        }
+      },
+      "enrichment": {
+        "productCategory": {
+          "productCategory": "Tracked48"
+        },
+        "postcodeRegion": "London"
+      }
+    },
+    "expected_notifications": [],
+    "expected_tracking": 1
+  },
+  {
+    "id": 1025,
+    "event": "EVIMC",
+    "product": "SpecialDelivery09",
+    "contact": "No contact info",
+    "input": {
+      "message.MPE": {
+        "mailPiece": {
+          "mailPieceBarcode": {
+            "royalMailSegment": {
+              "mailTypeCode": "A",
+              "UPUCountry": "JGB",
+              "informationCode": "8",
+              "versionId": "2",
+              "mailItemFormatCode": "15",
+              "mailClassCode": "F"
+            },
+            "channelSegment": {
+              "uniqueItemId": "11000000001025001091111",
+              "weightCode": "1",
+              "pricePaid": "123",
+              "barcodeCreationDate": "2024-10-24",
+              "productId": "102",
+              "address": {
+                "buildingNumber": "1"
+              },
+              "destinationPostcodeDPS": {
+                "postcode": "EC1A1BB"
+              },
+              "mailPieceWeight": "1",
+              "UPUTrackingNumber": "YA000001025GB",
+              "destinationCountry": "GB",
+              "requiredAtDeliveryCode": "S"
+            }
+          }
+        },
+        "manualScan": {
+          "messageId": "msg-1025",
+          "userId": "user1025",
+          "eventTimestamp": "2024-10-24T19:35:51+01:00",
+          "transmissionCompleteTimestamp": "2024-10-24T19:35:59+01:00",
+          "auxiliaryData": {
+            "data": []
+          },
+          "trackEventId": "5934652298366597",
+          "scanLocation": {
+            "altitude": "0.0",
+            "longitude": "0.0",
+            "latitude": "0.0"
+          },
+          "scanTimestamp": "2024-10-24T19:35:51+01:00",
+          "deviceId": "4789568638361025",
+          "RMGLocation": {
+            "functionalLocationId": "356",
+            "siteId": "000175"
+          },
+          "trackedEventCode": "EVIMC",
+          "transmissionTimestamp": "2024-10-24T19:35:59+01:00",
+          "eventReceivedTimestamp": "2024-10-24T19:35:59+01:00",
+          "eventReason": "11",
+          "manualScanIndicator": "false",
+          "workProcessCode": "100"
+        }
+      },
+      "enrichment": {
+        "productCategory": {
+          "productCategory": "SpecialDelivery09"
+        },
+        "postcodeRegion": "London"
+      }
+    },
+    "expected_notifications": [],
+    "expected_tracking": 1
+  },
+  {
+    "id": 1026,
+    "event": "EVIMC",
+    "product": "SpecialDelivery09",
+    "contact": "Email only",
+    "input": {
+      "message.MPE": {
+        "mailPiece": {
+          "mailPieceBarcode": {
+            "royalMailSegment": {
+              "mailTypeCode": "A",
+              "UPUCountry": "JGB",
+              "informationCode": "8",
+              "versionId": "2",
+              "mailItemFormatCode": "15",
+              "mailClassCode": "F"
+            },
+            "channelSegment": {
+              "uniqueItemId": "11000000001026001091111",
+              "weightCode": "1",
+              "pricePaid": "123",
+              "barcodeCreationDate": "2024-10-24",
+              "productId": "102",
+              "address": {
+                "buildingNumber": "1"
+              },
+              "destinationPostcodeDPS": {
+                "postcode": "EC1A1BB"
+              },
+              "mailPieceWeight": "1",
+              "UPUTrackingNumber": "YA000001026GB",
+              "destinationCountry": "GB",
+              "requiredAtDeliveryCode": "S"
+            }
+          }
+        },
+        "manualScan": {
+          "messageId": "msg-1026",
+          "userId": "user1026",
+          "eventTimestamp": "2024-10-24T19:35:51+01:00",
+          "transmissionCompleteTimestamp": "2024-10-24T19:35:59+01:00",
+          "auxiliaryData": {
+            "data": [
+              {
+                "name": "RECIPIENT_EMAILID",
+                "value": "test1026@example.com"
+              }
+            ]
+          },
+          "trackEventId": "5934652298366598",
+          "scanLocation": {
+            "altitude": "0.0",
+            "longitude": "0.0",
+            "latitude": "0.0"
+          },
+          "scanTimestamp": "2024-10-24T19:35:51+01:00",
+          "deviceId": "4789568638361026",
+          "RMGLocation": {
+            "functionalLocationId": "356",
+            "siteId": "000175"
+          },
+          "trackedEventCode": "EVIMC",
+          "transmissionTimestamp": "2024-10-24T19:35:59+01:00",
+          "eventReceivedTimestamp": "2024-10-24T19:35:59+01:00",
+          "eventReason": "11",
+          "manualScanIndicator": "false",
+          "workProcessCode": "100"
+        }
+      },
+      "enrichment": {
+        "productCategory": {
+          "productCategory": "SpecialDelivery09"
+        },
+        "postcodeRegion": "London"
+      }
+    },
+    "expected_notifications": [],
+    "expected_tracking": 1
+  },
+  {
+    "id": 1027,
+    "event": "EVIMC",
+    "product": "SpecialDelivery09",
+    "contact": "Mobile only",
+    "input": {
+      "message.MPE": {
+        "mailPiece": {
+          "mailPieceBarcode": {
+            "royalMailSegment": {
+              "mailTypeCode": "A",
+              "UPUCountry": "JGB",
+              "informationCode": "8",
+              "versionId": "2",
+              "mailItemFormatCode": "15",
+              "mailClassCode": "F"
+            },
+            "channelSegment": {
+              "uniqueItemId": "11000000001027001091111",
+              "weightCode": "1",
+              "pricePaid": "123",
+              "barcodeCreationDate": "2024-10-24",
+              "productId": "102",
+              "address": {
+                "buildingNumber": "1"
+              },
+              "destinationPostcodeDPS": {
+                "postcode": "EC1A1BB"
+              },
+              "mailPieceWeight": "1",
+              "UPUTrackingNumber": "YA000001027GB",
+              "destinationCountry": "GB",
+              "requiredAtDeliveryCode": "S"
+            }
+          }
+        },
+        "manualScan": {
+          "messageId": "msg-1027",
+          "userId": "user1027",
+          "eventTimestamp": "2024-10-24T19:35:51+01:00",
+          "transmissionCompleteTimestamp": "2024-10-24T19:35:59+01:00",
+          "auxiliaryData": {
+            "data": [
+              {
+                "name": "RECIPIENT_MOBILENO",
+                "value": "07088111027"
+              }
+            ]
+          },
+          "trackEventId": "5934652298366599",
+          "scanLocation": {
+            "altitude": "0.0",
+            "longitude": "0.0",
+            "latitude": "0.0"
+          },
+          "scanTimestamp": "2024-10-24T19:35:51+01:00",
+          "deviceId": "4789568638361027",
+          "RMGLocation": {
+            "functionalLocationId": "356",
+            "siteId": "000175"
+          },
+          "trackedEventCode": "EVIMC",
+          "transmissionTimestamp": "2024-10-24T19:35:59+01:00",
+          "eventReceivedTimestamp": "2024-10-24T19:35:59+01:00",
+          "eventReason": "11",
+          "manualScanIndicator": "false",
+          "workProcessCode": "100"
+        }
+      },
+      "enrichment": {
+        "productCategory": {
+          "productCategory": "SpecialDelivery09"
+        },
+        "postcodeRegion": "London"
+      }
+    },
+    "expected_notifications": [],
+    "expected_tracking": 1
+  },
+  {
+    "id": 1028,
+    "event": "EVIMC",
+    "product": "SpecialDelivery09",
+    "contact": "Both email and mobile",
+    "input": {
+      "message.MPE": {
+        "mailPiece": {
+          "mailPieceBarcode": {
+            "royalMailSegment": {
+              "mailTypeCode": "A",
+              "UPUCountry": "JGB",
+              "informationCode": "8",
+              "versionId": "2",
+              "mailItemFormatCode": "15",
+              "mailClassCode": "F"
+            },
+            "channelSegment": {
+              "uniqueItemId": "11000000001028001091111",
+              "weightCode": "1",
+              "pricePaid": "123",
+              "barcodeCreationDate": "2024-10-24",
+              "productId": "102",
+              "address": {
+                "buildingNumber": "1"
+              },
+              "destinationPostcodeDPS": {
+                "postcode": "EC1A1BB"
+              },
+              "mailPieceWeight": "1",
+              "UPUTrackingNumber": "YA000001028GB",
+              "destinationCountry": "GB",
+              "requiredAtDeliveryCode": "S"
+            }
+          }
+        },
+        "manualScan": {
+          "messageId": "msg-1028",
+          "userId": "user1028",
+          "eventTimestamp": "2024-10-24T19:35:51+01:00",
+          "transmissionCompleteTimestamp": "2024-10-24T19:35:59+01:00",
+          "auxiliaryData": {
+            "data": [
+              {
+                "name": "RECIPIENT_EMAILID",
+                "value": "test1028@example.com"
+              },
+              {
+                "name": "RECIPIENT_MOBILENO",
+                "value": "07088111028"
+              }
+            ]
+          },
+          "trackEventId": "5934652298366600",
+          "scanLocation": {
+            "altitude": "0.0",
+            "longitude": "0.0",
+            "latitude": "0.0"
+          },
+          "scanTimestamp": "2024-10-24T19:35:51+01:00",
+          "deviceId": "4789568638361028",
+          "RMGLocation": {
+            "functionalLocationId": "356",
+            "siteId": "000175"
+          },
+          "trackedEventCode": "EVIMC",
+          "transmissionTimestamp": "2024-10-24T19:35:59+01:00",
+          "eventReceivedTimestamp": "2024-10-24T19:35:59+01:00",
+          "eventReason": "11",
+          "manualScanIndicator": "false",
+          "workProcessCode": "100"
+        }
+      },
+      "enrichment": {
+        "productCategory": {
+          "productCategory": "SpecialDelivery09"
+        },
+        "postcodeRegion": "London"
+      }
+    },
+    "expected_notifications": [],
+    "expected_tracking": 1
+  },
+  {
+    "id": 1029,
+    "event": "EVIMC",
+    "product": "SpecialDelivery13",
+    "contact": "No contact info",
+    "input": {
+      "message.MPE": {
+        "mailPiece": {
+          "mailPieceBarcode": {
+            "royalMailSegment": {
+              "mailTypeCode": "A",
+              "UPUCountry": "JGB",
+              "informationCode": "8",
+              "versionId": "2",
+              "mailItemFormatCode": "15",
+              "mailClassCode": "F"
+            },
+            "channelSegment": {
+              "uniqueItemId": "11000000001029001091111",
+              "weightCode": "1",
+              "pricePaid": "123",
+              "barcodeCreationDate": "2024-10-24",
+              "productId": "103",
+              "address": {
+                "buildingNumber": "1"
+              },
+              "destinationPostcodeDPS": {
+                "postcode": "EC1A1BB"
+              },
+              "mailPieceWeight": "1",
+              "UPUTrackingNumber": "YA000001029GB",
+              "destinationCountry": "GB",
+              "requiredAtDeliveryCode": "S"
+            }
+          }
+        },
+        "manualScan": {
+          "messageId": "msg-1029",
+          "userId": "user1029",
+          "eventTimestamp": "2024-10-24T19:35:51+01:00",
+          "transmissionCompleteTimestamp": "2024-10-24T19:35:59+01:00",
+          "auxiliaryData": {
+            "data": []
+          },
+          "trackEventId": "5934652298366601",
+          "scanLocation": {
+            "altitude": "0.0",
+            "longitude": "0.0",
+            "latitude": "0.0"
+          },
+          "scanTimestamp": "2024-10-24T19:35:51+01:00",
+          "deviceId": "4789568638361029",
+          "RMGLocation": {
+            "functionalLocationId": "356",
+            "siteId": "000175"
+          },
+          "trackedEventCode": "EVIMC",
+          "transmissionTimestamp": "2024-10-24T19:35:59+01:00",
+          "eventReceivedTimestamp": "2024-10-24T19:35:59+01:00",
+          "eventReason": "11",
+          "manualScanIndicator": "false",
+          "workProcessCode": "100"
+        }
+      },
+      "enrichment": {
+        "productCategory": {
+          "productCategory": "SpecialDelivery13"
+        },
+        "postcodeRegion": "London"
+      }
+    },
+    "expected_notifications": [],
+    "expected_tracking": 1
+  },
+  {
+    "id": 1030,
+    "event": "EVIMC",
+    "product": "SpecialDelivery13",
+    "contact": "Email only",
+    "input": {
+      "message.MPE": {
+        "mailPiece": {
+          "mailPieceBarcode": {
+            "royalMailSegment": {
+              "mailTypeCode": "A",
+              "UPUCountry": "JGB",
+              "informationCode": "8",
+              "versionId": "2",
+              "mailItemFormatCode": "15",
+              "mailClassCode": "F"
+            },
+            "channelSegment": {
+              "uniqueItemId": "11000000001030001091111",
+              "weightCode": "1",
+              "pricePaid": "123",
+              "barcodeCreationDate": "2024-10-24",
+              "productId": "103",
+              "address": {
+                "buildingNumber": "1"
+              },
+              "destinationPostcodeDPS": {
+                "postcode": "EC1A1BB"
+              },
+              "mailPieceWeight": "1",
+              "UPUTrackingNumber": "YA000001030GB",
+              "destinationCountry": "GB",
+              "requiredAtDeliveryCode": "S"
+            }
+          }
+        },
+        "manualScan": {
+          "messageId": "msg-1030",
+          "userId": "user1030",
+          "eventTimestamp": "2024-10-24T19:35:51+01:00",
+          "transmissionCompleteTimestamp": "2024-10-24T19:35:59+01:00",
+          "auxiliaryData": {
+            "data": [
+              {
+                "name": "RECIPIENT_EMAILID",
+                "value": "test1030@example.com"
+              }
+            ]
+          },
+          "trackEventId": "5934652298366602",
+          "scanLocation": {
+            "altitude": "0.0",
+            "longitude": "0.0",
+            "latitude": "0.0"
+          },
+          "scanTimestamp": "2024-10-24T19:35:51+01:00",
+          "deviceId": "4789568638361030",
+          "RMGLocation": {
+            "functionalLocationId": "356",
+            "siteId": "000175"
+          },
+          "trackedEventCode": "EVIMC",
+          "transmissionTimestamp": "2024-10-24T19:35:59+01:00",
+          "eventReceivedTimestamp": "2024-10-24T19:35:59+01:00",
+          "eventReason": "11",
+          "manualScanIndicator": "false",
+          "workProcessCode": "100"
+        }
+      },
+      "enrichment": {
+        "productCategory": {
+          "productCategory": "SpecialDelivery13"
+        },
+        "postcodeRegion": "London"
+      }
+    },
+    "expected_notifications": [],
+    "expected_tracking": 1
+  },
+  {
+    "id": 1031,
+    "event": "EVIMC",
+    "product": "SpecialDelivery13",
+    "contact": "Mobile only",
+    "input": {
+      "message.MPE": {
+        "mailPiece": {
+          "mailPieceBarcode": {
+            "royalMailSegment": {
+              "mailTypeCode": "A",
+              "UPUCountry": "JGB",
+              "informationCode": "8",
+              "versionId": "2",
+              "mailItemFormatCode": "15",
+              "mailClassCode": "F"
+            },
+            "channelSegment": {
+              "uniqueItemId": "11000000001031001091111",
+              "weightCode": "1",
+              "pricePaid": "123",
+              "barcodeCreationDate": "2024-10-24",
+              "productId": "103",
+              "address": {
+                "buildingNumber": "1"
+              },
+              "destinationPostcodeDPS": {
+                "postcode": "EC1A1BB"
+              },
+              "mailPieceWeight": "1",
+              "UPUTrackingNumber": "YA000001031GB",
+              "destinationCountry": "GB",
+              "requiredAtDeliveryCode": "S"
+            }
+          }
+        },
+        "manualScan": {
+          "messageId": "msg-1031",
+          "userId": "user1031",
+          "eventTimestamp": "2024-10-24T19:35:51+01:00",
+          "transmissionCompleteTimestamp": "2024-10-24T19:35:59+01:00",
+          "auxiliaryData": {
+            "data": [
+              {
+                "name": "RECIPIENT_MOBILENO",
+                "value": "07088111031"
+              }
+            ]
+          },
+          "trackEventId": "5934652298366603",
+          "scanLocation": {
+            "altitude": "0.0",
+            "longitude": "0.0",
+            "latitude": "0.0"
+          },
+          "scanTimestamp": "2024-10-24T19:35:51+01:00",
+          "deviceId": "4789568638361031",
+          "RMGLocation": {
+            "functionalLocationId": "356",
+            "siteId": "000175"
+          },
+          "trackedEventCode": "EVIMC",
+          "transmissionTimestamp": "2024-10-24T19:35:59+01:00",
+          "eventReceivedTimestamp": "2024-10-24T19:35:59+01:00",
+          "eventReason": "11",
+          "manualScanIndicator": "false",
+          "workProcessCode": "100"
+        }
+      },
+      "enrichment": {
+        "productCategory": {
+          "productCategory": "SpecialDelivery13"
+        },
+        "postcodeRegion": "London"
+      }
+    },
+    "expected_notifications": [],
+    "expected_tracking": 1
+  },
+  {
+    "id": 1032,
+    "event": "EVIMC",
+    "product": "SpecialDelivery13",
+    "contact": "Both email and mobile",
+    "input": {
+      "message.MPE": {
+        "mailPiece": {
+          "mailPieceBarcode": {
+            "royalMailSegment": {
+              "mailTypeCode": "A",
+              "UPUCountry": "JGB",
+              "informationCode": "8",
+              "versionId": "2",
+              "mailItemFormatCode": "15",
+              "mailClassCode": "F"
+            },
+            "channelSegment": {
+              "uniqueItemId": "11000000001032001091111",
+              "weightCode": "1",
+              "pricePaid": "123",
+              "barcodeCreationDate": "2024-10-24",
+              "productId": "103",
+              "address": {
+                "buildingNumber": "1"
+              },
+              "destinationPostcodeDPS": {
+                "postcode": "EC1A1BB"
+              },
+              "mailPieceWeight": "1",
+              "UPUTrackingNumber": "YA000001032GB",
+              "destinationCountry": "GB",
+              "requiredAtDeliveryCode": "S"
+            }
+          }
+        },
+        "manualScan": {
+          "messageId": "msg-1032",
+          "userId": "user1032",
+          "eventTimestamp": "2024-10-24T19:35:51+01:00",
+          "transmissionCompleteTimestamp": "2024-10-24T19:35:59+01:00",
+          "auxiliaryData": {
+            "data": [
+              {
+                "name": "RECIPIENT_EMAILID",
+                "value": "test1032@example.com"
+              },
+              {
+                "name": "RECIPIENT_MOBILENO",
+                "value": "07088111032"
+              }
+            ]
+          },
+          "trackEventId": "5934652298366604",
+          "scanLocation": {
+            "altitude": "0.0",
+            "longitude": "0.0",
+            "latitude": "0.0"
+          },
+          "scanTimestamp": "2024-10-24T19:35:51+01:00",
+          "deviceId": "4789568638361032",
+          "RMGLocation": {
+            "functionalLocationId": "356",
+            "siteId": "000175"
+          },
+          "trackedEventCode": "EVIMC",
+          "transmissionTimestamp": "2024-10-24T19:35:59+01:00",
+          "eventReceivedTimestamp": "2024-10-24T19:35:59+01:00",
+          "eventReason": "11",
+          "manualScanIndicator": "false",
+          "workProcessCode": "100"
+        }
+      },
+      "enrichment": {
+        "productCategory": {
+          "productCategory": "SpecialDelivery13"
+        },
+        "postcodeRegion": "London"
+      }
+    },
+    "expected_notifications": [],
+    "expected_tracking": 1
+  },
+  {
+    "id": 1033,
+    "event": "EVGPD",
+    "product": "Tracked24",
+    "contact": "No contact info",
+    "input": {
+      "message.MPE": {
+        "mailPiece": {
+          "mailPieceBarcode": {
+            "royalMailSegment": {
+              "mailTypeCode": "A",
+              "UPUCountry": "JGB",
+              "informationCode": "8",
+              "versionId": "2",
+              "mailItemFormatCode": "15",
+              "mailClassCode": "F"
+            },
+            "channelSegment": {
+              "uniqueItemId": "11000000001033001091111",
+              "weightCode": "1",
+              "pricePaid": "123",
+              "barcodeCreationDate": "2024-10-24",
+              "productId": "100",
+              "address": {
+                "buildingNumber": "1"
+              },
+              "destinationPostcodeDPS": {
+                "postcode": "EC1A1BB"
+              },
+              "mailPieceWeight": "1",
+              "UPUTrackingNumber": "YA000001033GB",
+              "destinationCountry": "GB",
+              "requiredAtDeliveryCode": "S"
+            }
+          }
+        },
+        "manualScan": {
+          "messageId": "msg-1033",
+          "userId": "user1033",
+          "eventTimestamp": "2024-10-24T19:35:51+01:00",
+          "transmissionCompleteTimestamp": "2024-10-24T19:35:59+01:00",
+          "auxiliaryData": {
+            "data": []
+          },
+          "trackEventId": "5934652298366605",
+          "scanLocation": {
+            "altitude": "0.0",
+            "longitude": "0.0",
+            "latitude": "0.0"
+          },
+          "scanTimestamp": "2024-10-24T19:35:51+01:00",
+          "deviceId": "4789568638361033",
+          "RMGLocation": {
+            "functionalLocationId": "356",
+            "siteId": "000175"
+          },
+          "trackedEventCode": "EVGPD",
+          "transmissionTimestamp": "2024-10-24T19:35:59+01:00",
+          "eventReceivedTimestamp": "2024-10-24T19:35:59+01:00",
+          "eventReason": "11",
+          "manualScanIndicator": "false",
+          "workProcessCode": "100"
+        }
+      },
+      "enrichment": {
+        "productCategory": {
+          "productCategory": "Tracked24"
+        },
+        "postcodeRegion": "London"
+      }
+    },
+    "expected_notifications": [],
+    "expected_tracking": 1
+  },
+  {
+    "id": 1034,
+    "event": "EVGPD",
+    "product": "Tracked24",
+    "contact": "Email only",
+    "input": {
+      "message.MPE": {
+        "mailPiece": {
+          "mailPieceBarcode": {
+            "royalMailSegment": {
+              "mailTypeCode": "A",
+              "UPUCountry": "JGB",
+              "informationCode": "8",
+              "versionId": "2",
+              "mailItemFormatCode": "15",
+              "mailClassCode": "F"
+            },
+            "channelSegment": {
+              "uniqueItemId": "11000000001034001091111",
+              "weightCode": "1",
+              "pricePaid": "123",
+              "barcodeCreationDate": "2024-10-24",
+              "productId": "100",
+              "address": {
+                "buildingNumber": "1"
+              },
+              "destinationPostcodeDPS": {
+                "postcode": "EC1A1BB"
+              },
+              "mailPieceWeight": "1",
+              "UPUTrackingNumber": "YA000001034GB",
+              "destinationCountry": "GB",
+              "requiredAtDeliveryCode": "S"
+            }
+          }
+        },
+        "manualScan": {
+          "messageId": "msg-1034",
+          "userId": "user1034",
+          "eventTimestamp": "2024-10-24T19:35:51+01:00",
+          "transmissionCompleteTimestamp": "2024-10-24T19:35:59+01:00",
+          "auxiliaryData": {
+            "data": [
+              {
+                "name": "RECIPIENT_EMAILID",
+                "value": "test1034@example.com"
+              }
+            ]
+          },
+          "trackEventId": "5934652298366606",
+          "scanLocation": {
+            "altitude": "0.0",
+            "longitude": "0.0",
+            "latitude": "0.0"
+          },
+          "scanTimestamp": "2024-10-24T19:35:51+01:00",
+          "deviceId": "4789568638361034",
+          "RMGLocation": {
+            "functionalLocationId": "356",
+            "siteId": "000175"
+          },
+          "trackedEventCode": "EVGPD",
+          "transmissionTimestamp": "2024-10-24T19:35:59+01:00",
+          "eventReceivedTimestamp": "2024-10-24T19:35:59+01:00",
+          "eventReason": "11",
+          "manualScanIndicator": "false",
+          "workProcessCode": "100"
+        }
+      },
+      "enrichment": {
+        "productCategory": {
+          "productCategory": "Tracked24"
+        },
+        "postcodeRegion": "London"
+      }
+    },
+    "expected_notifications": [
+      "NRBRS (Email)"
+    ],
+    "expected_tracking": 1
+  },
+  {
+    "id": 1035,
+    "event": "EVGPD",
+    "product": "Tracked24",
+    "contact": "Mobile only",
+    "input": {
+      "message.MPE": {
+        "mailPiece": {
+          "mailPieceBarcode": {
+            "royalMailSegment": {
+              "mailTypeCode": "A",
+              "UPUCountry": "JGB",
+              "informationCode": "8",
+              "versionId": "2",
+              "mailItemFormatCode": "15",
+              "mailClassCode": "F"
+            },
+            "channelSegment": {
+              "uniqueItemId": "11000000001035001091111",
+              "weightCode": "1",
+              "pricePaid": "123",
+              "barcodeCreationDate": "2024-10-24",
+              "productId": "100",
+              "address": {
+                "buildingNumber": "1"
+              },
+              "destinationPostcodeDPS": {
+                "postcode": "EC1A1BB"
+              },
+              "mailPieceWeight": "1",
+              "UPUTrackingNumber": "YA000001035GB",
+              "destinationCountry": "GB",
+              "requiredAtDeliveryCode": "S"
+            }
+          }
+        },
+        "manualScan": {
+          "messageId": "msg-1035",
+          "userId": "user1035",
+          "eventTimestamp": "2024-10-24T19:35:51+01:00",
+          "transmissionCompleteTimestamp": "2024-10-24T19:35:59+01:00",
+          "auxiliaryData": {
+            "data": [
+              {
+                "name": "RECIPIENT_MOBILENO",
+                "value": "07088111035"
+              }
+            ]
+          },
+          "trackEventId": "5934652298366607",
+          "scanLocation": {
+            "altitude": "0.0",
+            "longitude": "0.0",
+            "latitude": "0.0"
+          },
+          "scanTimestamp": "2024-10-24T19:35:51+01:00",
+          "deviceId": "4789568638361035",
+          "RMGLocation": {
+            "functionalLocationId": "356",
+            "siteId": "000175"
+          },
+          "trackedEventCode": "EVGPD",
+          "transmissionTimestamp": "2024-10-24T19:35:59+01:00",
+          "eventReceivedTimestamp": "2024-10-24T19:35:59+01:00",
+          "eventReason": "11",
+          "manualScanIndicator": "false",
+          "workProcessCode": "100"
+        }
+      },
+      "enrichment": {
+        "productCategory": {
+          "productCategory": "Tracked24"
+        },
+        "postcodeRegion": "London"
+      }
+    },
+    "expected_notifications": [
+      "NRBRS (SMS)"
+    ],
+    "expected_tracking": 1
+  },
+  {
+    "id": 1036,
+    "event": "EVGPD",
+    "product": "Tracked24",
+    "contact": "Both email and mobile",
+    "input": {
+      "message.MPE": {
+        "mailPiece": {
+          "mailPieceBarcode": {
+            "royalMailSegment": {
+              "mailTypeCode": "A",
+              "UPUCountry": "JGB",
+              "informationCode": "8",
+              "versionId": "2",
+              "mailItemFormatCode": "15",
+              "mailClassCode": "F"
+            },
+            "channelSegment": {
+              "uniqueItemId": "11000000001036001091111",
+              "weightCode": "1",
+              "pricePaid": "123",
+              "barcodeCreationDate": "2024-10-24",
+              "productId": "100",
+              "address": {
+                "buildingNumber": "1"
+              },
+              "destinationPostcodeDPS": {
+                "postcode": "EC1A1BB"
+              },
+              "mailPieceWeight": "1",
+              "UPUTrackingNumber": "YA000001036GB",
+              "destinationCountry": "GB",
+              "requiredAtDeliveryCode": "S"
+            }
+          }
+        },
+        "manualScan": {
+          "messageId": "msg-1036",
+          "userId": "user1036",
+          "eventTimestamp": "2024-10-24T19:35:51+01:00",
+          "transmissionCompleteTimestamp": "2024-10-24T19:35:59+01:00",
+          "auxiliaryData": {
+            "data": [
+              {
+                "name": "RECIPIENT_EMAILID",
+                "value": "test1036@example.com"
+              },
+              {
+                "name": "RECIPIENT_MOBILENO",
+                "value": "07088111036"
+              }
+            ]
+          },
+          "trackEventId": "5934652298366608",
+          "scanLocation": {
+            "altitude": "0.0",
+            "longitude": "0.0",
+            "latitude": "0.0"
+          },
+          "scanTimestamp": "2024-10-24T19:35:51+01:00",
+          "deviceId": "4789568638361036",
+          "RMGLocation": {
+            "functionalLocationId": "356",
+            "siteId": "000175"
+          },
+          "trackedEventCode": "EVGPD",
+          "transmissionTimestamp": "2024-10-24T19:35:59+01:00",
+          "eventReceivedTimestamp": "2024-10-24T19:35:59+01:00",
+          "eventReason": "11",
+          "manualScanIndicator": "false",
+          "workProcessCode": "100"
+        }
+      },
+      "enrichment": {
+        "productCategory": {
+          "productCategory": "Tracked24"
+        },
+        "postcodeRegion": "London"
+      }
+    },
+    "expected_notifications": [
+      "NRBRS (Email)",
+      "NRBRS (SMS)"
+    ],
+    "expected_tracking": 1
+  },
+  {
+    "id": 1037,
+    "event": "EVGPD",
+    "product": "Tracked48",
+    "contact": "No contact info",
+    "input": {
+      "message.MPE": {
+        "mailPiece": {
+          "mailPieceBarcode": {
+            "royalMailSegment": {
+              "mailTypeCode": "A",
+              "UPUCountry": "JGB",
+              "informationCode": "8",
+              "versionId": "2",
+              "mailItemFormatCode": "15",
+              "mailClassCode": "F"
+            },
+            "channelSegment": {
+              "uniqueItemId": "11000000001037001091111",
+              "weightCode": "1",
+              "pricePaid": "123",
+              "barcodeCreationDate": "2024-10-24",
+              "productId": "101",
+              "address": {
+                "buildingNumber": "1"
+              },
+              "destinationPostcodeDPS": {
+                "postcode": "EC1A1BB"
+              },
+              "mailPieceWeight": "1",
+              "UPUTrackingNumber": "YA000001037GB",
+              "destinationCountry": "GB",
+              "requiredAtDeliveryCode": "S"
+            }
+          }
+        },
+        "manualScan": {
+          "messageId": "msg-1037",
+          "userId": "user1037",
+          "eventTimestamp": "2024-10-24T19:35:51+01:00",
+          "transmissionCompleteTimestamp": "2024-10-24T19:35:59+01:00",
+          "auxiliaryData": {
+            "data": []
+          },
+          "trackEventId": "5934652298366609",
+          "scanLocation": {
+            "altitude": "0.0",
+            "longitude": "0.0",
+            "latitude": "0.0"
+          },
+          "scanTimestamp": "2024-10-24T19:35:51+01:00",
+          "deviceId": "4789568638361037",
+          "RMGLocation": {
+            "functionalLocationId": "356",
+            "siteId": "000175"
+          },
+          "trackedEventCode": "EVGPD",
+          "transmissionTimestamp": "2024-10-24T19:35:59+01:00",
+          "eventReceivedTimestamp": "2024-10-24T19:35:59+01:00",
+          "eventReason": "11",
+          "manualScanIndicator": "false",
+          "workProcessCode": "100"
+        }
+      },
+      "enrichment": {
+        "productCategory": {
+          "productCategory": "Tracked48"
+        },
+        "postcodeRegion": "London"
+      }
+    },
+    "expected_notifications": [],
+    "expected_tracking": 1
+  },
+  {
+    "id": 1038,
+    "event": "EVGPD",
+    "product": "Tracked48",
+    "contact": "Email only",
+    "input": {
+      "message.MPE": {
+        "mailPiece": {
+          "mailPieceBarcode": {
+            "royalMailSegment": {
+              "mailTypeCode": "A",
+              "UPUCountry": "JGB",
+              "informationCode": "8",
+              "versionId": "2",
+              "mailItemFormatCode": "15",
+              "mailClassCode": "F"
+            },
+            "channelSegment": {
+              "uniqueItemId": "11000000001038001091111",
+              "weightCode": "1",
+              "pricePaid": "123",
+              "barcodeCreationDate": "2024-10-24",
+              "productId": "101",
+              "address": {
+                "buildingNumber": "1"
+              },
+              "destinationPostcodeDPS": {
+                "postcode": "EC1A1BB"
+              },
+              "mailPieceWeight": "1",
+              "UPUTrackingNumber": "YA000001038GB",
+              "destinationCountry": "GB",
+              "requiredAtDeliveryCode": "S"
+            }
+          }
+        },
+        "manualScan": {
+          "messageId": "msg-1038",
+          "userId": "user1038",
+          "eventTimestamp": "2024-10-24T19:35:51+01:00",
+          "transmissionCompleteTimestamp": "2024-10-24T19:35:59+01:00",
+          "auxiliaryData": {
+            "data": [
+              {
+                "name": "RECIPIENT_EMAILID",
+                "value": "test1038@example.com"
+              }
+            ]
+          },
+          "trackEventId": "5934652298366610",
+          "scanLocation": {
+            "altitude": "0.0",
+            "longitude": "0.0",
+            "latitude": "0.0"
+          },
+          "scanTimestamp": "2024-10-24T19:35:51+01:00",
+          "deviceId": "4789568638361038",
+          "RMGLocation": {
+            "functionalLocationId": "356",
+            "siteId": "000175"
+          },
+          "trackedEventCode": "EVGPD",
+          "transmissionTimestamp": "2024-10-24T19:35:59+01:00",
+          "eventReceivedTimestamp": "2024-10-24T19:35:59+01:00",
+          "eventReason": "11",
+          "manualScanIndicator": "false",
+          "workProcessCode": "100"
+        }
+      },
+      "enrichment": {
+        "productCategory": {
+          "productCategory": "Tracked48"
+        },
+        "postcodeRegion": "London"
+      }
+    },
+    "expected_notifications": [
+      "NRERS (Email)"
+    ],
+    "expected_tracking": 1
+  },
+  {
+    "id": 1039,
+    "event": "EVGPD",
+    "product": "Tracked48",
+    "contact": "Mobile only",
+    "input": {
+      "message.MPE": {
+        "mailPiece": {
+          "mailPieceBarcode": {
+            "royalMailSegment": {
+              "mailTypeCode": "A",
+              "UPUCountry": "JGB",
+              "informationCode": "8",
+              "versionId": "2",
+              "mailItemFormatCode": "15",
+              "mailClassCode": "F"
+            },
+            "channelSegment": {
+              "uniqueItemId": "11000000001039001091111",
+              "weightCode": "1",
+              "pricePaid": "123",
+              "barcodeCreationDate": "2024-10-24",
+              "productId": "101",
+              "address": {
+                "buildingNumber": "1"
+              },
+              "destinationPostcodeDPS": {
+                "postcode": "EC1A1BB"
+              },
+              "mailPieceWeight": "1",
+              "UPUTrackingNumber": "YA000001039GB",
+              "destinationCountry": "GB",
+              "requiredAtDeliveryCode": "S"
+            }
+          }
+        },
+        "manualScan": {
+          "messageId": "msg-1039",
+          "userId": "user1039",
+          "eventTimestamp": "2024-10-24T19:35:51+01:00",
+          "transmissionCompleteTimestamp": "2024-10-24T19:35:59+01:00",
+          "auxiliaryData": {
+            "data": [
+              {
+                "name": "RECIPIENT_MOBILENO",
+                "value": "07088111039"
+              }
+            ]
+          },
+          "trackEventId": "5934652298366611",
+          "scanLocation": {
+            "altitude": "0.0",
+            "longitude": "0.0",
+            "latitude": "0.0"
+          },
+          "scanTimestamp": "2024-10-24T19:35:51+01:00",
+          "deviceId": "4789568638361039",
+          "RMGLocation": {
+            "functionalLocationId": "356",
+            "siteId": "000175"
+          },
+          "trackedEventCode": "EVGPD",
+          "transmissionTimestamp": "2024-10-24T19:35:59+01:00",
+          "eventReceivedTimestamp": "2024-10-24T19:35:59+01:00",
+          "eventReason": "11",
+          "manualScanIndicator": "false",
+          "workProcessCode": "100"
+        }
+      },
+      "enrichment": {
+        "productCategory": {
+          "productCategory": "Tracked48"
+        },
+        "postcodeRegion": "London"
+      }
+    },
+    "expected_notifications": [
+      "NRERS (SMS)"
+    ],
+    "expected_tracking": 1
+  },
+  {
+    "id": 1040,
+    "event": "EVGPD",
+    "product": "Tracked48",
+    "contact": "Both email and mobile",
+    "input": {
+      "message.MPE": {
+        "mailPiece": {
+          "mailPieceBarcode": {
+            "royalMailSegment": {
+              "mailTypeCode": "A",
+              "UPUCountry": "JGB",
+              "informationCode": "8",
+              "versionId": "2",
+              "mailItemFormatCode": "15",
+              "mailClassCode": "F"
+            },
+            "channelSegment": {
+              "uniqueItemId": "11000000001040001091111",
+              "weightCode": "1",
+              "pricePaid": "123",
+              "barcodeCreationDate": "2024-10-24",
+              "productId": "101",
+              "address": {
+                "buildingNumber": "1"
+              },
+              "destinationPostcodeDPS": {
+                "postcode": "EC1A1BB"
+              },
+              "mailPieceWeight": "1",
+              "UPUTrackingNumber": "YA000001040GB",
+              "destinationCountry": "GB",
+              "requiredAtDeliveryCode": "S"
+            }
+          }
+        },
+        "manualScan": {
+          "messageId": "msg-1040",
+          "userId": "user1040",
+          "eventTimestamp": "2024-10-24T19:35:51+01:00",
+          "transmissionCompleteTimestamp": "2024-10-24T19:35:59+01:00",
+          "auxiliaryData": {
+            "data": [
+              {
+                "name": "RECIPIENT_EMAILID",
+                "value": "test1040@example.com"
+              },
+              {
+                "name": "RECIPIENT_MOBILENO",
+                "value": "07088111040"
+              }
+            ]
+          },
+          "trackEventId": "5934652298366612",
+          "scanLocation": {
+            "altitude": "0.0",
+            "longitude": "0.0",
+            "latitude": "0.0"
+          },
+          "scanTimestamp": "2024-10-24T19:35:51+01:00",
+          "deviceId": "4789568638361040",
+          "RMGLocation": {
+            "functionalLocationId": "356",
+            "siteId": "000175"
+          },
+          "trackedEventCode": "EVGPD",
+          "transmissionTimestamp": "2024-10-24T19:35:59+01:00",
+          "eventReceivedTimestamp": "2024-10-24T19:35:59+01:00",
+          "eventReason": "11",
+          "manualScanIndicator": "false",
+          "workProcessCode": "100"
+        }
+      },
+      "enrichment": {
+        "productCategory": {
+          "productCategory": "Tracked48"
+        },
+        "postcodeRegion": "London"
+      }
+    },
+    "expected_notifications": [
+      "NRERS (Email)",
+      "NRERS (SMS)"
+    ],
+    "expected_tracking": 1
+  },
+  {
+    "id": 1041,
+    "event": "EVGPD",
+    "product": "SpecialDelivery09",
+    "contact": "No contact info",
+    "input": {
+      "message.MPE": {
+        "mailPiece": {
+          "mailPieceBarcode": {
+            "royalMailSegment": {
+              "mailTypeCode": "A",
+              "UPUCountry": "JGB",
+              "informationCode": "8",
+              "versionId": "2",
+              "mailItemFormatCode": "15",
+              "mailClassCode": "F"
+            },
+            "channelSegment": {
+              "uniqueItemId": "11000000001041001091111",
+              "weightCode": "1",
+              "pricePaid": "123",
+              "barcodeCreationDate": "2024-10-24",
+              "productId": "102",
+              "address": {
+                "buildingNumber": "1"
+              },
+              "destinationPostcodeDPS": {
+                "postcode": "EC1A1BB"
+              },
+              "mailPieceWeight": "1",
+              "UPUTrackingNumber": "YA000001041GB",
+              "destinationCountry": "GB",
+              "requiredAtDeliveryCode": "S"
+            }
+          }
+        },
+        "manualScan": {
+          "messageId": "msg-1041",
+          "userId": "user1041",
+          "eventTimestamp": "2024-10-24T19:35:51+01:00",
+          "transmissionCompleteTimestamp": "2024-10-24T19:35:59+01:00",
+          "auxiliaryData": {
+            "data": []
+          },
+          "trackEventId": "5934652298366613",
+          "scanLocation": {
+            "altitude": "0.0",
+            "longitude": "0.0",
+            "latitude": "0.0"
+          },
+          "scanTimestamp": "2024-10-24T19:35:51+01:00",
+          "deviceId": "4789568638361041",
+          "RMGLocation": {
+            "functionalLocationId": "356",
+            "siteId": "000175"
+          },
+          "trackedEventCode": "EVGPD",
+          "transmissionTimestamp": "2024-10-24T19:35:59+01:00",
+          "eventReceivedTimestamp": "2024-10-24T19:35:59+01:00",
+          "eventReason": "11",
+          "manualScanIndicator": "false",
+          "workProcessCode": "100"
+        }
+      },
+      "enrichment": {
+        "productCategory": {
+          "productCategory": "SpecialDelivery09"
+        },
+        "postcodeRegion": "London"
+      }
+    },
+    "expected_notifications": [],
+    "expected_tracking": 1
+  },
+  {
+    "id": 1042,
+    "event": "EVGPD",
+    "product": "SpecialDelivery09",
+    "contact": "Email only",
+    "input": {
+      "message.MPE": {
+        "mailPiece": {
+          "mailPieceBarcode": {
+            "royalMailSegment": {
+              "mailTypeCode": "A",
+              "UPUCountry": "JGB",
+              "informationCode": "8",
+              "versionId": "2",
+              "mailItemFormatCode": "15",
+              "mailClassCode": "F"
+            },
+            "channelSegment": {
+              "uniqueItemId": "11000000001042001091111",
+              "weightCode": "1",
+              "pricePaid": "123",
+              "barcodeCreationDate": "2024-10-24",
+              "productId": "102",
+              "address": {
+                "buildingNumber": "1"
+              },
+              "destinationPostcodeDPS": {
+                "postcode": "EC1A1BB"
+              },
+              "mailPieceWeight": "1",
+              "UPUTrackingNumber": "YA000001042GB",
+              "destinationCountry": "GB",
+              "requiredAtDeliveryCode": "S"
+            }
+          }
+        },
+        "manualScan": {
+          "messageId": "msg-1042",
+          "userId": "user1042",
+          "eventTimestamp": "2024-10-24T19:35:51+01:00",
+          "transmissionCompleteTimestamp": "2024-10-24T19:35:59+01:00",
+          "auxiliaryData": {
+            "data": [
+              {
+                "name": "RECIPIENT_EMAILID",
+                "value": "test1042@example.com"
+              }
+            ]
+          },
+          "trackEventId": "5934652298366614",
+          "scanLocation": {
+            "altitude": "0.0",
+            "longitude": "0.0",
+            "latitude": "0.0"
+          },
+          "scanTimestamp": "2024-10-24T19:35:51+01:00",
+          "deviceId": "4789568638361042",
+          "RMGLocation": {
+            "functionalLocationId": "356",
+            "siteId": "000175"
+          },
+          "trackedEventCode": "EVGPD",
+          "transmissionTimestamp": "2024-10-24T19:35:59+01:00",
+          "eventReceivedTimestamp": "2024-10-24T19:35:59+01:00",
+          "eventReason": "11",
+          "manualScanIndicator": "false",
+          "workProcessCode": "100"
+        }
+      },
+      "enrichment": {
+        "productCategory": {
+          "productCategory": "SpecialDelivery09"
+        },
+        "postcodeRegion": "London"
+      }
+    },
+    "expected_notifications": [
+      "NRHRS (Email)"
+    ],
+    "expected_tracking": 1
+  },
+  {
+    "id": 1043,
+    "event": "EVGPD",
+    "product": "SpecialDelivery09",
+    "contact": "Mobile only",
+    "input": {
+      "message.MPE": {
+        "mailPiece": {
+          "mailPieceBarcode": {
+            "royalMailSegment": {
+              "mailTypeCode": "A",
+              "UPUCountry": "JGB",
+              "informationCode": "8",
+              "versionId": "2",
+              "mailItemFormatCode": "15",
+              "mailClassCode": "F"
+            },
+            "channelSegment": {
+              "uniqueItemId": "11000000001043001091111",
+              "weightCode": "1",
+              "pricePaid": "123",
+              "barcodeCreationDate": "2024-10-24",
+              "productId": "102",
+              "address": {
+                "buildingNumber": "1"
+              },
+              "destinationPostcodeDPS": {
+                "postcode": "EC1A1BB"
+              },
+              "mailPieceWeight": "1",
+              "UPUTrackingNumber": "YA000001043GB",
+              "destinationCountry": "GB",
+              "requiredAtDeliveryCode": "S"
+            }
+          }
+        },
+        "manualScan": {
+          "messageId": "msg-1043",
+          "userId": "user1043",
+          "eventTimestamp": "2024-10-24T19:35:51+01:00",
+          "transmissionCompleteTimestamp": "2024-10-24T19:35:59+01:00",
+          "auxiliaryData": {
+            "data": [
+              {
+                "name": "RECIPIENT_MOBILENO",
+                "value": "07088111043"
+              }
+            ]
+          },
+          "trackEventId": "5934652298366615",
+          "scanLocation": {
+            "altitude": "0.0",
+            "longitude": "0.0",
+            "latitude": "0.0"
+          },
+          "scanTimestamp": "2024-10-24T19:35:51+01:00",
+          "deviceId": "4789568638361043",
+          "RMGLocation": {
+            "functionalLocationId": "356",
+            "siteId": "000175"
+          },
+          "trackedEventCode": "EVGPD",
+          "transmissionTimestamp": "2024-10-24T19:35:59+01:00",
+          "eventReceivedTimestamp": "2024-10-24T19:35:59+01:00",
+          "eventReason": "11",
+          "manualScanIndicator": "false",
+          "workProcessCode": "100"
+        }
+      },
+      "enrichment": {
+        "productCategory": {
+          "productCategory": "SpecialDelivery09"
+        },
+        "postcodeRegion": "London"
+      }
+    },
+    "expected_notifications": [
+      "NRHRS (SMS)"
+    ],
+    "expected_tracking": 1
+  },
+  {
+    "id": 1044,
+    "event": "EVGPD",
+    "product": "SpecialDelivery09",
+    "contact": "Both email and mobile",
+    "input": {
+      "message.MPE": {
+        "mailPiece": {
+          "mailPieceBarcode": {
+            "royalMailSegment": {
+              "mailTypeCode": "A",
+              "UPUCountry": "JGB",
+              "informationCode": "8",
+              "versionId": "2",
+              "mailItemFormatCode": "15",
+              "mailClassCode": "F"
+            },
+            "channelSegment": {
+              "uniqueItemId": "11000000001044001091111",
+              "weightCode": "1",
+              "pricePaid": "123",
+              "barcodeCreationDate": "2024-10-24",
+              "productId": "102",
+              "address": {
+                "buildingNumber": "1"
+              },
+              "destinationPostcodeDPS": {
+                "postcode": "EC1A1BB"
+              },
+              "mailPieceWeight": "1",
+              "UPUTrackingNumber": "YA000001044GB",
+              "destinationCountry": "GB",
+              "requiredAtDeliveryCode": "S"
+            }
+          }
+        },
+        "manualScan": {
+          "messageId": "msg-1044",
+          "userId": "user1044",
+          "eventTimestamp": "2024-10-24T19:35:51+01:00",
+          "transmissionCompleteTimestamp": "2024-10-24T19:35:59+01:00",
+          "auxiliaryData": {
+            "data": [
+              {
+                "name": "RECIPIENT_EMAILID",
+                "value": "test1044@example.com"
+              },
+              {
+                "name": "RECIPIENT_MOBILENO",
+                "value": "07088111044"
+              }
+            ]
+          },
+          "trackEventId": "5934652298366616",
+          "scanLocation": {
+            "altitude": "0.0",
+            "longitude": "0.0",
+            "latitude": "0.0"
+          },
+          "scanTimestamp": "2024-10-24T19:35:51+01:00",
+          "deviceId": "4789568638361044",
+          "RMGLocation": {
+            "functionalLocationId": "356",
+            "siteId": "000175"
+          },
+          "trackedEventCode": "EVGPD",
+          "transmissionTimestamp": "2024-10-24T19:35:59+01:00",
+          "eventReceivedTimestamp": "2024-10-24T19:35:59+01:00",
+          "eventReason": "11",
+          "manualScanIndicator": "false",
+          "workProcessCode": "100"
+        }
+      },
+      "enrichment": {
+        "productCategory": {
+          "productCategory": "SpecialDelivery09"
+        },
+        "postcodeRegion": "London"
+      }
+    },
+    "expected_notifications": [
+      "NRHRS (Email)",
+      "NRHRS (SMS)"
+    ],
+    "expected_tracking": 1
+  },
+  {
+    "id": 1045,
+    "event": "EVGPD",
+    "product": "SpecialDelivery13",
+    "contact": "No contact info",
+    "input": {
+      "message.MPE": {
+        "mailPiece": {
+          "mailPieceBarcode": {
+            "royalMailSegment": {
+              "mailTypeCode": "A",
+              "UPUCountry": "JGB",
+              "informationCode": "8",
+              "versionId": "2",
+              "mailItemFormatCode": "15",
+              "mailClassCode": "F"
+            },
+            "channelSegment": {
+              "uniqueItemId": "11000000001045001091111",
+              "weightCode": "1",
+              "pricePaid": "123",
+              "barcodeCreationDate": "2024-10-24",
+              "productId": "103",
+              "address": {
+                "buildingNumber": "1"
+              },
+              "destinationPostcodeDPS": {
+                "postcode": "EC1A1BB"
+              },
+              "mailPieceWeight": "1",
+              "UPUTrackingNumber": "YA000001045GB",
+              "destinationCountry": "GB",
+              "requiredAtDeliveryCode": "S"
+            }
+          }
+        },
+        "manualScan": {
+          "messageId": "msg-1045",
+          "userId": "user1045",
+          "eventTimestamp": "2024-10-24T19:35:51+01:00",
+          "transmissionCompleteTimestamp": "2024-10-24T19:35:59+01:00",
+          "auxiliaryData": {
+            "data": []
+          },
+          "trackEventId": "5934652298366617",
+          "scanLocation": {
+            "altitude": "0.0",
+            "longitude": "0.0",
+            "latitude": "0.0"
+          },
+          "scanTimestamp": "2024-10-24T19:35:51+01:00",
+          "deviceId": "4789568638361045",
+          "RMGLocation": {
+            "functionalLocationId": "356",
+            "siteId": "000175"
+          },
+          "trackedEventCode": "EVGPD",
+          "transmissionTimestamp": "2024-10-24T19:35:59+01:00",
+          "eventReceivedTimestamp": "2024-10-24T19:35:59+01:00",
+          "eventReason": "11",
+          "manualScanIndicator": "false",
+          "workProcessCode": "100"
+        }
+      },
+      "enrichment": {
+        "productCategory": {
+          "productCategory": "SpecialDelivery13"
+        },
+        "postcodeRegion": "London"
+      }
+    },
+    "expected_notifications": [],
+    "expected_tracking": 1
+  },
+  {
+    "id": 1046,
+    "event": "EVGPD",
+    "product": "SpecialDelivery13",
+    "contact": "Email only",
+    "input": {
+      "message.MPE": {
+        "mailPiece": {
+          "mailPieceBarcode": {
+            "royalMailSegment": {
+              "mailTypeCode": "A",
+              "UPUCountry": "JGB",
+              "informationCode": "8",
+              "versionId": "2",
+              "mailItemFormatCode": "15",
+              "mailClassCode": "F"
+            },
+            "channelSegment": {
+              "uniqueItemId": "11000000001046001091111",
+              "weightCode": "1",
+              "pricePaid": "123",
+              "barcodeCreationDate": "2024-10-24",
+              "productId": "103",
+              "address": {
+                "buildingNumber": "1"
+              },
+              "destinationPostcodeDPS": {
+                "postcode": "EC1A1BB"
+              },
+              "mailPieceWeight": "1",
+              "UPUTrackingNumber": "YA000001046GB",
+              "destinationCountry": "GB",
+              "requiredAtDeliveryCode": "S"
+            }
+          }
+        },
+        "manualScan": {
+          "messageId": "msg-1046",
+          "userId": "user1046",
+          "eventTimestamp": "2024-10-24T19:35:51+01:00",
+          "transmissionCompleteTimestamp": "2024-10-24T19:35:59+01:00",
+          "auxiliaryData": {
+            "data": [
+              {
+                "name": "RECIPIENT_EMAILID",
+                "value": "test1046@example.com"
+              }
+            ]
+          },
+          "trackEventId": "5934652298366618",
+          "scanLocation": {
+            "altitude": "0.0",
+            "longitude": "0.0",
+            "latitude": "0.0"
+          },
+          "scanTimestamp": "2024-10-24T19:35:51+01:00",
+          "deviceId": "4789568638361046",
+          "RMGLocation": {
+            "functionalLocationId": "356",
+            "siteId": "000175"
+          },
+          "trackedEventCode": "EVGPD",
+          "transmissionTimestamp": "2024-10-24T19:35:59+01:00",
+          "eventReceivedTimestamp": "2024-10-24T19:35:59+01:00",
+          "eventReason": "11",
+          "manualScanIndicator": "false",
+          "workProcessCode": "100"
+        }
+      },
+      "enrichment": {
+        "productCategory": {
+          "productCategory": "SpecialDelivery13"
+        },
+        "postcodeRegion": "London"
+      }
+    },
+    "expected_notifications": [
+      "NRKRS (Email)"
+    ],
+    "expected_tracking": 1
+  },
+  {
+    "id": 1047,
+    "event": "EVGPD",
+    "product": "SpecialDelivery13",
+    "contact": "Mobile only",
+    "input": {
+      "message.MPE": {
+        "mailPiece": {
+          "mailPieceBarcode": {
+            "royalMailSegment": {
+              "mailTypeCode": "A",
+              "UPUCountry": "JGB",
+              "informationCode": "8",
+              "versionId": "2",
+              "mailItemFormatCode": "15",
+              "mailClassCode": "F"
+            },
+            "channelSegment": {
+              "uniqueItemId": "11000000001047001091111",
+              "weightCode": "1",
+              "pricePaid": "123",
+              "barcodeCreationDate": "2024-10-24",
+              "productId": "103",
+              "address": {
+                "buildingNumber": "1"
+              },
+              "destinationPostcodeDPS": {
+                "postcode": "EC1A1BB"
+              },
+              "mailPieceWeight": "1",
+              "UPUTrackingNumber": "YA000001047GB",
+              "destinationCountry": "GB",
+              "requiredAtDeliveryCode": "S"
+            }
+          }
+        },
+        "manualScan": {
+          "messageId": "msg-1047",
+          "userId": "user1047",
+          "eventTimestamp": "2024-10-24T19:35:51+01:00",
+          "transmissionCompleteTimestamp": "2024-10-24T19:35:59+01:00",
+          "auxiliaryData": {
+            "data": [
+              {
+                "name": "RECIPIENT_MOBILENO",
+                "value": "07088111047"
+              }
+            ]
+          },
+          "trackEventId": "5934652298366619",
+          "scanLocation": {
+            "altitude": "0.0",
+            "longitude": "0.0",
+            "latitude": "0.0"
+          },
+          "scanTimestamp": "2024-10-24T19:35:51+01:00",
+          "deviceId": "4789568638361047",
+          "RMGLocation": {
+            "functionalLocationId": "356",
+            "siteId": "000175"
+          },
+          "trackedEventCode": "EVGPD",
+          "transmissionTimestamp": "2024-10-24T19:35:59+01:00",
+          "eventReceivedTimestamp": "2024-10-24T19:35:59+01:00",
+          "eventReason": "11",
+          "manualScanIndicator": "false",
+          "workProcessCode": "100"
+        }
+      },
+      "enrichment": {
+        "productCategory": {
+          "productCategory": "SpecialDelivery13"
+        },
+        "postcodeRegion": "London"
+      }
+    },
+    "expected_notifications": [
+      "NRKRS (SMS)"
+    ],
+    "expected_tracking": 1
+  },
+  {
+    "id": 1048,
+    "event": "EVGPD",
+    "product": "SpecialDelivery13",
+    "contact": "Both email and mobile",
+    "input": {
+      "message.MPE": {
+        "mailPiece": {
+          "mailPieceBarcode": {
+            "royalMailSegment": {
+              "mailTypeCode": "A",
+              "UPUCountry": "JGB",
+              "informationCode": "8",
+              "versionId": "2",
+              "mailItemFormatCode": "15",
+              "mailClassCode": "F"
+            },
+            "channelSegment": {
+              "uniqueItemId": "11000000001048001091111",
+              "weightCode": "1",
+              "pricePaid": "123",
+              "barcodeCreationDate": "2024-10-24",
+              "productId": "103",
+              "address": {
+                "buildingNumber": "1"
+              },
+              "destinationPostcodeDPS": {
+                "postcode": "EC1A1BB"
+              },
+              "mailPieceWeight": "1",
+              "UPUTrackingNumber": "YA000001048GB",
+              "destinationCountry": "GB",
+              "requiredAtDeliveryCode": "S"
+            }
+          }
+        },
+        "manualScan": {
+          "messageId": "msg-1048",
+          "userId": "user1048",
+          "eventTimestamp": "2024-10-24T19:35:51+01:00",
+          "transmissionCompleteTimestamp": "2024-10-24T19:35:59+01:00",
+          "auxiliaryData": {
+            "data": [
+              {
+                "name": "RECIPIENT_EMAILID",
+                "value": "test1048@example.com"
+              },
+              {
+                "name": "RECIPIENT_MOBILENO",
+                "value": "07088111048"
+              }
+            ]
+          },
+          "trackEventId": "5934652298366620",
+          "scanLocation": {
+            "altitude": "0.0",
+            "longitude": "0.0",
+            "latitude": "0.0"
+          },
+          "scanTimestamp": "2024-10-24T19:35:51+01:00",
+          "deviceId": "4789568638361048",
+          "RMGLocation": {
+            "functionalLocationId": "356",
+            "siteId": "000175"
+          },
+          "trackedEventCode": "EVGPD",
+          "transmissionTimestamp": "2024-10-24T19:35:59+01:00",
+          "eventReceivedTimestamp": "2024-10-24T19:35:59+01:00",
+          "eventReason": "11",
+          "manualScanIndicator": "false",
+          "workProcessCode": "100"
+        }
+      },
+      "enrichment": {
+        "productCategory": {
+          "productCategory": "SpecialDelivery13"
+        },
+        "postcodeRegion": "London"
+      }
+    },
+    "expected_notifications": [
+      "NRKRS (Email)",
+      "NRKRS (SMS)"
+    ],
+    "expected_tracking": 1
+  },
+  {
+    "id": 1049,
+    "event": "ENKDN",
+    "product": "Tracked24",
+    "contact": "No contact info",
+    "input": {
+      "message.MPE": {
+        "mailPiece": {
+          "mailPieceBarcode": {
+            "royalMailSegment": {
+              "mailTypeCode": "A",
+              "UPUCountry": "JGB",
+              "informationCode": "8",
+              "versionId": "2",
+              "mailItemFormatCode": "15",
+              "mailClassCode": "F"
+            },
+            "channelSegment": {
+              "uniqueItemId": "11000000001049001091111",
+              "weightCode": "1",
+              "pricePaid": "123",
+              "barcodeCreationDate": "2024-10-24",
+              "productId": "100",
+              "address": {
+                "buildingNumber": "1"
+              },
+              "destinationPostcodeDPS": {
+                "postcode": "EC1A1BB"
+              },
+              "mailPieceWeight": "1",
+              "UPUTrackingNumber": "YA000001049GB",
+              "destinationCountry": "GB",
+              "requiredAtDeliveryCode": "S"
+            }
+          }
+        },
+        "manualScan": {
+          "messageId": "msg-1049",
+          "userId": "user1049",
+          "eventTimestamp": "2024-10-24T19:35:51+01:00",
+          "transmissionCompleteTimestamp": "2024-10-24T19:35:59+01:00",
+          "auxiliaryData": {
+            "data": []
+          },
+          "trackEventId": "5934652298366621",
+          "scanLocation": {
+            "altitude": "0.0",
+            "longitude": "0.0",
+            "latitude": "0.0"
+          },
+          "scanTimestamp": "2024-10-24T19:35:51+01:00",
+          "deviceId": "4789568638361049",
+          "RMGLocation": {
+            "functionalLocationId": "356",
+            "siteId": "000175"
+          },
+          "trackedEventCode": "ENKDN",
+          "transmissionTimestamp": "2024-10-24T19:35:59+01:00",
+          "eventReceivedTimestamp": "2024-10-24T19:35:59+01:00",
+          "eventReason": "11",
+          "manualScanIndicator": "false",
+          "workProcessCode": "100"
+        }
+      },
+      "enrichment": {
+        "productCategory": {
+          "productCategory": "Tracked24"
+        },
+        "postcodeRegion": "London"
+      }
+    },
+    "expected_notifications": [],
+    "expected_tracking": 1
+  },
+  {
+    "id": 1050,
+    "event": "ENKDN",
+    "product": "Tracked24",
+    "contact": "Email only",
+    "input": {
+      "message.MPE": {
+        "mailPiece": {
+          "mailPieceBarcode": {
+            "royalMailSegment": {
+              "mailTypeCode": "A",
+              "UPUCountry": "JGB",
+              "informationCode": "8",
+              "versionId": "2",
+              "mailItemFormatCode": "15",
+              "mailClassCode": "F"
+            },
+            "channelSegment": {
+              "uniqueItemId": "11000000001050001091111",
+              "weightCode": "1",
+              "pricePaid": "123",
+              "barcodeCreationDate": "2024-10-24",
+              "productId": "100",
+              "address": {
+                "buildingNumber": "1"
+              },
+              "destinationPostcodeDPS": {
+                "postcode": "EC1A1BB"
+              },
+              "mailPieceWeight": "1",
+              "UPUTrackingNumber": "YA000001050GB",
+              "destinationCountry": "GB",
+              "requiredAtDeliveryCode": "S"
+            }
+          }
+        },
+        "manualScan": {
+          "messageId": "msg-1050",
+          "userId": "user1050",
+          "eventTimestamp": "2024-10-24T19:35:51+01:00",
+          "transmissionCompleteTimestamp": "2024-10-24T19:35:59+01:00",
+          "auxiliaryData": {
+            "data": [
+              {
+                "name": "RECIPIENT_EMAILID",
+                "value": "test1050@example.com"
+              }
+            ]
+          },
+          "trackEventId": "5934652298366622",
+          "scanLocation": {
+            "altitude": "0.0",
+            "longitude": "0.0",
+            "latitude": "0.0"
+          },
+          "scanTimestamp": "2024-10-24T19:35:51+01:00",
+          "deviceId": "4789568638361050",
+          "RMGLocation": {
+            "functionalLocationId": "356",
+            "siteId": "000175"
+          },
+          "trackedEventCode": "ENKDN",
+          "transmissionTimestamp": "2024-10-24T19:35:59+01:00",
+          "eventReceivedTimestamp": "2024-10-24T19:35:59+01:00",
+          "eventReason": "11",
+          "manualScanIndicator": "false",
+          "workProcessCode": "100"
+        }
+      },
+      "enrichment": {
+        "productCategory": {
+          "productCategory": "Tracked24"
+        },
+        "postcodeRegion": "London"
+      }
+    },
+    "expected_notifications": [
+      "NRCRS (Email)"
+    ],
+    "expected_tracking": 1
+  },
+  {
+    "id": 1051,
+    "event": "ENKDN",
+    "product": "Tracked24",
+    "contact": "Mobile only",
+    "input": {
+      "message.MPE": {
+        "mailPiece": {
+          "mailPieceBarcode": {
+            "royalMailSegment": {
+              "mailTypeCode": "A",
+              "UPUCountry": "JGB",
+              "informationCode": "8",
+              "versionId": "2",
+              "mailItemFormatCode": "15",
+              "mailClassCode": "F"
+            },
+            "channelSegment": {
+              "uniqueItemId": "11000000001051001091111",
+              "weightCode": "1",
+              "pricePaid": "123",
+              "barcodeCreationDate": "2024-10-24",
+              "productId": "100",
+              "address": {
+                "buildingNumber": "1"
+              },
+              "destinationPostcodeDPS": {
+                "postcode": "EC1A1BB"
+              },
+              "mailPieceWeight": "1",
+              "UPUTrackingNumber": "YA000001051GB",
+              "destinationCountry": "GB",
+              "requiredAtDeliveryCode": "S"
+            }
+          }
+        },
+        "manualScan": {
+          "messageId": "msg-1051",
+          "userId": "user1051",
+          "eventTimestamp": "2024-10-24T19:35:51+01:00",
+          "transmissionCompleteTimestamp": "2024-10-24T19:35:59+01:00",
+          "auxiliaryData": {
+            "data": [
+              {
+                "name": "RECIPIENT_MOBILENO",
+                "value": "07088111051"
+              }
+            ]
+          },
+          "trackEventId": "5934652298366623",
+          "scanLocation": {
+            "altitude": "0.0",
+            "longitude": "0.0",
+            "latitude": "0.0"
+          },
+          "scanTimestamp": "2024-10-24T19:35:51+01:00",
+          "deviceId": "4789568638361051",
+          "RMGLocation": {
+            "functionalLocationId": "356",
+            "siteId": "000175"
+          },
+          "trackedEventCode": "ENKDN",
+          "transmissionTimestamp": "2024-10-24T19:35:59+01:00",
+          "eventReceivedTimestamp": "2024-10-24T19:35:59+01:00",
+          "eventReason": "11",
+          "manualScanIndicator": "false",
+          "workProcessCode": "100"
+        }
+      },
+      "enrichment": {
+        "productCategory": {
+          "productCategory": "Tracked24"
+        },
+        "postcodeRegion": "London"
+      }
+    },
+    "expected_notifications": [],
+    "expected_tracking": 1
+  },
+  {
+    "id": 1052,
+    "event": "ENKDN",
+    "product": "Tracked24",
+    "contact": "Both email and mobile",
+    "input": {
+      "message.MPE": {
+        "mailPiece": {
+          "mailPieceBarcode": {
+            "royalMailSegment": {
+              "mailTypeCode": "A",
+              "UPUCountry": "JGB",
+              "informationCode": "8",
+              "versionId": "2",
+              "mailItemFormatCode": "15",
+              "mailClassCode": "F"
+            },
+            "channelSegment": {
+              "uniqueItemId": "11000000001052001091111",
+              "weightCode": "1",
+              "pricePaid": "123",
+              "barcodeCreationDate": "2024-10-24",
+              "productId": "100",
+              "address": {
+                "buildingNumber": "1"
+              },
+              "destinationPostcodeDPS": {
+                "postcode": "EC1A1BB"
+              },
+              "mailPieceWeight": "1",
+              "UPUTrackingNumber": "YA000001052GB",
+              "destinationCountry": "GB",
+              "requiredAtDeliveryCode": "S"
+            }
+          }
+        },
+        "manualScan": {
+          "messageId": "msg-1052",
+          "userId": "user1052",
+          "eventTimestamp": "2024-10-24T19:35:51+01:00",
+          "transmissionCompleteTimestamp": "2024-10-24T19:35:59+01:00",
+          "auxiliaryData": {
+            "data": [
+              {
+                "name": "RECIPIENT_EMAILID",
+                "value": "test1052@example.com"
+              },
+              {
+                "name": "RECIPIENT_MOBILENO",
+                "value": "07088111052"
+              }
+            ]
+          },
+          "trackEventId": "5934652298366624",
+          "scanLocation": {
+            "altitude": "0.0",
+            "longitude": "0.0",
+            "latitude": "0.0"
+          },
+          "scanTimestamp": "2024-10-24T19:35:51+01:00",
+          "deviceId": "4789568638361052",
+          "RMGLocation": {
+            "functionalLocationId": "356",
+            "siteId": "000175"
+          },
+          "trackedEventCode": "ENKDN",
+          "transmissionTimestamp": "2024-10-24T19:35:59+01:00",
+          "eventReceivedTimestamp": "2024-10-24T19:35:59+01:00",
+          "eventReason": "11",
+          "manualScanIndicator": "false",
+          "workProcessCode": "100"
+        }
+      },
+      "enrichment": {
+        "productCategory": {
+          "productCategory": "Tracked24"
+        },
+        "postcodeRegion": "London"
+      }
+    },
+    "expected_notifications": [
+      "NRCRS (Email)"
+    ],
+    "expected_tracking": 1
+  },
+  {
+    "id": 1053,
+    "event": "ENKDN",
+    "product": "Tracked48",
+    "contact": "No contact info",
+    "input": {
+      "message.MPE": {
+        "mailPiece": {
+          "mailPieceBarcode": {
+            "royalMailSegment": {
+              "mailTypeCode": "A",
+              "UPUCountry": "JGB",
+              "informationCode": "8",
+              "versionId": "2",
+              "mailItemFormatCode": "15",
+              "mailClassCode": "F"
+            },
+            "channelSegment": {
+              "uniqueItemId": "11000000001053001091111",
+              "weightCode": "1",
+              "pricePaid": "123",
+              "barcodeCreationDate": "2024-10-24",
+              "productId": "101",
+              "address": {
+                "buildingNumber": "1"
+              },
+              "destinationPostcodeDPS": {
+                "postcode": "EC1A1BB"
+              },
+              "mailPieceWeight": "1",
+              "UPUTrackingNumber": "YA000001053GB",
+              "destinationCountry": "GB",
+              "requiredAtDeliveryCode": "S"
+            }
+          }
+        },
+        "manualScan": {
+          "messageId": "msg-1053",
+          "userId": "user1053",
+          "eventTimestamp": "2024-10-24T19:35:51+01:00",
+          "transmissionCompleteTimestamp": "2024-10-24T19:35:59+01:00",
+          "auxiliaryData": {
+            "data": []
+          },
+          "trackEventId": "5934652298366625",
+          "scanLocation": {
+            "altitude": "0.0",
+            "longitude": "0.0",
+            "latitude": "0.0"
+          },
+          "scanTimestamp": "2024-10-24T19:35:51+01:00",
+          "deviceId": "4789568638361053",
+          "RMGLocation": {
+            "functionalLocationId": "356",
+            "siteId": "000175"
+          },
+          "trackedEventCode": "ENKDN",
+          "transmissionTimestamp": "2024-10-24T19:35:59+01:00",
+          "eventReceivedTimestamp": "2024-10-24T19:35:59+01:00",
+          "eventReason": "11",
+          "manualScanIndicator": "false",
+          "workProcessCode": "100"
+        }
+      },
+      "enrichment": {
+        "productCategory": {
+          "productCategory": "Tracked48"
+        },
+        "postcodeRegion": "London"
+      }
+    },
+    "expected_notifications": [],
+    "expected_tracking": 1
+  },
+  {
+    "id": 1054,
+    "event": "ENKDN",
+    "product": "Tracked48",
+    "contact": "Email only",
+    "input": {
+      "message.MPE": {
+        "mailPiece": {
+          "mailPieceBarcode": {
+            "royalMailSegment": {
+              "mailTypeCode": "A",
+              "UPUCountry": "JGB",
+              "informationCode": "8",
+              "versionId": "2",
+              "mailItemFormatCode": "15",
+              "mailClassCode": "F"
+            },
+            "channelSegment": {
+              "uniqueItemId": "11000000001054001091111",
+              "weightCode": "1",
+              "pricePaid": "123",
+              "barcodeCreationDate": "2024-10-24",
+              "productId": "101",
+              "address": {
+                "buildingNumber": "1"
+              },
+              "destinationPostcodeDPS": {
+                "postcode": "EC1A1BB"
+              },
+              "mailPieceWeight": "1",
+              "UPUTrackingNumber": "YA000001054GB",
+              "destinationCountry": "GB",
+              "requiredAtDeliveryCode": "S"
+            }
+          }
+        },
+        "manualScan": {
+          "messageId": "msg-1054",
+          "userId": "user1054",
+          "eventTimestamp": "2024-10-24T19:35:51+01:00",
+          "transmissionCompleteTimestamp": "2024-10-24T19:35:59+01:00",
+          "auxiliaryData": {
+            "data": [
+              {
+                "name": "RECIPIENT_EMAILID",
+                "value": "test1054@example.com"
+              }
+            ]
+          },
+          "trackEventId": "5934652298366626",
+          "scanLocation": {
+            "altitude": "0.0",
+            "longitude": "0.0",
+            "latitude": "0.0"
+          },
+          "scanTimestamp": "2024-10-24T19:35:51+01:00",
+          "deviceId": "4789568638361054",
+          "RMGLocation": {
+            "functionalLocationId": "356",
+            "siteId": "000175"
+          },
+          "trackedEventCode": "ENKDN",
+          "transmissionTimestamp": "2024-10-24T19:35:59+01:00",
+          "eventReceivedTimestamp": "2024-10-24T19:35:59+01:00",
+          "eventReason": "11",
+          "manualScanIndicator": "false",
+          "workProcessCode": "100"
+        }
+      },
+      "enrichment": {
+        "productCategory": {
+          "productCategory": "Tracked48"
+        },
+        "postcodeRegion": "London"
+      }
+    },
+    "expected_notifications": [],
+    "expected_tracking": 1
+  },
+  {
+    "id": 1055,
+    "event": "ENKDN",
+    "product": "Tracked48",
+    "contact": "Mobile only",
+    "input": {
+      "message.MPE": {
+        "mailPiece": {
+          "mailPieceBarcode": {
+            "royalMailSegment": {
+              "mailTypeCode": "A",
+              "UPUCountry": "JGB",
+              "informationCode": "8",
+              "versionId": "2",
+              "mailItemFormatCode": "15",
+              "mailClassCode": "F"
+            },
+            "channelSegment": {
+              "uniqueItemId": "11000000001055001091111",
+              "weightCode": "1",
+              "pricePaid": "123",
+              "barcodeCreationDate": "2024-10-24",
+              "productId": "101",
+              "address": {
+                "buildingNumber": "1"
+              },
+              "destinationPostcodeDPS": {
+                "postcode": "EC1A1BB"
+              },
+              "mailPieceWeight": "1",
+              "UPUTrackingNumber": "YA000001055GB",
+              "destinationCountry": "GB",
+              "requiredAtDeliveryCode": "S"
+            }
+          }
+        },
+        "manualScan": {
+          "messageId": "msg-1055",
+          "userId": "user1055",
+          "eventTimestamp": "2024-10-24T19:35:51+01:00",
+          "transmissionCompleteTimestamp": "2024-10-24T19:35:59+01:00",
+          "auxiliaryData": {
+            "data": [
+              {
+                "name": "RECIPIENT_MOBILENO",
+                "value": "07088111055"
+              }
+            ]
+          },
+          "trackEventId": "5934652298366627",
+          "scanLocation": {
+            "altitude": "0.0",
+            "longitude": "0.0",
+            "latitude": "0.0"
+          },
+          "scanTimestamp": "2024-10-24T19:35:51+01:00",
+          "deviceId": "4789568638361055",
+          "RMGLocation": {
+            "functionalLocationId": "356",
+            "siteId": "000175"
+          },
+          "trackedEventCode": "ENKDN",
+          "transmissionTimestamp": "2024-10-24T19:35:59+01:00",
+          "eventReceivedTimestamp": "2024-10-24T19:35:59+01:00",
+          "eventReason": "11",
+          "manualScanIndicator": "false",
+          "workProcessCode": "100"
+        }
+      },
+      "enrichment": {
+        "productCategory": {
+          "productCategory": "Tracked48"
+        },
+        "postcodeRegion": "London"
+      }
+    },
+    "expected_notifications": [
+      "NRFRS (SMS)"
+    ],
+    "expected_tracking": 1
+  },
+  {
+    "id": 1056,
+    "event": "ENKDN",
+    "product": "Tracked48",
+    "contact": "Both email and mobile",
+    "input": {
+      "message.MPE": {
+        "mailPiece": {
+          "mailPieceBarcode": {
+            "royalMailSegment": {
+              "mailTypeCode": "A",
+              "UPUCountry": "JGB",
+              "informationCode": "8",
+              "versionId": "2",
+              "mailItemFormatCode": "15",
+              "mailClassCode": "F"
+            },
+            "channelSegment": {
+              "uniqueItemId": "11000000001056001091111",
+              "weightCode": "1",
+              "pricePaid": "123",
+              "barcodeCreationDate": "2024-10-24",
+              "productId": "101",
+              "address": {
+                "buildingNumber": "1"
+              },
+              "destinationPostcodeDPS": {
+                "postcode": "EC1A1BB"
+              },
+              "mailPieceWeight": "1",
+              "UPUTrackingNumber": "YA000001056GB",
+              "destinationCountry": "GB",
+              "requiredAtDeliveryCode": "S"
+            }
+          }
+        },
+        "manualScan": {
+          "messageId": "msg-1056",
+          "userId": "user1056",
+          "eventTimestamp": "2024-10-24T19:35:51+01:00",
+          "transmissionCompleteTimestamp": "2024-10-24T19:35:59+01:00",
+          "auxiliaryData": {
+            "data": [
+              {
+                "name": "RECIPIENT_EMAILID",
+                "value": "test1056@example.com"
+              },
+              {
+                "name": "RECIPIENT_MOBILENO",
+                "value": "07088111056"
+              }
+            ]
+          },
+          "trackEventId": "5934652298366628",
+          "scanLocation": {
+            "altitude": "0.0",
+            "longitude": "0.0",
+            "latitude": "0.0"
+          },
+          "scanTimestamp": "2024-10-24T19:35:51+01:00",
+          "deviceId": "4789568638361056",
+          "RMGLocation": {
+            "functionalLocationId": "356",
+            "siteId": "000175"
+          },
+          "trackedEventCode": "ENKDN",
+          "transmissionTimestamp": "2024-10-24T19:35:59+01:00",
+          "eventReceivedTimestamp": "2024-10-24T19:35:59+01:00",
+          "eventReason": "11",
+          "manualScanIndicator": "false",
+          "workProcessCode": "100"
+        }
+      },
+      "enrichment": {
+        "productCategory": {
+          "productCategory": "Tracked48"
+        },
+        "postcodeRegion": "London"
+      }
+    },
+    "expected_notifications": [
+      "NRFRS (SMS)"
+    ],
+    "expected_tracking": 1
+  },
+  {
+    "id": 1057,
+    "event": "ENKDN",
+    "product": "SpecialDelivery09",
+    "contact": "No contact info",
+    "input": {
+      "message.MPE": {
+        "mailPiece": {
+          "mailPieceBarcode": {
+            "royalMailSegment": {
+              "mailTypeCode": "A",
+              "UPUCountry": "JGB",
+              "informationCode": "8",
+              "versionId": "2",
+              "mailItemFormatCode": "15",
+              "mailClassCode": "F"
+            },
+            "channelSegment": {
+              "uniqueItemId": "11000000001057001091111",
+              "weightCode": "1",
+              "pricePaid": "123",
+              "barcodeCreationDate": "2024-10-24",
+              "productId": "102",
+              "address": {
+                "buildingNumber": "1"
+              },
+              "destinationPostcodeDPS": {
+                "postcode": "EC1A1BB"
+              },
+              "mailPieceWeight": "1",
+              "UPUTrackingNumber": "YA000001057GB",
+              "destinationCountry": "GB",
+              "requiredAtDeliveryCode": "S"
+            }
+          }
+        },
+        "manualScan": {
+          "messageId": "msg-1057",
+          "userId": "user1057",
+          "eventTimestamp": "2024-10-24T19:35:51+01:00",
+          "transmissionCompleteTimestamp": "2024-10-24T19:35:59+01:00",
+          "auxiliaryData": {
+            "data": []
+          },
+          "trackEventId": "5934652298366629",
+          "scanLocation": {
+            "altitude": "0.0",
+            "longitude": "0.0",
+            "latitude": "0.0"
+          },
+          "scanTimestamp": "2024-10-24T19:35:51+01:00",
+          "deviceId": "4789568638361057",
+          "RMGLocation": {
+            "functionalLocationId": "356",
+            "siteId": "000175"
+          },
+          "trackedEventCode": "ENKDN",
+          "transmissionTimestamp": "2024-10-24T19:35:59+01:00",
+          "eventReceivedTimestamp": "2024-10-24T19:35:59+01:00",
+          "eventReason": "11",
+          "manualScanIndicator": "false",
+          "workProcessCode": "100"
+        }
+      },
+      "enrichment": {
+        "productCategory": {
+          "productCategory": "SpecialDelivery09"
+        },
+        "postcodeRegion": "London"
+      }
+    },
+    "expected_notifications": [],
+    "expected_tracking": 1
+  },
+  {
+    "id": 1058,
+    "event": "ENKDN",
+    "product": "SpecialDelivery09",
+    "contact": "Email only",
+    "input": {
+      "message.MPE": {
+        "mailPiece": {
+          "mailPieceBarcode": {
+            "royalMailSegment": {
+              "mailTypeCode": "A",
+              "UPUCountry": "JGB",
+              "informationCode": "8",
+              "versionId": "2",
+              "mailItemFormatCode": "15",
+              "mailClassCode": "F"
+            },
+            "channelSegment": {
+              "uniqueItemId": "11000000001058001091111",
+              "weightCode": "1",
+              "pricePaid": "123",
+              "barcodeCreationDate": "2024-10-24",
+              "productId": "102",
+              "address": {
+                "buildingNumber": "1"
+              },
+              "destinationPostcodeDPS": {
+                "postcode": "EC1A1BB"
+              },
+              "mailPieceWeight": "1",
+              "UPUTrackingNumber": "YA000001058GB",
+              "destinationCountry": "GB",
+              "requiredAtDeliveryCode": "S"
+            }
+          }
+        },
+        "manualScan": {
+          "messageId": "msg-1058",
+          "userId": "user1058",
+          "eventTimestamp": "2024-10-24T19:35:51+01:00",
+          "transmissionCompleteTimestamp": "2024-10-24T19:35:59+01:00",
+          "auxiliaryData": {
+            "data": [
+              {
+                "name": "RECIPIENT_EMAILID",
+                "value": "test1058@example.com"
+              }
+            ]
+          },
+          "trackEventId": "5934652298366630",
+          "scanLocation": {
+            "altitude": "0.0",
+            "longitude": "0.0",
+            "latitude": "0.0"
+          },
+          "scanTimestamp": "2024-10-24T19:35:51+01:00",
+          "deviceId": "4789568638361058",
+          "RMGLocation": {
+            "functionalLocationId": "356",
+            "siteId": "000175"
+          },
+          "trackedEventCode": "ENKDN",
+          "transmissionTimestamp": "2024-10-24T19:35:59+01:00",
+          "eventReceivedTimestamp": "2024-10-24T19:35:59+01:00",
+          "eventReason": "11",
+          "manualScanIndicator": "false",
+          "workProcessCode": "100"
+        }
+      },
+      "enrichment": {
+        "productCategory": {
+          "productCategory": "SpecialDelivery09"
+        },
+        "postcodeRegion": "London"
+      }
+    },
+    "expected_notifications": [],
+    "expected_tracking": 1
+  },
+  {
+    "id": 1059,
+    "event": "ENKDN",
+    "product": "SpecialDelivery09",
+    "contact": "Mobile only",
+    "input": {
+      "message.MPE": {
+        "mailPiece": {
+          "mailPieceBarcode": {
+            "royalMailSegment": {
+              "mailTypeCode": "A",
+              "UPUCountry": "JGB",
+              "informationCode": "8",
+              "versionId": "2",
+              "mailItemFormatCode": "15",
+              "mailClassCode": "F"
+            },
+            "channelSegment": {
+              "uniqueItemId": "11000000001059001091111",
+              "weightCode": "1",
+              "pricePaid": "123",
+              "barcodeCreationDate": "2024-10-24",
+              "productId": "102",
+              "address": {
+                "buildingNumber": "1"
+              },
+              "destinationPostcodeDPS": {
+                "postcode": "EC1A1BB"
+              },
+              "mailPieceWeight": "1",
+              "UPUTrackingNumber": "YA000001059GB",
+              "destinationCountry": "GB",
+              "requiredAtDeliveryCode": "S"
+            }
+          }
+        },
+        "manualScan": {
+          "messageId": "msg-1059",
+          "userId": "user1059",
+          "eventTimestamp": "2024-10-24T19:35:51+01:00",
+          "transmissionCompleteTimestamp": "2024-10-24T19:35:59+01:00",
+          "auxiliaryData": {
+            "data": [
+              {
+                "name": "RECIPIENT_MOBILENO",
+                "value": "07088111059"
+              }
+            ]
+          },
+          "trackEventId": "5934652298366631",
+          "scanLocation": {
+            "altitude": "0.0",
+            "longitude": "0.0",
+            "latitude": "0.0"
+          },
+          "scanTimestamp": "2024-10-24T19:35:51+01:00",
+          "deviceId": "4789568638361059",
+          "RMGLocation": {
+            "functionalLocationId": "356",
+            "siteId": "000175"
+          },
+          "trackedEventCode": "ENKDN",
+          "transmissionTimestamp": "2024-10-24T19:35:59+01:00",
+          "eventReceivedTimestamp": "2024-10-24T19:35:59+01:00",
+          "eventReason": "11",
+          "manualScanIndicator": "false",
+          "workProcessCode": "100"
+        }
+      },
+      "enrichment": {
+        "productCategory": {
+          "productCategory": "SpecialDelivery09"
+        },
+        "postcodeRegion": "London"
+      }
+    },
+    "expected_notifications": [
+      "NRIRS (SMS)"
+    ],
+    "expected_tracking": 1
+  },
+  {
+    "id": 1060,
+    "event": "ENKDN",
+    "product": "SpecialDelivery09",
+    "contact": "Both email and mobile",
+    "input": {
+      "message.MPE": {
+        "mailPiece": {
+          "mailPieceBarcode": {
+            "royalMailSegment": {
+              "mailTypeCode": "A",
+              "UPUCountry": "JGB",
+              "informationCode": "8",
+              "versionId": "2",
+              "mailItemFormatCode": "15",
+              "mailClassCode": "F"
+            },
+            "channelSegment": {
+              "uniqueItemId": "11000000001060001091111",
+              "weightCode": "1",
+              "pricePaid": "123",
+              "barcodeCreationDate": "2024-10-24",
+              "productId": "102",
+              "address": {
+                "buildingNumber": "1"
+              },
+              "destinationPostcodeDPS": {
+                "postcode": "EC1A1BB"
+              },
+              "mailPieceWeight": "1",
+              "UPUTrackingNumber": "YA000001060GB",
+              "destinationCountry": "GB",
+              "requiredAtDeliveryCode": "S"
+            }
+          }
+        },
+        "manualScan": {
+          "messageId": "msg-1060",
+          "userId": "user1060",
+          "eventTimestamp": "2024-10-24T19:35:51+01:00",
+          "transmissionCompleteTimestamp": "2024-10-24T19:35:59+01:00",
+          "auxiliaryData": {
+            "data": [
+              {
+                "name": "RECIPIENT_EMAILID",
+                "value": "test1060@example.com"
+              },
+              {
+                "name": "RECIPIENT_MOBILENO",
+                "value": "07088111060"
+              }
+            ]
+          },
+          "trackEventId": "5934652298366632",
+          "scanLocation": {
+            "altitude": "0.0",
+            "longitude": "0.0",
+            "latitude": "0.0"
+          },
+          "scanTimestamp": "2024-10-24T19:35:51+01:00",
+          "deviceId": "4789568638361060",
+          "RMGLocation": {
+            "functionalLocationId": "356",
+            "siteId": "000175"
+          },
+          "trackedEventCode": "ENKDN",
+          "transmissionTimestamp": "2024-10-24T19:35:59+01:00",
+          "eventReceivedTimestamp": "2024-10-24T19:35:59+01:00",
+          "eventReason": "11",
+          "manualScanIndicator": "false",
+          "workProcessCode": "100"
+        }
+      },
+      "enrichment": {
+        "productCategory": {
+          "productCategory": "SpecialDelivery09"
+        },
+        "postcodeRegion": "London"
+      }
+    },
+    "expected_notifications": [
+      "NRIRS (SMS)"
+    ],
+    "expected_tracking": 1
+  },
+  {
+    "id": 1061,
+    "event": "ENKDN",
+    "product": "SpecialDelivery13",
+    "contact": "No contact info",
+    "input": {
+      "message.MPE": {
+        "mailPiece": {
+          "mailPieceBarcode": {
+            "royalMailSegment": {
+              "mailTypeCode": "A",
+              "UPUCountry": "JGB",
+              "informationCode": "8",
+              "versionId": "2",
+              "mailItemFormatCode": "15",
+              "mailClassCode": "F"
+            },
+            "channelSegment": {
+              "uniqueItemId": "11000000001061001091111",
+              "weightCode": "1",
+              "pricePaid": "123",
+              "barcodeCreationDate": "2024-10-24",
+              "productId": "103",
+              "address": {
+                "buildingNumber": "1"
+              },
+              "destinationPostcodeDPS": {
+                "postcode": "EC1A1BB"
+              },
+              "mailPieceWeight": "1",
+              "UPUTrackingNumber": "YA000001061GB",
+              "destinationCountry": "GB",
+              "requiredAtDeliveryCode": "S"
+            }
+          }
+        },
+        "manualScan": {
+          "messageId": "msg-1061",
+          "userId": "user1061",
+          "eventTimestamp": "2024-10-24T19:35:51+01:00",
+          "transmissionCompleteTimestamp": "2024-10-24T19:35:59+01:00",
+          "auxiliaryData": {
+            "data": []
+          },
+          "trackEventId": "5934652298366633",
+          "scanLocation": {
+            "altitude": "0.0",
+            "longitude": "0.0",
+            "latitude": "0.0"
+          },
+          "scanTimestamp": "2024-10-24T19:35:51+01:00",
+          "deviceId": "4789568638361061",
+          "RMGLocation": {
+            "functionalLocationId": "356",
+            "siteId": "000175"
+          },
+          "trackedEventCode": "ENKDN",
+          "transmissionTimestamp": "2024-10-24T19:35:59+01:00",
+          "eventReceivedTimestamp": "2024-10-24T19:35:59+01:00",
+          "eventReason": "11",
+          "manualScanIndicator": "false",
+          "workProcessCode": "100"
+        }
+      },
+      "enrichment": {
+        "productCategory": {
+          "productCategory": "SpecialDelivery13"
+        },
+        "postcodeRegion": "London"
+      }
+    },
+    "expected_notifications": [],
+    "expected_tracking": 1
+  },
+  {
+    "id": 1062,
+    "event": "ENKDN",
+    "product": "SpecialDelivery13",
+    "contact": "Email only",
+    "input": {
+      "message.MPE": {
+        "mailPiece": {
+          "mailPieceBarcode": {
+            "royalMailSegment": {
+              "mailTypeCode": "A",
+              "UPUCountry": "JGB",
+              "informationCode": "8",
+              "versionId": "2",
+              "mailItemFormatCode": "15",
+              "mailClassCode": "F"
+            },
+            "channelSegment": {
+              "uniqueItemId": "11000000001062001091111",
+              "weightCode": "1",
+              "pricePaid": "123",
+              "barcodeCreationDate": "2024-10-24",
+              "productId": "103",
+              "address": {
+                "buildingNumber": "1"
+              },
+              "destinationPostcodeDPS": {
+                "postcode": "EC1A1BB"
+              },
+              "mailPieceWeight": "1",
+              "UPUTrackingNumber": "YA000001062GB",
+              "destinationCountry": "GB",
+              "requiredAtDeliveryCode": "S"
+            }
+          }
+        },
+        "manualScan": {
+          "messageId": "msg-1062",
+          "userId": "user1062",
+          "eventTimestamp": "2024-10-24T19:35:51+01:00",
+          "transmissionCompleteTimestamp": "2024-10-24T19:35:59+01:00",
+          "auxiliaryData": {
+            "data": [
+              {
+                "name": "RECIPIENT_EMAILID",
+                "value": "test1062@example.com"
+              }
+            ]
+          },
+          "trackEventId": "5934652298366634",
+          "scanLocation": {
+            "altitude": "0.0",
+            "longitude": "0.0",
+            "latitude": "0.0"
+          },
+          "scanTimestamp": "2024-10-24T19:35:51+01:00",
+          "deviceId": "4789568638361062",
+          "RMGLocation": {
+            "functionalLocationId": "356",
+            "siteId": "000175"
+          },
+          "trackedEventCode": "ENKDN",
+          "transmissionTimestamp": "2024-10-24T19:35:59+01:00",
+          "eventReceivedTimestamp": "2024-10-24T19:35:59+01:00",
+          "eventReason": "11",
+          "manualScanIndicator": "false",
+          "workProcessCode": "100"
+        }
+      },
+      "enrichment": {
+        "productCategory": {
+          "productCategory": "SpecialDelivery13"
+        },
+        "postcodeRegion": "London"
+      }
+    },
+    "expected_notifications": [
+      "NRLRS (Email)"
+    ],
+    "expected_tracking": 1
+  },
+  {
+    "id": 1063,
+    "event": "ENKDN",
+    "product": "SpecialDelivery13",
+    "contact": "Mobile only",
+    "input": {
+      "message.MPE": {
+        "mailPiece": {
+          "mailPieceBarcode": {
+            "royalMailSegment": {
+              "mailTypeCode": "A",
+              "UPUCountry": "JGB",
+              "informationCode": "8",
+              "versionId": "2",
+              "mailItemFormatCode": "15",
+              "mailClassCode": "F"
+            },
+            "channelSegment": {
+              "uniqueItemId": "11000000001063001091111",
+              "weightCode": "1",
+              "pricePaid": "123",
+              "barcodeCreationDate": "2024-10-24",
+              "productId": "103",
+              "address": {
+                "buildingNumber": "1"
+              },
+              "destinationPostcodeDPS": {
+                "postcode": "EC1A1BB"
+              },
+              "mailPieceWeight": "1",
+              "UPUTrackingNumber": "YA000001063GB",
+              "destinationCountry": "GB",
+              "requiredAtDeliveryCode": "S"
+            }
+          }
+        },
+        "manualScan": {
+          "messageId": "msg-1063",
+          "userId": "user1063",
+          "eventTimestamp": "2024-10-24T19:35:51+01:00",
+          "transmissionCompleteTimestamp": "2024-10-24T19:35:59+01:00",
+          "auxiliaryData": {
+            "data": [
+              {
+                "name": "RECIPIENT_MOBILENO",
+                "value": "07088111063"
+              }
+            ]
+          },
+          "trackEventId": "5934652298366635",
+          "scanLocation": {
+            "altitude": "0.0",
+            "longitude": "0.0",
+            "latitude": "0.0"
+          },
+          "scanTimestamp": "2024-10-24T19:35:51+01:00",
+          "deviceId": "4789568638361063",
+          "RMGLocation": {
+            "functionalLocationId": "356",
+            "siteId": "000175"
+          },
+          "trackedEventCode": "ENKDN",
+          "transmissionTimestamp": "2024-10-24T19:35:59+01:00",
+          "eventReceivedTimestamp": "2024-10-24T19:35:59+01:00",
+          "eventReason": "11",
+          "manualScanIndicator": "false",
+          "workProcessCode": "100"
+        }
+      },
+      "enrichment": {
+        "productCategory": {
+          "productCategory": "SpecialDelivery13"
+        },
+        "postcodeRegion": "London"
+      }
+    },
+    "expected_notifications": [
+      "NRLRS (SMS)"
+    ],
+    "expected_tracking": 1
+  },
+  {
+    "id": 1064,
+    "event": "ENKDN",
+    "product": "SpecialDelivery13",
+    "contact": "Both email and mobile",
+    "input": {
+      "message.MPE": {
+        "mailPiece": {
+          "mailPieceBarcode": {
+            "royalMailSegment": {
+              "mailTypeCode": "A",
+              "UPUCountry": "JGB",
+              "informationCode": "8",
+              "versionId": "2",
+              "mailItemFormatCode": "15",
+              "mailClassCode": "F"
+            },
+            "channelSegment": {
+              "uniqueItemId": "11000000001064001091111",
+              "weightCode": "1",
+              "pricePaid": "123",
+              "barcodeCreationDate": "2024-10-24",
+              "productId": "103",
+              "address": {
+                "buildingNumber": "1"
+              },
+              "destinationPostcodeDPS": {
+                "postcode": "EC1A1BB"
+              },
+              "mailPieceWeight": "1",
+              "UPUTrackingNumber": "YA000001064GB",
+              "destinationCountry": "GB",
+              "requiredAtDeliveryCode": "S"
+            }
+          }
+        },
+        "manualScan": {
+          "messageId": "msg-1064",
+          "userId": "user1064",
+          "eventTimestamp": "2024-10-24T19:35:51+01:00",
+          "transmissionCompleteTimestamp": "2024-10-24T19:35:59+01:00",
+          "auxiliaryData": {
+            "data": [
+              {
+                "name": "RECIPIENT_EMAILID",
+                "value": "test1064@example.com"
+              },
+              {
+                "name": "RECIPIENT_MOBILENO",
+                "value": "07088111064"
+              }
+            ]
+          },
+          "trackEventId": "5934652298366636",
+          "scanLocation": {
+            "altitude": "0.0",
+            "longitude": "0.0",
+            "latitude": "0.0"
+          },
+          "scanTimestamp": "2024-10-24T19:35:51+01:00",
+          "deviceId": "4789568638361064",
+          "RMGLocation": {
+            "functionalLocationId": "356",
+            "siteId": "000175"
+          },
+          "trackedEventCode": "ENKDN",
+          "transmissionTimestamp": "2024-10-24T19:35:59+01:00",
+          "eventReceivedTimestamp": "2024-10-24T19:35:59+01:00",
+          "eventReason": "11",
+          "manualScanIndicator": "false",
+          "workProcessCode": "100"
+        }
+      },
+      "enrichment": {
+        "productCategory": {
+          "productCategory": "SpecialDelivery13"
+        },
+        "postcodeRegion": "London"
+      }
+    },
+    "expected_notifications": [
+      "NRLRS (Email)",
+      "NRLRS (SMS)"
+    ],
+    "expected_tracking": 1
+  }
+]

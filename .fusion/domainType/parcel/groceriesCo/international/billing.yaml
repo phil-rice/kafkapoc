@@ -1,0 +1,16 @@
+module:
+  billing:
+    signedFor:
+      logic:
+        - type: celInline
+          inline: |
+            input.eventType == "signedFor"
+              ? [{
+                  type: "billing",
+                  accountId: input.accountId,
+                  amountGBP: 2.5,
+                  code: "INTL-POD",
+                  description: "International POD archival fee",
+                  taxable: true
+                }]
+              : null

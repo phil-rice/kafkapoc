@@ -1,0 +1,5 @@
+{
+  "a": "a1",
+  "b": "b2",
+  "note": "Example payload for enrichment tests; not used by CsvResourceLoader directly."
+}

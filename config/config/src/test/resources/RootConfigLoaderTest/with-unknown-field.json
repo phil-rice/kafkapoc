@@ -1,0 +1,15 @@
+{
+  "xmlSchemaPath": "schemas/ok.xsd",
+  "unexpectedField": "should be ignored",
+  "parameterConfig": {
+    "parameters": [
+      {
+        "legalValue": ["x", "y"],
+        "defaultValue": "x",
+        "description": "tolerance test",
+        "bogusField": "ignored"           // unknown at item level
+      }
+    ],
+    "bogusAtParamConfig": true            // unknown at paramConfig level
+  }
+}

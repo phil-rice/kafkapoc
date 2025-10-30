@@ -1,0 +1,102 @@
+version: '1'
+
+parameters:
+  barcode:
+    legal:
+      - idbarcode
+      - longbarcode
+      - qrcode
+    default: parcel
+  company:
+    legal:
+      - rmg
+      - sainsbury
+      - oneVanMan
+    default: rmg
+  product:
+    legal:
+      - firstClass
+      - secondClass
+      - signedForFirstClass
+      - signedForSecondClass
+      - tracked24
+      - tracked48
+    default: firstClass
+    #  event:
+    #    legal:
+    #      - created
+    #      - collected
+    #      - arrived
+    #      - departed
+    #      - outForDelivery
+    #      - signedFor
+    #      - delivered
+    # no default
+
+modules:
+  - notification
+#  - notification-police
+  - billing
+  - tracking
+  - preAdvice
+
+
+files:
+  - tasks.yaml  # This is the file that contains the tasks that are needed by the system
+  - services.yaml  # This is the file that contains services that implement the tasks
+  - modules.yaml  # This is the file that contains the modules that are used by the system
+  - ${module}/${module}.yaml  # This is the file that contains the company specific configuration
+  - ${module}/${company}/${barcode}_${company}.yaml  # This is the file that contains the company specific configuration
+  - product/${barcode}_${product}.yaml  # This is the file that contains the product specific configuration
+  - company/product/${company}/${barcode}_${company}_${product}.yaml  # This is the file that contains the company and product specific configuration
+
+
+module:
+  notification:
+    parcelArrived:
+      validate:
+        type: xmlSchema
+        schema: parcelSchema.xml
+      enrichment:
+        type: referenceLookup
+        kafkaTopic:sl;adk
+      bizlogic:
+         type: celInfile
+         cel:
+    parcelDeparted:
+      validate:
+        type: xmlSchema
+        schema: parcelSchema.xml
+
+  transformation:
+    parcelArrived:
+      transform:
+        type: xslt
+        file: parcelArrived.xslt
+    parcelDeparted:
+      transform:
+        type: xslt
+        file: parcelDeparted.xslt
+
+  addressEnrichment:
+    parcelArrived:
+      enrich:
+        - type: task
+          task: look_up_address_default
+          params: [ ]
+
+
+
+# example
+example:
+  -tasks.yaml                    <-- most general
+  -services.yaml
+  -modules.yaml
+  -notification/notification.yaml
+  -notification/rmg/idbarcode_rmg.yaml
+  -billing/billing.yaml               <-- bit general for biling
+  -billing/rmg/idbarcode_rmg.yaml
+  -preAdvice/preAdvice.yaml
+  -preAdvice/rmg/idbarcode_rmg.yaml  <-- most specific
+
+

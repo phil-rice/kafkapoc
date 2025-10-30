@@ -1,0 +1,55 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
+           elementFormDefault="qualified"
+           attributeFormDefault="unqualified">
+
+    <!-- Root element -->
+    <xs:element name="test" type="TestType"/>
+
+    <!-- ===== Types ===== -->
+
+    <!-- The <test> wrapper -->
+    <xs:complexType name="TestType">
+        <xs:sequence>
+            <xs:element name="input" type="InputType"/>
+            <xs:element name="output" type="OutputType"/>
+        </xs:sequence>
+    </xs:complexType>
+
+    <!-- <input> contains exactly one <msg> (your encoded payload) -->
+    <xs:complexType name="InputType">
+        <xs:sequence>
+            <xs:element ref="msg"/>
+        </xs:sequence>
+    </xs:complexType>
+
+    <!-- <output> contains zero or more <out> -->
+    <xs:complexType name="OutputType">
+        <xs:sequence>
+            <xs:element name="out" type="OutType" minOccurs="0" maxOccurs="unbounded"/>
+        </xs:sequence>
+    </xs:complexType>
+
+    <!-- One out line; extend here if you add more fields later -->
+    <xs:complexType name="OutType">
+        <xs:sequence>
+            <xs:element name="count" type="xs:long"/>
+        </xs:sequence>
+    </xs:complexType>
+
+    <!-- ===== Message payload emitted by your xmlCodec ===== -->
+
+    <!-- Make <msg> a global element so we can reference it inside <input> -->
+    <xs:element name="msg" type="MsgType"/>
+
+    <xs:complexType name="MsgType">
+        <xs:sequence>
+            <xs:element name="domainId"    type="xs:string"/>
+            <xs:element name="eventType"   type="xs:string"/>
+            <xs:element name="productType" type="xs:string"/>
+            <xs:element name="company"     type="xs:string"/>
+            <xs:element name="count"       type="xs:long"/>
+        </xs:sequence>
+    </xs:complexType>
+
+</xs:schema>

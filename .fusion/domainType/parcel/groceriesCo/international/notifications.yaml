@@ -1,0 +1,14 @@
+module:
+  notification:
+    signedFor:
+      logic:
+        - type: celInline
+          inline: |
+            input.eventType == "signedFor"
+              ? [{
+                  type: "notification",
+                  channel: "email",
+                  to: "both",
+                  message: "International parcel delivered and signed for in DE."
+                }]
+              : null

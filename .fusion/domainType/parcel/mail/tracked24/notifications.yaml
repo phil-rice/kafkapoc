@@ -1,0 +1,27 @@
+module:
+  notification:
+    arrival:
+      logic:
+        - type: celInline
+          inline: |
+            input.eventType == "arrived"
+              ? [{
+                  type: "notification",
+                  channel: "email",
+                  to: "recipient",
+                  message: "Tracked 24 parcel has arrived; delivery expected within 1 working day."
+                }]
+              : null
+
+    signedFor:
+      logic:
+        - type: celInline
+          inline: |
+            input.eventType == "signedFor"
+              ? [{
+                  type: "notification",
+                  channel: "email",
+                  to: "both",
+                  message: "Signed for at destination. Thank you!"
+                }]
+              : null

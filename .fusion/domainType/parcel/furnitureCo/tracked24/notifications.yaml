@@ -1,0 +1,14 @@
+module:
+  notification:
+    arrival:
+      logic:
+        - type: celInline
+          inline: |
+            input.eventType == "arrived"
+              ? [{
+                  type: "notification",
+                  channel: "email",
+                  to: "sender",
+                  message: "Bulky handling fee applied to your shipment."
+                }]
+              : null

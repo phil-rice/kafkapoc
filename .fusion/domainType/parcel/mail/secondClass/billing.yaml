@@ -1,0 +1,31 @@
+module:
+  billing:
+    arrival:
+      logic:
+        - type: celInline
+          inline: |
+            input.eventType == "arrived"
+              ? [{
+                  type: "billing",
+                  accountId: input.accountId,
+                  amountGBP: 7.5,
+                  code: "HEAVY-SUR",
+                  description: "Heavy/volumetric surcharge",
+                  taxable: true
+                }]
+              : null
+
+    departure:
+      logic:
+        - type: celInline
+          inline: |
+            input.eventType == "departed"
+              ? [{
+                  type: "billing",
+                  accountId: input.accountId,
+                  amountGBP: 0.15,
+                  code: "DEP-HND",
+                  description: "Departure handling fee",
+                  taxable: true
+                }]
+              : null

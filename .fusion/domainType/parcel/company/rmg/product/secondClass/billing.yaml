@@ -1,0 +1,14 @@
+module:
+  billings:
+     arrival:
+         logic:
+            - type: celInline
+              cel: | # Here we have some inline cel. It is creating a single side effect
+                recipient.country == "uk" && product.type == "registeredDelivery"
+                  ? [{
+                      type: "create_billing_record",
+                      amount: 5.00,
+                      currency: "GBP",
+                      description: "Arrival billing for {{ parcel_id }} to UK with registered delivery"
+                    }]
+                  : null

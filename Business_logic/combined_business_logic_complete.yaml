@@ -1,0 +1,517 @@
+# COMPLETE BUSINESS LOGIC - CEL Rules
+# Reverse-engineered from generate_rm_full_dataset_v2.py
+#
+# Structure: Split by output type (notification, tracking, billing)
+# This allows clear separation of concerns and independent testing
+#
+# NOTIFICATION RULES (from Python RULES dict):
+# Event    | Tracked24    | Tracked48    | SD09         | SD13
+# ---------|--------------|--------------|--------------|-------------
+# EVDAV    | NRA: email   | -            | NRG: both    | NRJ: sms
+# EVIMC    | -            | -            | -            | -
+# EVGPD    | NRB: both    | NRE: both    | NRH: both    | NRK: both
+# ENKDN    | NRC: email   | NRF: sms     | NRI: sms     | NRL: both
+#
+# Contact types: 1=email, 2=sms/mobile
+# Tracked event code format: <prefix>RS (e.g., NRARS, NRBRS, etc.)
+
+# ========================================
+# NOTIFICATION BUSINESS LOGIC
+# ========================================
+notification:
+  events:
+    # EVDAV - Accepted at Depot
+    # Rules: T24=email, SD09=both, SD13=sms
+    EVDAV:
+      bizlogic:
+        type: "cel"
+        cel: |
+          {
+            'out': (
+              has(enrichment.productCategory.productCategory) && 
+              has(manualScan.auxiliaryData) ?
+              
+              (enrichment.productCategory.productCategory == 'Tracked24' ? 
+                (manualScan.auxiliaryData.exists(d, d.name == 'RECIPIENT_EMAILID') ? 
+                  [
+                    {
+                      'type': 'notification',
+                      'trackedEventCode': 'NRARS',
+                      'originatingTrackedEventCode': 'EVDAV',
+                      'notificationDestination': manualScan.auxiliaryData.filter(d, d.name == 'RECIPIENT_EMAILID')[0].value,
+                      'notificationDestinationType': 1,
+                      'notificationRecipientType': 'R',
+                      'eventTimestamp': manualScan.eventTimestamp,
+                      'uniqueItemId': mailPiece.mailPieceBarcode.channelSegment.uniqueItemId,
+                      'UPUTrackingNumber': mailPiece.mailPieceBarcode.channelSegment.UPUTrackingNumber
+                    }
+                  ] 
+                  : []
+                )
+              :
+              enrichment.productCategory.productCategory == 'SpecialDelivery09' ?
+                (
+                  (manualScan.auxiliaryData.exists(d, d.name == 'RECIPIENT_EMAILID') ? 
+                    [
+                      {
+                        'type': 'notification',
+                        'trackedEventCode': 'NRGRS',
+                        'originatingTrackedEventCode': 'EVDAV',
+                        'notificationDestination': manualScan.auxiliaryData.filter(d, d.name == 'RECIPIENT_EMAILID')[0].value,
+                        'notificationDestinationType': 1,
+                        'notificationRecipientType': 'R',
+                        'eventTimestamp': manualScan.eventTimestamp,
+                        'uniqueItemId': mailPiece.mailPieceBarcode.channelSegment.uniqueItemId,
+                        'UPUTrackingNumber': mailPiece.mailPieceBarcode.channelSegment.UPUTrackingNumber
+                      }
+                    ] 
+                    : []
+                  ) +
+                  (manualScan.auxiliaryData.exists(d, d.name == 'RECIPIENT_MOBILENO') ? 
+                    [
+                      {
+                        'type': 'notification',
+                        'trackedEventCode': 'NRGRS',
+                        'originatingTrackedEventCode': 'EVDAV',
+                        'notificationDestination': manualScan.auxiliaryData.filter(d, d.name == 'RECIPIENT_MOBILENO')[0].value,
+                        'notificationDestinationType': 2,
+                        'notificationRecipientType': 'R',
+                        'eventTimestamp': manualScan.eventTimestamp,
+                        'uniqueItemId': mailPiece.mailPieceBarcode.channelSegment.uniqueItemId,
+                        'UPUTrackingNumber': mailPiece.mailPieceBarcode.channelSegment.UPUTrackingNumber
+                      }
+                    ] 
+                    : []
+                  )
+                )
+              :
+              enrichment.productCategory.productCategory == 'SpecialDelivery13' ?
+                (manualScan.auxiliaryData.exists(d, d.name == 'RECIPIENT_MOBILENO') ? 
+                  [
+                    {
+                      'type': 'notification',
+                      'trackedEventCode': 'NRJRS',
+                      'originatingTrackedEventCode': 'EVDAV',
+                      'notificationDestination': manualScan.auxiliaryData.filter(d, d.name == 'RECIPIENT_MOBILENO')[0].value,
+                      'notificationDestinationType': 2,
+                      'notificationRecipientType': 'R',
+                      'eventTimestamp': manualScan.eventTimestamp,
+                      'uniqueItemId': mailPiece.mailPieceBarcode.channelSegment.uniqueItemId,
+                      'UPUTrackingNumber': mailPiece.mailPieceBarcode.channelSegment.UPUTrackingNumber
+                    }
+                  ] 
+                  : []
+                )
+              : []
+              )
+              : []
+            )
+          }
+    
+    # EVGPD - Out for Delivery
+    # Rules: All products support both email and sms
+    EVGPD:
+      bizlogic:
+        type: "cel"
+        cel: |
+          {
+            'out': (
+              has(enrichment.productCategory.productCategory) && 
+              has(manualScan.auxiliaryData) ?
+              
+              (enrichment.productCategory.productCategory == 'Tracked24' ? 
+                (
+                  (manualScan.auxiliaryData.exists(d, d.name == 'RECIPIENT_EMAILID') ? 
+                    [
+                      {
+                        'type': 'notification',
+                        'trackedEventCode': 'NRBRS',
+                        'originatingTrackedEventCode': 'EVGPD',
+                        'notificationDestination': manualScan.auxiliaryData.filter(d, d.name == 'RECIPIENT_EMAILID')[0].value,
+                        'notificationDestinationType': 1,
+                        'notificationRecipientType': 'R',
+                        'eventTimestamp': manualScan.eventTimestamp,
+                        'uniqueItemId': mailPiece.mailPieceBarcode.channelSegment.uniqueItemId,
+                        'UPUTrackingNumber': mailPiece.mailPieceBarcode.channelSegment.UPUTrackingNumber
+                      }
+                    ] 
+                    : []
+                  ) +
+                  (manualScan.auxiliaryData.exists(d, d.name == 'RECIPIENT_MOBILENO') ? 
+                    [
+                      {
+                        'type': 'notification',
+                        'trackedEventCode': 'NRBRS',
+                        'originatingTrackedEventCode': 'EVGPD',
+                        'notificationDestination': manualScan.auxiliaryData.filter(d, d.name == 'RECIPIENT_MOBILENO')[0].value,
+                        'notificationDestinationType': 2,
+                        'notificationRecipientType': 'R',
+                        'eventTimestamp': manualScan.eventTimestamp,
+                        'uniqueItemId': mailPiece.mailPieceBarcode.channelSegment.uniqueItemId,
+                        'UPUTrackingNumber': mailPiece.mailPieceBarcode.channelSegment.UPUTrackingNumber
+                      }
+                    ] 
+                    : []
+                  )
+                )
+              :
+              enrichment.productCategory.productCategory == 'Tracked48' ?
+                (
+                  (manualScan.auxiliaryData.exists(d, d.name == 'RECIPIENT_EMAILID') ? 
+                    [
+                      {
+                        'type': 'notification',
+                        'trackedEventCode': 'NRERS',
+                        'originatingTrackedEventCode': 'EVGPD',
+                        'notificationDestination': manualScan.auxiliaryData.filter(d, d.name == 'RECIPIENT_EMAILID')[0].value,
+                        'notificationDestinationType': 1,
+                        'notificationRecipientType': 'R',
+                        'eventTimestamp': manualScan.eventTimestamp,
+                        'uniqueItemId': mailPiece.mailPieceBarcode.channelSegment.uniqueItemId,
+                        'UPUTrackingNumber': mailPiece.mailPieceBarcode.channelSegment.UPUTrackingNumber
+                      }
+                    ] 
+                    : []
+                  ) +
+                  (manualScan.auxiliaryData.exists(d, d.name == 'RECIPIENT_MOBILENO') ? 
+                    [
+                      {
+                        'type': 'notification',
+                        'trackedEventCode': 'NRERS',
+                        'originatingTrackedEventCode': 'EVGPD',
+                        'notificationDestination': manualScan.auxiliaryData.filter(d, d.name == 'RECIPIENT_MOBILENO')[0].value,
+                        'notificationDestinationType': 2,
+                        'notificationRecipientType': 'R',
+                        'eventTimestamp': manualScan.eventTimestamp,
+                        'uniqueItemId': mailPiece.mailPieceBarcode.channelSegment.uniqueItemId,
+                        'UPUTrackingNumber': mailPiece.mailPieceBarcode.channelSegment.UPUTrackingNumber
+                      }
+                    ] 
+                    : []
+                  )
+                )
+              :
+              enrichment.productCategory.productCategory == 'SpecialDelivery09' ?
+                (
+                  (manualScan.auxiliaryData.exists(d, d.name == 'RECIPIENT_EMAILID') ? 
+                    [
+                      {
+                        'type': 'notification',
+                        'trackedEventCode': 'NRHRS',
+                        'originatingTrackedEventCode': 'EVGPD',
+                        'notificationDestination': manualScan.auxiliaryData.filter(d, d.name == 'RECIPIENT_EMAILID')[0].value,
+                        'notificationDestinationType': 1,
+                        'notificationRecipientType': 'R',
+                        'eventTimestamp': manualScan.eventTimestamp,
+                        'uniqueItemId': mailPiece.mailPieceBarcode.channelSegment.uniqueItemId,
+                        'UPUTrackingNumber': mailPiece.mailPieceBarcode.channelSegment.UPUTrackingNumber
+                      }
+                    ] 
+                    : []
+                  ) +
+                  (manualScan.auxiliaryData.exists(d, d.name == 'RECIPIENT_MOBILENO') ? 
+                    [
+                      {
+                        'type': 'notification',
+                        'trackedEventCode': 'NRHRS',
+                        'originatingTrackedEventCode': 'EVGPD',
+                        'notificationDestination': manualScan.auxiliaryData.filter(d, d.name == 'RECIPIENT_MOBILENO')[0].value,
+                        'notificationDestinationType': 2,
+                        'notificationRecipientType': 'R',
+                        'eventTimestamp': manualScan.eventTimestamp,
+                        'uniqueItemId': mailPiece.mailPieceBarcode.channelSegment.uniqueItemId,
+                        'UPUTrackingNumber': mailPiece.mailPieceBarcode.channelSegment.UPUTrackingNumber
+                      }
+                    ] 
+                    : []
+                  )
+                )
+              :
+              enrichment.productCategory.productCategory == 'SpecialDelivery13' ?
+                (
+                  (manualScan.auxiliaryData.exists(d, d.name == 'RECIPIENT_EMAILID') ? 
+                    [
+                      {
+                        'type': 'notification',
+                        'trackedEventCode': 'NRKRS',
+                        'originatingTrackedEventCode': 'EVGPD',
+                        'notificationDestination': manualScan.auxiliaryData.filter(d, d.name == 'RECIPIENT_EMAILID')[0].value,
+                        'notificationDestinationType': 1,
+                        'notificationRecipientType': 'R',
+                        'eventTimestamp': manualScan.eventTimestamp,
+                        'uniqueItemId': mailPiece.mailPieceBarcode.channelSegment.uniqueItemId,
+                        'UPUTrackingNumber': mailPiece.mailPieceBarcode.channelSegment.UPUTrackingNumber
+                      }
+                    ] 
+                    : []
+                  ) +
+                  (manualScan.auxiliaryData.exists(d, d.name == 'RECIPIENT_MOBILENO') ? 
+                    [
+                      {
+                        'type': 'notification',
+                        'trackedEventCode': 'NRKRS',
+                        'originatingTrackedEventCode': 'EVGPD',
+                        'notificationDestination': manualScan.auxiliaryData.filter(d, d.name == 'RECIPIENT_MOBILENO')[0].value,
+                        'notificationDestinationType': 2,
+                        'notificationRecipientType': 'R',
+                        'eventTimestamp': manualScan.eventTimestamp,
+                        'uniqueItemId': mailPiece.mailPieceBarcode.channelSegment.uniqueItemId,
+                        'UPUTrackingNumber': mailPiece.mailPieceBarcode.channelSegment.UPUTrackingNumber
+                      }
+                    ] 
+                    : []
+                  )
+                )
+              : []
+              )
+              : []
+            )
+          }
+    
+    # ENKDN - Delivered
+    # Rules: T24=email, T48=sms, SD09=sms, SD13=both
+    ENKDN:
+      bizlogic:
+        type: "cel"
+        cel: |
+          {
+            'out': (
+              has(enrichment.productCategory.productCategory) && 
+              has(manualScan.auxiliaryData) ?
+              
+              (enrichment.productCategory.productCategory == 'Tracked24' ? 
+                (manualScan.auxiliaryData.exists(d, d.name == 'RECIPIENT_EMAILID') ? 
+                  [
+                    {
+                      'type': 'notification',
+                      'trackedEventCode': 'NRCRS',
+                      'originatingTrackedEventCode': 'ENKDN',
+                      'notificationDestination': manualScan.auxiliaryData.filter(d, d.name == 'RECIPIENT_EMAILID')[0].value,
+                      'notificationDestinationType': 1,
+                      'notificationRecipientType': 'R',
+                      'eventTimestamp': manualScan.eventTimestamp,
+                      'uniqueItemId': mailPiece.mailPieceBarcode.channelSegment.uniqueItemId,
+                      'UPUTrackingNumber': mailPiece.mailPieceBarcode.channelSegment.UPUTrackingNumber
+                    }
+                  ] 
+                  : []
+                )
+              :
+              enrichment.productCategory.productCategory == 'Tracked48' ?
+                (manualScan.auxiliaryData.exists(d, d.name == 'RECIPIENT_MOBILENO') ? 
+                  [
+                    {
+                      'type': 'notification',
+                      'trackedEventCode': 'NRFRS',
+                      'originatingTrackedEventCode': 'ENKDN',
+                      'notificationDestination': manualScan.auxiliaryData.filter(d, d.name == 'RECIPIENT_MOBILENO')[0].value,
+                      'notificationDestinationType': 2,
+                      'notificationRecipientType': 'R',
+                      'eventTimestamp': manualScan.eventTimestamp,
+                      'uniqueItemId': mailPiece.mailPieceBarcode.channelSegment.uniqueItemId,
+                      'UPUTrackingNumber': mailPiece.mailPieceBarcode.channelSegment.UPUTrackingNumber
+                    }
+                  ] 
+                  : []
+                )
+              :
+              enrichment.productCategory.productCategory == 'SpecialDelivery09' ?
+                (manualScan.auxiliaryData.exists(d, d.name == 'RECIPIENT_MOBILENO') ? 
+                  [
+                    {
+                      'type': 'notification',
+                      'trackedEventCode': 'NRIRS',
+                      'originatingTrackedEventCode': 'ENKDN',
+                      'notificationDestination': manualScan.auxiliaryData.filter(d, d.name == 'RECIPIENT_MOBILENO')[0].value,
+                      'notificationDestinationType': 2,
+                      'notificationRecipientType': 'R',
+                      'eventTimestamp': manualScan.eventTimestamp,
+                      'uniqueItemId': mailPiece.mailPieceBarcode.channelSegment.uniqueItemId,
+                      'UPUTrackingNumber': mailPiece.mailPieceBarcode.channelSegment.UPUTrackingNumber
+                    }
+                  ] 
+                  : []
+                )
+              :
+              enrichment.productCategory.productCategory == 'SpecialDelivery13' ?
+                (
+                  (manualScan.auxiliaryData.exists(d, d.name == 'RECIPIENT_EMAILID') ? 
+                    [
+                      {
+                        'type': 'notification',
+                        'trackedEventCode': 'NRLRS',
+                        'originatingTrackedEventCode': 'ENKDN',
+                        'notificationDestination': manualScan.auxiliaryData.filter(d, d.name == 'RECIPIENT_EMAILID')[0].value,
+                        'notificationDestinationType': 1,
+                        'notificationRecipientType': 'R',
+                        'eventTimestamp': manualScan.eventTimestamp,
+                        'uniqueItemId': mailPiece.mailPieceBarcode.channelSegment.uniqueItemId,
+                        'UPUTrackingNumber': mailPiece.mailPieceBarcode.channelSegment.UPUTrackingNumber
+                      }
+                    ] 
+                    : []
+                  ) +
+                  (manualScan.auxiliaryData.exists(d, d.name == 'RECIPIENT_MOBILENO') ? 
+                    [
+                      {
+                        'type': 'notification',
+                        'trackedEventCode': 'NRLRS',
+                        'originatingTrackedEventCode': 'ENKDN',
+                        'notificationDestination': manualScan.auxiliaryData.filter(d, d.name == 'RECIPIENT_MOBILENO')[0].value,
+                        'notificationDestinationType': 2,
+                        'notificationRecipientType': 'R',
+                        'eventTimestamp': manualScan.eventTimestamp,
+                        'uniqueItemId': mailPiece.mailPieceBarcode.channelSegment.uniqueItemId,
+                        'UPUTrackingNumber': mailPiece.mailPieceBarcode.channelSegment.UPUTrackingNumber
+                      }
+                    ] 
+                    : []
+                  )
+                )
+              : []
+              )
+              : []
+            )
+          }
+
+# ========================================
+# TRACKING BUSINESS LOGIC
+# ========================================
+tracking:
+  events:
+    # EVDAV - Accepted at Depot
+    EVDAV:
+      bizlogic:
+        type: "cel"
+        cel: |
+          {
+            'out': [
+              {
+                'type': 'tracking',
+                'eventCode': 'EVDAV',
+                'eventName': 'Accepted at Depot',
+                'eventDateTime': manualScan.eventTimestamp,
+                'uniqueItemId': mailPiece.mailPieceBarcode.channelSegment.uniqueItemId,
+                'UPUTrackingNumber': mailPiece.mailPieceBarcode.channelSegment.UPUTrackingNumber,
+                'productId': mailPiece.mailPieceBarcode.channelSegment.productId,
+                'productName': enrichment.productCategory.productCategory,
+                'functionalLocationId': has(manualScan.RMGLocation.functionalLocationId) ? manualScan.RMGLocation.functionalLocationId : '',
+                'siteId': has(manualScan.RMGLocation.siteId) ? manualScan.RMGLocation.siteId : '',
+                'locationName': has(enrichment.postcodeRegion) ? enrichment.postcodeRegion : '',
+                'postcode': mailPiece.mailPieceBarcode.channelSegment.destinationPostcodeDPS.postcode,
+                'destinationCountry': mailPiece.mailPieceBarcode.channelSegment.destinationCountry
+              }
+            ]
+          }
+    
+    # EVIMC - In Transit at Mail Centre
+    EVIMC:
+      bizlogic:
+        type: "cel"
+        cel: |
+          {
+            'out': [
+              {
+                'type': 'tracking',
+                'eventCode': 'EVIMC',
+                'eventName': 'In Transit at Mail Centre',
+                'eventDateTime': manualScan.eventTimestamp,
+                'uniqueItemId': mailPiece.mailPieceBarcode.channelSegment.uniqueItemId,
+                'UPUTrackingNumber': mailPiece.mailPieceBarcode.channelSegment.UPUTrackingNumber,
+                'productId': mailPiece.mailPieceBarcode.channelSegment.productId,
+                'productName': enrichment.productCategory.productCategory,
+                'functionalLocationId': has(manualScan.RMGLocation.functionalLocationId) ? manualScan.RMGLocation.functionalLocationId : '',
+                'siteId': has(manualScan.RMGLocation.siteId) ? manualScan.RMGLocation.siteId : '',
+                'locationName': has(enrichment.sortingCenter) ? enrichment.sortingCenter : '',
+                'postcode': mailPiece.mailPieceBarcode.channelSegment.destinationPostcodeDPS.postcode,
+                'destinationCountry': mailPiece.mailPieceBarcode.channelSegment.destinationCountry
+              }
+            ]
+          }
+    
+    # EVGPD - Out for Delivery
+    EVGPD:
+      bizlogic:
+        type: "cel"
+        cel: |
+          {
+            'out': [
+              {
+                'type': 'tracking',
+                'eventCode': 'EVGPD',
+                'eventName': 'Out for Delivery',
+                'eventDateTime': manualScan.eventTimestamp,
+                'uniqueItemId': mailPiece.mailPieceBarcode.channelSegment.uniqueItemId,
+                'UPUTrackingNumber': mailPiece.mailPieceBarcode.channelSegment.UPUTrackingNumber,
+                'productId': mailPiece.mailPieceBarcode.channelSegment.productId,
+                'productName': enrichment.productCategory.productCategory,
+                'userId': has(manualScan.userId) ? manualScan.userId : '',
+                'deviceId': has(manualScan.deviceId) ? manualScan.deviceId : '',
+                'functionalLocationId': has(manualScan.RMGLocation.functionalLocationId) ? manualScan.RMGLocation.functionalLocationId : '',
+                'siteId': has(manualScan.RMGLocation.siteId) ? manualScan.RMGLocation.siteId : '',
+                'locationName': has(enrichment.deliveryOffice) ? enrichment.deliveryOffice : '',
+                'postcode': mailPiece.mailPieceBarcode.channelSegment.destinationPostcodeDPS.postcode,
+                'destinationCountry': mailPiece.mailPieceBarcode.channelSegment.destinationCountry,
+                'routeOrWalkNumber': has(manualScan.routeOrWalkNumber) ? manualScan.routeOrWalkNumber : '',
+                'longitude': has(manualScan.scanLocation.longitude) ? manualScan.scanLocation.longitude : 0.0,
+                'latitude': has(manualScan.scanLocation.latitude) ? manualScan.scanLocation.latitude : 0.0,
+                'altitude': has(manualScan.scanLocation.altitude) ? manualScan.scanLocation.altitude : 0.0
+              }
+            ]
+          }
+    
+    # ENKDN - Delivered
+    ENKDN:
+      bizlogic:
+        type: "cel"
+        cel: |
+          {
+            'out': [
+              {
+                'type': 'tracking',
+                'eventCode': 'ENKDN',
+                'eventName': 'Delivered',
+                'eventDateTime': manualScan.eventTimestamp,
+                'uniqueItemId': mailPiece.mailPieceBarcode.channelSegment.uniqueItemId,
+                'UPUTrackingNumber': mailPiece.mailPieceBarcode.channelSegment.UPUTrackingNumber,
+                'productId': mailPiece.mailPieceBarcode.channelSegment.productId,
+                'productName': enrichment.productCategory.productCategory,
+                'userId': has(manualScan.userId) ? manualScan.userId : '',
+                'deviceId': has(manualScan.deviceId) ? manualScan.deviceId : '',
+                'functionalLocationId': has(manualScan.RMGLocation.functionalLocationId) ? manualScan.RMGLocation.functionalLocationId : '',
+                'siteId': has(manualScan.RMGLocation.siteId) ? manualScan.RMGLocation.siteId : '',
+                'locationName': has(enrichment.deliveryLocation) ? enrichment.deliveryLocation : '',
+                'postcode': mailPiece.mailPieceBarcode.channelSegment.destinationPostcodeDPS.postcode,
+                'destinationCountry': mailPiece.mailPieceBarcode.channelSegment.destinationCountry,
+                'routeOrWalkNumber': has(manualScan.routeOrWalkNumber) ? manualScan.routeOrWalkNumber : '',
+                'longitude': has(manualScan.scanLocation.longitude) ? manualScan.scanLocation.longitude : 0.0,
+                'latitude': has(manualScan.scanLocation.latitude) ? manualScan.scanLocation.latitude : 0.0,
+                'altitude': has(manualScan.scanLocation.altitude) ? manualScan.scanLocation.altitude : 0.0
+              }
+            ]
+          }
+
+# ========================================
+# BILLING BUSINESS LOGIC
+# ========================================
+billing:
+  events:
+    # ENKDN - Delivered (only event that generates billing)
+    ENKDN:
+      bizlogic:
+        type: "cel"
+        cel: |
+          {
+            'out': [
+              {
+                'type': 'billing',
+                'billingCode': 'DELIVERY_COMPLETE',
+                'eventCode': 'ENKDN',
+                'uniqueItemId': mailPiece.mailPieceBarcode.channelSegment.uniqueItemId,
+                'productId': mailPiece.mailPieceBarcode.channelSegment.productId,
+                'productCategory': enrichment.productCategory.productCategory,
+                'eventTimestamp': manualScan.eventTimestamp,
+                'pricePaid': has(mailPiece.mailPieceBarcode.channelSegment.pricePaid) ? mailPiece.mailPieceBarcode.channelSegment.pricePaid : 0
+              }
+            ]
+          }

@@ -1,0 +1,51 @@
+{
+  "events": {
+    "readyForDelivery": {
+      "validation": {
+        "notification": {
+          "type": "cel",
+          "cel": "a + b > 0"
+        }
+      },
+      "transformation": {
+        "notification": {
+          "type": "xml",
+          "file": "xforms/ready.xslt",
+          "schema": "schemas/ready.xsd"
+        }
+      },
+      "enrichment": {
+        "lookup": {
+          "type": "lookup",
+          "inputs": [
+            [
+              "addr",
+              "line1"
+            ],
+            [
+              "addr",
+              "line2"
+            ]
+          ],
+          "output": [
+            "addr",
+            "postcode"
+          ],
+          "lookup": {
+            "L1.L2": "PC1"
+          }
+        }
+      },
+      "bizlogic": {
+        "fileLogic": {
+          "type": "celFile",
+          "file": "logic.cel"
+        },
+        "inlineLogic": {
+          "type": "cel",
+          "cel": "a + b"
+        }
+      }
+    }
+  }
+}

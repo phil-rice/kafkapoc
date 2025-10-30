@@ -1,0 +1,26 @@
+module:
+  notification:
+    arrival:
+      logic:
+        - type: celInline
+          inline: |
+            input.eventType == "arrived"
+              ? [{
+                  type: "notification",
+                  channel: "email",
+                  to: "recipient",
+                  message: "Your first-class letter has arrived at the local depot."
+                }]
+              : null
+    cancelled:
+      logic:
+        - type: celInline
+          inline: |
+            input.eventType == "cancelled"
+              ? [{
+                  type: "notification",
+                  channel: "email",
+                  to: "sender",
+                  message: "Letter cancelled; small handling fee charged."
+                }]
+              : null

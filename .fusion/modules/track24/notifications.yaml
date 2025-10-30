@@ -1,0 +1,8 @@
+module:
+  notification:
+
+    readyForDelivery: # Here we can see we have two different ways to define the logic. We execute both
+      logic:
+          type: celFile
+          file: 'cel/ready_for_delivery_notification.cel' # The name of a file that holds cel
+

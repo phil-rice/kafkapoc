@@ -1,0 +1,319 @@
+// 🎯 Playground-Compatible CEL - All Events
+// This CEL handles all 4 events: EVDAV, EVIMC, EVGPD, ENKDN
+// Routes based on message.MPE.manualScan.trackedEventCode
+// Compatible with: https://playcel.undistro.io
+//
+// Usage:
+//   1. Copy this entire file to playground (left panel)
+//   2. Copy any test input from playground_tests/*_input.json (right panel)
+//   3. Click 'Evaluate'
+//
+// Notes:
+//   - No 'let' bindings (inlined for playground)
+//   - All values wrapped with string() for strict typing
+//   - Works with all 64 test cases
+//
+
+{'out': (
+  message.MPE.manualScan.trackedEventCode == 'EVDAV' ?
+    (
+      (has(enrichment.productCategory.productCategory) && has(message.MPE.manualScan.auxiliaryData.data) ? (enrichment.productCategory.productCategory == 'Tracked24' ? ((message.MPE.manualScan.auxiliaryData.data.exists(d, d.name == 'RECIPIENT_EMAILID') ? [
+              {
+                'type': 'notification',
+                'trackedEventCode': 'NRARS',
+                'originatingTrackedEventCode': 'EVDAV',
+                'notificationDestination': string(message.MPE.manualScan.auxiliaryData.data.filter(d, d.name == 'RECIPIENT_EMAILID')[0].value),
+                'notificationDestinationType': string(1),
+                'notificationRecipientType': 'R',
+                'eventTimestamp': string(message.MPE.manualScan.eventTimestamp),
+                'uniqueItemId': string(message.MPE.mailPiece.mailPieceBarcode.channelSegment.uniqueItemId),
+                'UPUTrackingNumber': string(message.MPE.mailPiece.mailPieceBarcode.channelSegment.UPUTrackingNumber)
+              }
+            ] : [])) : enrichment.productCategory.productCategory == 'SpecialDelivery09' ? ((message.MPE.manualScan.auxiliaryData.data.exists(d, d.name == 'RECIPIENT_EMAILID') ? [
+              {
+                'type': 'notification',
+                'trackedEventCode': 'NRGRS',
+                'originatingTrackedEventCode': 'EVDAV',
+                'notificationDestination': string(message.MPE.manualScan.auxiliaryData.data.filter(d, d.name == 'RECIPIENT_EMAILID')[0].value),
+                'notificationDestinationType': string(1),
+                'notificationRecipientType': 'R',
+                'eventTimestamp': string(message.MPE.manualScan.eventTimestamp),
+                'uniqueItemId': string(message.MPE.mailPiece.mailPieceBarcode.channelSegment.uniqueItemId),
+                'UPUTrackingNumber': string(message.MPE.mailPiece.mailPieceBarcode.channelSegment.UPUTrackingNumber)
+              }
+            ] : []) + (message.MPE.manualScan.auxiliaryData.data.exists(d, d.name == 'RECIPIENT_MOBILENO') ? [
+              {
+                'type': 'notification',
+                'trackedEventCode': 'NRGRS',
+                'originatingTrackedEventCode': 'EVDAV',
+                'notificationDestination': string(message.MPE.manualScan.auxiliaryData.data.filter(d, d.name == 'RECIPIENT_MOBILENO')[0].value),
+                'notificationDestinationType': string(2),
+                'notificationRecipientType': 'R',
+                'eventTimestamp': string(message.MPE.manualScan.eventTimestamp),
+                'uniqueItemId': string(message.MPE.mailPiece.mailPieceBarcode.channelSegment.uniqueItemId),
+                'UPUTrackingNumber': string(message.MPE.mailPiece.mailPieceBarcode.channelSegment.UPUTrackingNumber)
+              }
+            ] : [])) : enrichment.productCategory.productCategory == 'SpecialDelivery13' ? ((message.MPE.manualScan.auxiliaryData.data.exists(d, d.name == 'RECIPIENT_MOBILENO') ? [
+              {
+                'type': 'notification',
+                'trackedEventCode': 'NRJRS',
+                'originatingTrackedEventCode': 'EVDAV',
+                'notificationDestination': string(message.MPE.manualScan.auxiliaryData.data.filter(d, d.name == 'RECIPIENT_MOBILENO')[0].value),
+                'notificationDestinationType': string(2),
+                'notificationRecipientType': 'R',
+                'eventTimestamp': string(message.MPE.manualScan.eventTimestamp),
+                'uniqueItemId': string(message.MPE.mailPiece.mailPieceBarcode.channelSegment.uniqueItemId),
+                'UPUTrackingNumber': string(message.MPE.mailPiece.mailPieceBarcode.channelSegment.UPUTrackingNumber)
+              }
+            ] : [])) : []) : [])
+      +
+      [
+      {
+        'type': 'tracking',
+        'eventCode': 'EVDAV',
+        'eventName': 'Accepted at Depot',
+        'eventDateTime': string(message.MPE.manualScan.eventTimestamp),
+        'uniqueItemId': string(message.MPE.mailPiece.mailPieceBarcode.channelSegment.uniqueItemId),
+        'UPUTrackingNumber': string(message.MPE.mailPiece.mailPieceBarcode.channelSegment.UPUTrackingNumber),
+        'productId': string(message.MPE.mailPiece.mailPieceBarcode.channelSegment.productId),
+        'productName': string(enrichment.productCategory.productCategory),
+        'functionalLocationId': has(message.MPE.manualScan.RMGLocation.functionalLocationId) ? string(message.MPE.manualScan.RMGLocation.functionalLocationId) : '',
+        'siteId': has(message.MPE.manualScan.RMGLocation.siteId) ? string(message.MPE.manualScan.RMGLocation.siteId) : '',
+        'locationName': has(enrichment.postcodeRegion) ? string(enrichment.postcodeRegion) : '',
+        'postcode': string(message.MPE.mailPiece.mailPieceBarcode.channelSegment.destinationPostcodeDPS.postcode),
+        'destinationCountry': string(message.MPE.mailPiece.mailPieceBarcode.channelSegment.destinationCountry)
+      }
+    ]
+    ) :
+  message.MPE.manualScan.trackedEventCode == 'EVIMC' ?
+    (
+      []
+      +
+      [
+      {
+        'type': 'tracking',
+        'eventCode': 'EVIMC',
+        'eventName': 'Accepted at Mail Centre',
+        'eventDateTime': string(message.MPE.manualScan.eventTimestamp),
+        'uniqueItemId': string(message.MPE.mailPiece.mailPieceBarcode.channelSegment.uniqueItemId),
+        'UPUTrackingNumber': string(message.MPE.mailPiece.mailPieceBarcode.channelSegment.UPUTrackingNumber),
+        'productId': string(message.MPE.mailPiece.mailPieceBarcode.channelSegment.productId),
+        'productName': string(enrichment.productCategory.productCategory),
+        'functionalLocationId': has(message.MPE.manualScan.RMGLocation.functionalLocationId) ? string(message.MPE.manualScan.RMGLocation.functionalLocationId) : '',
+        'siteId': has(message.MPE.manualScan.RMGLocation.siteId) ? string(message.MPE.manualScan.RMGLocation.siteId) : '',
+        'locationName': has(enrichment.postcodeRegion) ? string(enrichment.postcodeRegion) : '',
+        'postcode': string(message.MPE.mailPiece.mailPieceBarcode.channelSegment.destinationPostcodeDPS.postcode),
+        'destinationCountry': string(message.MPE.mailPiece.mailPieceBarcode.channelSegment.destinationCountry)
+      }
+    ]
+    ) :
+  message.MPE.manualScan.trackedEventCode == 'EVGPD' ?
+    (
+      (has(enrichment.productCategory.productCategory) && has(message.MPE.manualScan.auxiliaryData.data) ? (enrichment.productCategory.productCategory == 'Tracked24' ? ((message.MPE.manualScan.auxiliaryData.data.exists(d, d.name == 'RECIPIENT_EMAILID') ? [
+              {
+                'type': 'notification',
+                'trackedEventCode': 'NRBRS',
+                'originatingTrackedEventCode': 'EVGPD',
+                'notificationDestination': string(message.MPE.manualScan.auxiliaryData.data.filter(d, d.name == 'RECIPIENT_EMAILID')[0].value),
+                'notificationDestinationType': string(1),
+                'notificationRecipientType': 'R',
+                'eventTimestamp': string(message.MPE.manualScan.eventTimestamp),
+                'uniqueItemId': string(message.MPE.mailPiece.mailPieceBarcode.channelSegment.uniqueItemId),
+                'UPUTrackingNumber': string(message.MPE.mailPiece.mailPieceBarcode.channelSegment.UPUTrackingNumber)
+              }
+            ] : []) + (message.MPE.manualScan.auxiliaryData.data.exists(d, d.name == 'RECIPIENT_MOBILENO') ? [
+              {
+                'type': 'notification',
+                'trackedEventCode': 'NRBRS',
+                'originatingTrackedEventCode': 'EVGPD',
+                'notificationDestination': string(message.MPE.manualScan.auxiliaryData.data.filter(d, d.name == 'RECIPIENT_MOBILENO')[0].value),
+                'notificationDestinationType': string(2),
+                'notificationRecipientType': 'R',
+                'eventTimestamp': string(message.MPE.manualScan.eventTimestamp),
+                'uniqueItemId': string(message.MPE.mailPiece.mailPieceBarcode.channelSegment.uniqueItemId),
+                'UPUTrackingNumber': string(message.MPE.mailPiece.mailPieceBarcode.channelSegment.UPUTrackingNumber)
+              }
+            ] : [])) : enrichment.productCategory.productCategory == 'Tracked48' ? ((message.MPE.manualScan.auxiliaryData.data.exists(d, d.name == 'RECIPIENT_EMAILID') ? [
+              {
+                'type': 'notification',
+                'trackedEventCode': 'NRERS',
+                'originatingTrackedEventCode': 'EVGPD',
+                'notificationDestination': string(message.MPE.manualScan.auxiliaryData.data.filter(d, d.name == 'RECIPIENT_EMAILID')[0].value),
+                'notificationDestinationType': string(1),
+                'notificationRecipientType': 'R',
+                'eventTimestamp': string(message.MPE.manualScan.eventTimestamp),
+                'uniqueItemId': string(message.MPE.mailPiece.mailPieceBarcode.channelSegment.uniqueItemId),
+                'UPUTrackingNumber': string(message.MPE.mailPiece.mailPieceBarcode.channelSegment.UPUTrackingNumber)
+              }
+            ] : []) + (message.MPE.manualScan.auxiliaryData.data.exists(d, d.name == 'RECIPIENT_MOBILENO') ? [
+              {
+                'type': 'notification',
+                'trackedEventCode': 'NRERS',
+                'originatingTrackedEventCode': 'EVGPD',
+                'notificationDestination': string(message.MPE.manualScan.auxiliaryData.data.filter(d, d.name == 'RECIPIENT_MOBILENO')[0].value),
+                'notificationDestinationType': string(2),
+                'notificationRecipientType': 'R',
+                'eventTimestamp': string(message.MPE.manualScan.eventTimestamp),
+                'uniqueItemId': string(message.MPE.mailPiece.mailPieceBarcode.channelSegment.uniqueItemId),
+                'UPUTrackingNumber': string(message.MPE.mailPiece.mailPieceBarcode.channelSegment.UPUTrackingNumber)
+              }
+            ] : [])) : enrichment.productCategory.productCategory == 'SpecialDelivery09' ? ((message.MPE.manualScan.auxiliaryData.data.exists(d, d.name == 'RECIPIENT_EMAILID') ? [
+              {
+                'type': 'notification',
+                'trackedEventCode': 'NRHRS',
+                'originatingTrackedEventCode': 'EVGPD',
+                'notificationDestination': string(message.MPE.manualScan.auxiliaryData.data.filter(d, d.name == 'RECIPIENT_EMAILID')[0].value),
+                'notificationDestinationType': string(1),
+                'notificationRecipientType': 'R',
+                'eventTimestamp': string(message.MPE.manualScan.eventTimestamp),
+                'uniqueItemId': string(message.MPE.mailPiece.mailPieceBarcode.channelSegment.uniqueItemId),
+                'UPUTrackingNumber': string(message.MPE.mailPiece.mailPieceBarcode.channelSegment.UPUTrackingNumber)
+              }
+            ] : []) + (message.MPE.manualScan.auxiliaryData.data.exists(d, d.name == 'RECIPIENT_MOBILENO') ? [
+              {
+                'type': 'notification',
+                'trackedEventCode': 'NRHRS',
+                'originatingTrackedEventCode': 'EVGPD',
+                'notificationDestination': string(message.MPE.manualScan.auxiliaryData.data.filter(d, d.name == 'RECIPIENT_MOBILENO')[0].value),
+                'notificationDestinationType': string(2),
+                'notificationRecipientType': 'R',
+                'eventTimestamp': string(message.MPE.manualScan.eventTimestamp),
+                'uniqueItemId': string(message.MPE.mailPiece.mailPieceBarcode.channelSegment.uniqueItemId),
+                'UPUTrackingNumber': string(message.MPE.mailPiece.mailPieceBarcode.channelSegment.UPUTrackingNumber)
+              }
+            ] : [])) : enrichment.productCategory.productCategory == 'SpecialDelivery13' ? ((message.MPE.manualScan.auxiliaryData.data.exists(d, d.name == 'RECIPIENT_EMAILID') ? [
+              {
+                'type': 'notification',
+                'trackedEventCode': 'NRKRS',
+                'originatingTrackedEventCode': 'EVGPD',
+                'notificationDestination': string(message.MPE.manualScan.auxiliaryData.data.filter(d, d.name == 'RECIPIENT_EMAILID')[0].value),
+                'notificationDestinationType': string(1),
+                'notificationRecipientType': 'R',
+                'eventTimestamp': string(message.MPE.manualScan.eventTimestamp),
+                'uniqueItemId': string(message.MPE.mailPiece.mailPieceBarcode.channelSegment.uniqueItemId),
+                'UPUTrackingNumber': string(message.MPE.mailPiece.mailPieceBarcode.channelSegment.UPUTrackingNumber)
+              }
+            ] : []) + (message.MPE.manualScan.auxiliaryData.data.exists(d, d.name == 'RECIPIENT_MOBILENO') ? [
+              {
+                'type': 'notification',
+                'trackedEventCode': 'NRKRS',
+                'originatingTrackedEventCode': 'EVGPD',
+                'notificationDestination': string(message.MPE.manualScan.auxiliaryData.data.filter(d, d.name == 'RECIPIENT_MOBILENO')[0].value),
+                'notificationDestinationType': string(2),
+                'notificationRecipientType': 'R',
+                'eventTimestamp': string(message.MPE.manualScan.eventTimestamp),
+                'uniqueItemId': string(message.MPE.mailPiece.mailPieceBarcode.channelSegment.uniqueItemId),
+                'UPUTrackingNumber': string(message.MPE.mailPiece.mailPieceBarcode.channelSegment.UPUTrackingNumber)
+              }
+            ] : [])) : []) : [])
+      +
+      [
+      {
+        'type': 'tracking',
+        'eventCode': 'EVGPD',
+        'eventName': 'Out for Delivery',
+        'eventDateTime': string(message.MPE.manualScan.eventTimestamp),
+        'uniqueItemId': string(message.MPE.mailPiece.mailPieceBarcode.channelSegment.uniqueItemId),
+        'UPUTrackingNumber': string(message.MPE.mailPiece.mailPieceBarcode.channelSegment.UPUTrackingNumber),
+        'productId': string(message.MPE.mailPiece.mailPieceBarcode.channelSegment.productId),
+        'productName': string(enrichment.productCategory.productCategory),
+        'functionalLocationId': has(message.MPE.manualScan.RMGLocation.functionalLocationId) ? string(message.MPE.manualScan.RMGLocation.functionalLocationId) : '',
+        'siteId': has(message.MPE.manualScan.RMGLocation.siteId) ? string(message.MPE.manualScan.RMGLocation.siteId) : '',
+        'locationName': has(enrichment.postcodeRegion) ? string(enrichment.postcodeRegion) : '',
+        'postcode': string(message.MPE.mailPiece.mailPieceBarcode.channelSegment.destinationPostcodeDPS.postcode),
+        'destinationCountry': string(message.MPE.mailPiece.mailPieceBarcode.channelSegment.destinationCountry),
+        'userId': has(message.MPE.manualScan.userId) ? string(message.MPE.manualScan.userId) : '',
+        'deviceId': has(message.MPE.manualScan.deviceId) ? string(message.MPE.manualScan.deviceId) : '',
+        'routeOrWalkNumber': has(message.MPE.manualScan.routeOrWalkNumber) ? string(message.MPE.manualScan.routeOrWalkNumber) : '',
+        'longitude': has(message.MPE.manualScan.scanLocation.longitude) ? string(message.MPE.manualScan.scanLocation.longitude) : '',
+        'latitude': has(message.MPE.manualScan.scanLocation.latitude) ? string(message.MPE.manualScan.scanLocation.latitude) : '',
+        'altitude': has(message.MPE.manualScan.scanLocation.altitude) ? string(message.MPE.manualScan.scanLocation.altitude) : ''
+      }
+    ]
+    ) :
+  message.MPE.manualScan.trackedEventCode == 'ENKDN' ?
+    (
+      (has(enrichment.productCategory.productCategory) && has(message.MPE.manualScan.auxiliaryData.data) ? (enrichment.productCategory.productCategory == 'Tracked24' ? ((message.MPE.manualScan.auxiliaryData.data.exists(d, d.name == 'RECIPIENT_EMAILID') ? [
+              {
+                'type': 'notification',
+                'trackedEventCode': 'NRCRS',
+                'originatingTrackedEventCode': 'ENKDN',
+                'notificationDestination': string(message.MPE.manualScan.auxiliaryData.data.filter(d, d.name == 'RECIPIENT_EMAILID')[0].value),
+                'notificationDestinationType': string(1),
+                'notificationRecipientType': 'R',
+                'eventTimestamp': string(message.MPE.manualScan.eventTimestamp),
+                'uniqueItemId': string(message.MPE.mailPiece.mailPieceBarcode.channelSegment.uniqueItemId),
+                'UPUTrackingNumber': string(message.MPE.mailPiece.mailPieceBarcode.channelSegment.UPUTrackingNumber)
+              }
+            ] : [])) : enrichment.productCategory.productCategory == 'Tracked48' ? ((message.MPE.manualScan.auxiliaryData.data.exists(d, d.name == 'RECIPIENT_MOBILENO') ? [
+              {
+                'type': 'notification',
+                'trackedEventCode': 'NRFRS',
+                'originatingTrackedEventCode': 'ENKDN',
+                'notificationDestination': string(message.MPE.manualScan.auxiliaryData.data.filter(d, d.name == 'RECIPIENT_MOBILENO')[0].value),
+                'notificationDestinationType': string(2),
+                'notificationRecipientType': 'R',
+                'eventTimestamp': string(message.MPE.manualScan.eventTimestamp),
+                'uniqueItemId': string(message.MPE.mailPiece.mailPieceBarcode.channelSegment.uniqueItemId),
+                'UPUTrackingNumber': string(message.MPE.mailPiece.mailPieceBarcode.channelSegment.UPUTrackingNumber)
+              }
+            ] : [])) : enrichment.productCategory.productCategory == 'SpecialDelivery09' ? ((message.MPE.manualScan.auxiliaryData.data.exists(d, d.name == 'RECIPIENT_MOBILENO') ? [
+              {
+                'type': 'notification',
+                'trackedEventCode': 'NRIRS',
+                'originatingTrackedEventCode': 'ENKDN',
+                'notificationDestination': string(message.MPE.manualScan.auxiliaryData.data.filter(d, d.name == 'RECIPIENT_MOBILENO')[0].value),
+                'notificationDestinationType': string(2),
+                'notificationRecipientType': 'R',
+                'eventTimestamp': string(message.MPE.manualScan.eventTimestamp),
+                'uniqueItemId': string(message.MPE.mailPiece.mailPieceBarcode.channelSegment.uniqueItemId),
+                'UPUTrackingNumber': string(message.MPE.mailPiece.mailPieceBarcode.channelSegment.UPUTrackingNumber)
+              }
+            ] : [])) : enrichment.productCategory.productCategory == 'SpecialDelivery13' ? ((message.MPE.manualScan.auxiliaryData.data.exists(d, d.name == 'RECIPIENT_EMAILID') ? [
+              {
+                'type': 'notification',
+                'trackedEventCode': 'NRLRS',
+                'originatingTrackedEventCode': 'ENKDN',
+                'notificationDestination': string(message.MPE.manualScan.auxiliaryData.data.filter(d, d.name == 'RECIPIENT_EMAILID')[0].value),
+                'notificationDestinationType': string(1),
+                'notificationRecipientType': 'R',
+                'eventTimestamp': string(message.MPE.manualScan.eventTimestamp),
+                'uniqueItemId': string(message.MPE.mailPiece.mailPieceBarcode.channelSegment.uniqueItemId),
+                'UPUTrackingNumber': string(message.MPE.mailPiece.mailPieceBarcode.channelSegment.UPUTrackingNumber)
+              }
+            ] : []) + (message.MPE.manualScan.auxiliaryData.data.exists(d, d.name == 'RECIPIENT_MOBILENO') ? [
+              {
+                'type': 'notification',
+                'trackedEventCode': 'NRLRS',
+                'originatingTrackedEventCode': 'ENKDN',
+                'notificationDestination': string(message.MPE.manualScan.auxiliaryData.data.filter(d, d.name == 'RECIPIENT_MOBILENO')[0].value),
+                'notificationDestinationType': string(2),
+                'notificationRecipientType': 'R',
+                'eventTimestamp': string(message.MPE.manualScan.eventTimestamp),
+                'uniqueItemId': string(message.MPE.mailPiece.mailPieceBarcode.channelSegment.uniqueItemId),
+                'UPUTrackingNumber': string(message.MPE.mailPiece.mailPieceBarcode.channelSegment.UPUTrackingNumber)
+              }
+            ] : [])) : []) : [])
+      +
+      [
+      {
+        'type': 'tracking',
+        'eventCode': 'ENKDN',
+        'eventName': 'Delivered',
+        'eventDateTime': string(message.MPE.manualScan.eventTimestamp),
+        'uniqueItemId': string(message.MPE.mailPiece.mailPieceBarcode.channelSegment.uniqueItemId),
+        'UPUTrackingNumber': string(message.MPE.mailPiece.mailPieceBarcode.channelSegment.UPUTrackingNumber),
+        'productId': string(message.MPE.mailPiece.mailPieceBarcode.channelSegment.productId),
+        'productName': string(enrichment.productCategory.productCategory),
+        'functionalLocationId': has(message.MPE.manualScan.RMGLocation.functionalLocationId) ? string(message.MPE.manualScan.RMGLocation.functionalLocationId) : '',
+        'siteId': has(message.MPE.manualScan.RMGLocation.siteId) ? string(message.MPE.manualScan.RMGLocation.siteId) : '',
+        'locationName': has(enrichment.postcodeRegion) ? string(enrichment.postcodeRegion) : '',
+        'postcode': string(message.MPE.mailPiece.mailPieceBarcode.channelSegment.destinationPostcodeDPS.postcode),
+        'destinationCountry': string(message.MPE.mailPiece.mailPieceBarcode.channelSegment.destinationCountry),
+        'userId': has(message.MPE.manualScan.userId) ? string(message.MPE.manualScan.userId) : '',
+        'deviceId': has(message.MPE.manualScan.deviceId) ? string(message.MPE.manualScan.deviceId) : ''
+      }
+    ]
+    ) :
+  []
+)}
