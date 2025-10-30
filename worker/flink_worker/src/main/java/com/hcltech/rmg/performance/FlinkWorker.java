@@ -23,6 +23,7 @@ public final class FlinkWorker {
 
     public static void main(String[] args) throws Exception {
         var appContainerDefn = AppContainerDefn.of(AppContainerFactoryForMapStringObject.class, "prod");
+//        var appContainerDefn = AppContainerDefn.of(AppContainerFactoryForMapStringObject.class, "dev");
 
         System.setProperty("java.io.tmpdir", "C:\\flink-tmp");
         // print to confirm

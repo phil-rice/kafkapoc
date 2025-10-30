@@ -128,6 +128,25 @@ public final class AppContainerFactoryForMapStringObject implements IAppContaine
             case "dev" -> basic(
                     t -> KafkaConfig.fromSystemProps(t, false),
                     id,
+                    "mper-input-events",//topic from system properties
+                    ITimeService.real,
+                    IUuidGenerator.defaultGenerator(),
+                    "config/root-prod.json",
+                    30_000,
+                    RootConfigLoader::fromClasspath,
+                    ConfigsBuilder::buildFromClasspath,
+                    "noCelCondition",
+                    ParameterExtractor.defaultParameterExtractor(defaultParametersForProd, Map.of(), Map.of(
+                            "productType", List.of("MPE", "mailPiece", "mailPieceBarcode", "royalMailSegment", "mailTypeCode"))),
+                    IEventTypeExtractor.fromPathForMapStringObject(List.of("MPE", "manualScan", "trackedEventCode")),
+                    IDomainTypeExtractor.fixed("parcel"),
+                    "config/prod/",
+                    "/opt/flink-rocksdb-prod",
+                    v -> v
+            );
+            case "perf" -> basic(
+                    t -> KafkaConfig.fromSystemProps(t, false),
+                    id,
                     null,//topic from system properties
                     ITimeService.real,
                     IUuidGenerator.defaultGenerator(),
