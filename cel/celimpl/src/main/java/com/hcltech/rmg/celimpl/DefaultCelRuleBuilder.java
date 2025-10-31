@@ -9,6 +9,7 @@ import dev.cel.common.types.CelType;
 import dev.cel.common.types.SimpleType;
 import dev.cel.compiler.CelCompiler;
 import dev.cel.compiler.CelCompilerFactory;
+import dev.cel.parser.CelStandardMacro;
 import dev.cel.runtime.CelRuntime;
 import dev.cel.runtime.CelRuntimeFactory;
 
@@ -76,7 +77,7 @@ final class DefaultCelRuleBuilder<Inp, Out> implements CelRuleBuilder<Inp, Out> 
         final List<String> errors = new ArrayList<>();
         try {
             // 1) Build compiler and declare variables.
-            var cb = CelCompilerFactory.standardCelCompilerBuilder();
+            var cb = CelCompilerFactory.standardCelCompilerBuilder().setStandardMacros(CelStandardMacro.HAS);
             for (var e : vars.entrySet()) {
                 cb = cb.addVar(e.getKey(), toSimpleType(e.getValue().type()));
             }
