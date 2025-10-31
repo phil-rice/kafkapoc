@@ -1,0 +1,119 @@
+# This pipeline is used to upgrade both Job and Task Managers whenever there is a new version available.
+
+name: Upgrade Flink Cluster CI-CD
+on:
+  workflow_dispatch:
+    inputs:
+      image_version:
+        description: 'Flink Docker image version'
+        required: true
+        default: '2.0.0-java21' 
+  push:
+    branches: 
+    - main
+    - develop
+
+permissions:
+  contents: read
+  packages: write
+  id-token: write
+
+jobs:
+  docker-Pull-publish:
+    name: Publish Docker Image to ACR
+    runs-on: ubuntu-latest
+    env:
+      RESOURCE_GROUP: rg-aiforce-rmgpoc-uksouth-001
+      ACR_NAME: rmgflink
+      IMAGE_REPO: flink-cluster
+      IMAGE_VERSION: ${{ github.event.inputs.image_version || '2.0.0-java21' }}
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Login to Azure
+        uses: azure/login@v1
+        with:
+          creds: ${{ secrets.AZURE_CREDENTIALS }}
+
+      - name: Get runner public IP
+        id: get-ip
+        run: echo "ip=$(curl -s https://api.ipify.org)" >> $GITHUB_OUTPUT
+
+      - name: Add runner IP to ACR firewall
+        run: |
+          az acr network-rule add \
+            --name ${{ env.ACR_NAME }} \
+            --ip-address ${{ steps.get-ip.outputs.ip }} \
+            --resource-group ${{ env.RESOURCE_GROUP }}
+
+      - name: Wait for firewall rule
+        run: sleep 30
+
+      - name: Login to ACR
+        run: az acr login --name ${{ env.ACR_NAME }}
+
+      - name: Pull and tag Docker image
+        run: |
+          docker pull flink:${{ env.IMAGE_VERSION }}
+          docker tag docker.io/library/flink:${{ env.IMAGE_VERSION }} ${{ env.ACR_NAME }}.azurecr.io/${{ env.IMAGE_REPO }}:${{ env.IMAGE_VERSION }}
+
+      - name: Run Image Scan
+        uses: aquasecurity/trivy-action@0.24.0
+        with:
+         image-ref: ${{ env.ACR_NAME }}.azurecr.io/${{ env.IMAGE_REPO }}:${{ env.IMAGE_VERSION }}
+         format: 'table'
+         ignore-unfixed: true
+         output: image-scan-results.txt
+         vuln-type: 'os,library'
+         severity: 'CRITICAL,HIGH'
+         exit-code: '0'          
+         scan-type: image
+         scanners: vuln           
+         cache-dir: .trivycache   
+        env:
+         TRIVY_SKIP_DB_UPDATE: false
+         TRIVY_SKIP_JAVA_DB_UPDATE: false
+
+      - name: Push Docker image
+        run: |
+          docker push ${{ env.ACR_NAME }}.azurecr.io/${{ env.IMAGE_REPO }}:${{ env.IMAGE_VERSION }}
+
+      - name: Wait for Image refresh
+        run: sleep 30
+
+      - name: Ugrading Job Manager
+        run: |
+          az containerapp update \
+            --name jobmanager \
+            --resource-group ${{ env.RESOURCE_GROUP }} \
+            --image ${{ env.ACR_NAME }}.azurecr.io/${{ env.IMAGE_REPO }}:${{ env.IMAGE_VERSION }}
+
+      - name: Upgrading Task Manager
+        run: |
+          container_app_prefix="taskmanagerworker"
+          for i in {1..8}; 
+          do
+            app="${container_app_prefix}${i}"
+            echo "Upgrading container app: $app"
+      
+            az containerapp update \
+              --name $app \
+              --resource-group ${{ env.RESOURCE_GROUP }} \
+              --image ${{ env.ACR_NAME }}.azurecr.io/${{ env.IMAGE_REPO }}:${{ env.IMAGE_VERSION }}
+          done
+
+      - name: Cleanup firewall rule
+        if: always()
+        run: |
+          az acr network-rule remove \
+            --name ${{ env.ACR_NAME }} \
+            --ip-address ${{ steps.get-ip.outputs.ip }} \
+            --resource-group ${{ env.RESOURCE_GROUP }}
+            
+      - name: Logout from ACR & Azure
+        if: always()
+        run: |
+          az acr logout --name ${{ env.ACR_NAME }}
+          az logout
