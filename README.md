@@ -1,4 +1,4 @@
-# RMG Kafka POC
+# ESPX Event Processor
 
 A proof-of-concept Apache Flink streaming application for processing Royal Mail Group parcel tracking events with Kafka/EventHub integration, CEL-based business logic execution, and comprehensive observability.
 
