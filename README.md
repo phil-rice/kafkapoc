@@ -89,11 +89,11 @@ mvn clean package
 ### Build Output
 
 After building, JAR files will be located in each module's `target/` directory:
-- `worker/flink_worker/target/flink_worker-1.0.0-SNAPSHOT.jar`
-- `worker/ai_worker/target/ai_worker-1.0.0-SNAPSHOT.jar`
-- `worker/sample_api/target/sample_api-1.0.0-SNAPSHOT.jar`
-- `worker/csv_api/target/csv_api-1.0.0-SNAPSHOT.jar`
-- etc.
+- `worker/flink_worker/target/flink_worker-1.0.0-SNAPSHOT.jar` - The Main Flink Worker, intended to be used in the production environment
+- `worker/flink_worker/target/performance-1.0.0-SNAPSHOT.jar` - A standalone 'for development' application that allows everything to be tested in dev
+- `worker/ai_worker/target/ai_worker-1.0.0-SNAPSHOT.jar` - Used to support the migration demonstration
+- `worker/sample_api/target/sample_api-1.0.0-SNAPSHOT.jar` - A sample API showing the use of observability
+
 
 ---
 
