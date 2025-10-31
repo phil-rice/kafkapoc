@@ -34,7 +34,7 @@ public class BuildPipeline {
         KafkaConfig kafka = app.eventSourceConfig();
 
         DataStream<RawMessage> raw = KafkaFlinkHelper.createRawMessageStreamFromKafka(
-                appContainerDefn, env, kafka, app.checkPointIntervalMillis(), app.rocksDBPath());
+                appContainerDefn, env, kafka, app.checkPointIntervalMillis(), app.rocksDBPath(), app.useRocksDBStateBackend());
         KeyedStream<RawMessage, String> keyedRaw = raw.keyBy(RawMessage::domainId);
 
 // 2) Map to Envelope

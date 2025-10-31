@@ -121,6 +121,7 @@ public final class AppContainerFactoryForMapStringObject implements IAppContaine
                     IDomainTypeExtractor.fixed("parcel"),
                     "config/prod/",
                     "/opt/flink-rocksdb-prod",
+                    true,
                     v -> v
             );
             case "dev" -> basic(
@@ -140,6 +141,7 @@ public final class AppContainerFactoryForMapStringObject implements IAppContaine
                     IDomainTypeExtractor.fixed("parcel"),
                     "config/prod/",
                     "/opt/flink-rocksdb-prod",
+                    false,
                     v -> v
             );
             case "perf" -> basic(
@@ -160,6 +162,7 @@ public final class AppContainerFactoryForMapStringObject implements IAppContaine
                     IDomainTypeExtractor.fixed("parcel"),
                     "config/prod/",
                     "/tmp/flink-rocksdb-prod",
+                    false,
                     v -> v
             );
             case "ai" -> basic(
@@ -180,7 +183,7 @@ public final class AppContainerFactoryForMapStringObject implements IAppContaine
                     IDomainTypeExtractor.fixed("parcel"),
                     "config/prod/",
                     "/opt/flink-rocksdb-ai",
-
+                    false,
                     AppContainerFactoryForMapStringObject::aiMessagePostParse
             );
             case "test" -> basic(
@@ -199,6 +202,7 @@ public final class AppContainerFactoryForMapStringObject implements IAppContaine
                     IDomainTypeExtractor.fixed("parcel"),
                     "config/test/",
                     "/opt/flink-rocksdb-test",
+                    false,
                     v -> v
             );
             default -> ErrorsOr.error("Unknown container id: " + id);
@@ -223,6 +227,7 @@ public final class AppContainerFactoryForMapStringObject implements IAppContaine
             IDomainTypeExtractor<Map<String, Object>> domainTypeExtractor,
             String configResourcePrefix,
             String rocksDBPath,
+            boolean useRocksdb,
             Function<Envelope<Map<String, Object>, Map<String, Object>>, Envelope<Map<String, Object>, Map<String, Object>>> afterParse
     ) {
         Objects.requireNonNull(time, "timeService service must not be null");
@@ -294,6 +299,7 @@ public final class AppContainerFactoryForMapStringObject implements IAppContaine
                                                     checkpointIntervalMillis,
                                                     cepEventLogFunction,
                                                     opaeConfig,
+                                                    useRocksdb,
                                                     keyPath,
                                                     eventSourceConfig,
                                                     root,

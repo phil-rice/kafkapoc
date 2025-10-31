@@ -24,12 +24,14 @@ import java.nio.file.Path;
 
 public class KafkaFlinkHelper {
     private static final Logger LOG = LoggerFactory.getLogger(KafkaFlinkHelper.class);
-    static public <ESC, CepState, Msg, Schema,RT, FR,MetricsParam> DataStreamSource<RawMessage> createRawMessageStreamFromKafka(AppContainerDefn<ESC, CepState, Msg, Schema,RT, FR,MetricsParam> appContainerDefn, StreamExecutionEnvironment env, KafkaConfig kafka, int checkpointingInterval, String rocksDBPath) {
+
+    static public <ESC, CepState, Msg, Schema, RT, FR, MetricsParam> DataStreamSource<RawMessage> createRawMessageStreamFromKafka(AppContainerDefn<ESC, CepState, Msg, Schema, RT, FR, MetricsParam> appContainerDefn, StreamExecutionEnvironment env, KafkaConfig kafka, int checkpointingInterval, String rocksDBPath, boolean useRocksDBStateBackend) {
         final int totalPartitions = kafka.sourceParallelism();
         env.setParallelism(totalPartitions > 0 ? totalPartitions : env.getParallelism());
         env.getConfig().setAutoWatermarkInterval(0);
         env.enableCheckpointing(checkpointingInterval);
-        ensureRocksDbStateBackend(env, rocksDBPath);
+        if (useRocksDBStateBackend)
+            ensureRocksDbStateBackend(env, rocksDBPath);
         env.getCheckpointConfig().setCheckpointingMode(CheckpointingMode.EXACTLY_ONCE);
         env.getCheckpointConfig().setMinPauseBetweenCheckpoints(5000);
         env.getCheckpointConfig().setTolerableCheckpointFailureNumber(3);

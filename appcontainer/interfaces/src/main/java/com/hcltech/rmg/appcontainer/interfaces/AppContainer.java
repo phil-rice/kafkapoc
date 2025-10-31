@@ -38,6 +38,7 @@ public record AppContainer<EventSourceConfig, CepState, Msg, Schema, FlinkRT, Fl
         int checkPointIntervalMillis,
         Function<FlinkRT, CepEventLog> eventLogFromRuntimeContext,
         OrderPreservingAsyncExecutorConfig<Envelope<CepState, Msg>, Envelope<CepState, Msg>, FlinkFR> asyncCfg,
+        boolean useRocksDBStateBackend,
 
         // shared config
         List<String> keyPath,
