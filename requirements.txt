@@ -1,0 +1,15 @@
+# Core dependencies
+fastapi
+uvicorn
+python-dotenv
+loguru
+
+# Kafka/Event Hub
+confluent-kafka
+azure-eventhub
+
+# Azure Storage (for CSV uploads)
+azure-storage-blob
+
+# Database (used for buffering in LMDB mode)
+lmdb

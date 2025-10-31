@@ -1,785 +1,583 @@
-# RMG Kafka POC
+# Royal Mail EPS POC - Event Generator and Streaming API
 
-A proof-of-concept Apache Flink streaming application for processing Royal Mail Group parcel tracking events with Kafka/EventHub integration, CEL-based business logic execution, and comprehensive observability.
+A high-performance event generation and streaming service for Royal Mail proof-of-concept testing. This Python FastAPI service generates synthetic parcel tracking events on-demand and streams them to Kafka or Azure Event Hub without persistent storage.
 
----
+## Architecture
 
-## Table of Contents
-
-- [Getting Started](#getting-started)
-- [Building the Project](#building-the-project)
-- [Testing](#testing)
-- [Running Locally](#running-locally)
-- [Monitoring & Observability](#monitoring--observability)
-- [Project Architecture](#project-architecture)
-- [Module Overview](#module-overview)
-- [Quick Start Summary](#quick-start-summary)
-
----
-
-## Getting Started
-
-### Prerequisites
-
-Before you begin, ensure you have the following installed:
-
-- **Java 21** (JDK 21 or higher)
-  ```bash
-  java -version  # Should show version 21+
-  ```
-
-- **Apache Maven 3.8+**
-  ```bash
-  mvn -version
-  ```
-
-- **Docker & Docker Compose**
-  ```bash
-  docker --version
-  docker compose version
-  ```
-
-- **Git**
-  ```bash
-  git --version
-  ```
-
-### Clone the Repository
-
-```bash
-git clone <repository-url>
-cd kafkapoc
-```
-
----
-
-## Building the Project
-
-### Compile All Modules
-
-Build the entire multi-module Maven project:
-
-```bash
-mvn clean install
-```
-
-This will:
-- Compile all Java source files
-- Run unit tests
-- Package JARs for all modules
-- Install artifacts to local Maven repository
-
-### Build Without Tests
-
-To speed up the build during development:
-
-```bash
-mvn clean install -DskipTests
-```
-
-### Build Specific Module
-
-To build only a specific module (e.g., `flink_worker`):
-
-```bash
-cd worker/flink_worker
-mvn clean package
-```
-
-### Build Output
-
-After building, JAR files will be located in each module's `target/` directory:
-- `worker/flink_worker/target/flink_worker-1.0.0-SNAPSHOT.jar` - The Main Flink Worker, intended to be used in the production environment
-- `worker/flink_worker/target/performance-1.0.0-SNAPSHOT.jar` - A standalone 'for development' application that allows everything to be tested in dev
-- `worker/ai_worker/target/ai_worker-1.0.0-SNAPSHOT.jar` - Used to support the migration demonstration
-- `worker/sample_api/target/sample_api-1.0.0-SNAPSHOT.jar` - A sample API showing the use of observability
-
-
----
-
-## Testing
-
-### Run All Tests
-
-Execute all unit tests across all modules:
-
-```bash
-mvn test
-```
-
-### Run Tests for Specific Module
-
-```bash
-cd worker/flink_worker
-mvn test
-```
-
-### Run Specific Test Class
-
-```bash
-mvn test -Dtest=EnvelopeTest
-```
-
-### Generate Test Coverage Report
-
-The project uses JaCoCo for code coverage:
-
-```bash
-mvn clean verify
-```
-
-View the aggregated coverage report:
-```bash
-open coverage-report/target/site/jacoco-aggregate/index.html
-```
-
-Or navigate to: `coverage-report/target/site/jacoco-aggregate/index.html`
-
-### Testing Framework
-
-- **JUnit 5**: Unit testing framework
-- **Mockito**: Mocking framework for unit tests
-- **Flink Test Utils**: For testing Flink pipelines
-
----
-
-## Running Locally
-
-### Step 1: Start Infrastructure Services
-
-Start Kafka, Prometheus, and RedPanda Console using Docker Compose:
-
-```bash
-docker compose up -d
-```
-
-This starts:
-- **Kafka**: Apache Kafka broker (localhost:9092)
-- **RedPanda Console**: Kafka UI at http://localhost:8081
-- **Prometheus**: Metrics collection at http://localhost:9090
-
-Verify services are running:
-```bash
-docker compose ps
-```
-
-### Step 2: Run the Flink Worker
-
-The Flink Worker is the main streaming application that processes events from Kafka.
-
-#### Option A: Run from IDE
-
-1. Open `worker/flink_worker/src/main/java/com/hcltech/rmg/performance/FlinkWorker.java`
-2. Run the `main()` method
-
-#### Option B: Run from Maven
-
-```bash
-cd worker/flink_worker
-mvn exec:java -Dexec.mainClass="com.hcltech.rmg.performance.FlinkWorker"
-```
-
-#### Option C: Run Packaged JAR
-
-```bash
-cd worker/flink_worker
-mvn clean package
-java -jar target/flink_worker-1.0.0-SNAPSHOT.jar
-```
-
-**What the Flink Worker Does:**
-- Consumes events from Kafka input topics
-- Executes business logic using CEL expressions
-- Performs data enrichment and transformations
-- Routes processed events to output Kafka topics
-- Exposes metrics on port 9400
-
-**Flink Web UI:**
-When running locally, access the Flink dashboard at:
-- http://localhost:8081 (Note: May use a different port if 8081 is taken by RedPanda Console)
-
-### Step 3: Run the AI Worker (Optional)
-
-The AI Worker provides a REST API for managing Flink jobs programmatically.
-
-```bash
-cd worker/ai_worker
-mvn spring-boot:run
-```
-
-Or run the JAR:
-```bash
-java -jar target/ai_worker-1.0.0-SNAPSHOT.jar
-```
-
-**API Endpoints:**
-- `POST /api/jobs/start`: Start a new Flink job
-- `GET /api/jobs/{id}/status`: Get job status
-- Health check: http://localhost:8080/actuator/health
-
-### Step 4: Run Sample API (Optional)
-
-The Sample API is a reactive mock service for testing enrichment operations.
-
-```bash
-cd worker/sample_api
-mvn spring-boot:run
-```
-
-**Configuration:**
-- Runs on port 1235 (HTTPS enabled with self-signed cert)
-- Provides lookup endpoints for address validation
-- OpenTelemetry tracing enabled
-
-### Step 5: Run CSV API (Optional)
-
-The CSV API provides REST endpoints for CSV processing operations.
-
-```bash
-cd worker/csv_api
-mvn spring-boot:run
-```
-
-Runs on port 8080 by default.
-
----
-
-## Monitoring & Observability
-
-### Local Monitoring Stack
-
-#### 1. Kafka Monitoring - RedPanda Console
-
-**URL:** http://localhost:8081
-
-**Features:**
-- View Kafka topics and messages
-- Browse message content
-- Monitor consumer groups and lag
-- View topic configurations
-- Real-time message inspection
-
-**How to Use:**
-1. Navigate to http://localhost:8081
-2. Click "Topics" to see all Kafka topics
-3. Click a topic to browse messages
-4. Use "Consumer Groups" to monitor lag
-
-#### 2. Metrics - Prometheus
-
-**URL:** http://localhost:9090
-
-**Features:**
-- Time-series metrics collection
-- Query metrics using PromQL
-- View graphs and time-series data
-
-**Configuration:**
-The Prometheus scrape configuration is in `prometheus.yml`:
-```yaml
-scrape_configs:
-  - job_name: "myapp-host"
-    static_configs:
-      - targets: ["host.docker.internal:9400"]
-```
-
-**How to View Metrics:**
-1. Navigate to http://localhost:9090
-2. Go to "Graph" tab
-3. Enter a PromQL query (e.g., `rate(messages_processed_total[1m])`)
-4. Click "Execute"
-
-**Available Metrics:**
-- Flink job metrics (throughput, latency, backpressure)
-- Custom business metrics (envelopes, errors, retries)
-- JVM metrics (heap, GC, threads)
-
-#### 3. Application Logs
-
-**Log Location:** Console output (stdout)
-
-**Log Configuration:**
-Each module has its own `logback.xml` configuration in `src/main/resources/`:
-- `worker/flink_worker/src/main/resources/logback.xml`
-- `worker/ai_worker/src/main/resources/logback.xml`
-- etc.
-
-**Log Levels:**
-- Most modules use `WARN` level by default for cleaner output
-- To enable `DEBUG` logging, modify the `logback.xml` file:
-  ```xml
-  <root level="DEBUG">
-    <appender-ref ref="CONSOLE"/>
-  </root>
-  ```
-
-**Viewing Logs:**
-Logs are written to console where you ran the application. For Docker services:
-```bash
-# View Kafka logs
-docker compose logs kafka -f
-
-# View all service logs
-docker compose logs -f
-```
-
-#### 4. Flink Web UI
-
-When running the Flink Worker locally, a web UI is available for monitoring:
-
-**URL:** http://localhost:8081 (or check console output for actual port)
-
-**Features:**
-- Job execution details
-- Task metrics and parallelism
-- Checkpoint and savepoint information
-- Backpressure monitoring
-- Task manager resources
-- Exception and failure tracking
-
-**How to Use:**
-1. Start the Flink Worker
-2. Navigate to the Flink Web UI URL shown in console
-3. View running jobs under "Jobs"
-4. Click a job to see detailed metrics
-
-#### 5. Spring Boot Actuator (AI Worker / Sample API / CSV API)
-
-Spring Boot applications expose actuator endpoints:
-
-**AI Worker:**
-- Health: http://localhost:8080/actuator/health
-- Metrics: http://localhost:8080/actuator/metrics
-- Info: http://localhost:8080/actuator/info
-
-**Sample API:**
-- Health: http://localhost:1235/actuator/health
-
-**Available Endpoints:**
-- `/actuator/health`: Application health status
-- `/actuator/metrics`: Available metric names
-- `/actuator/metrics/{name}`: Specific metric details
-- `/actuator/info`: Application information
-
-#### 6. OpenTelemetry Tracing
-
-The Sample API includes OpenTelemetry integration for distributed tracing.
-
-**Configuration:**
-- OTLP exporter configured in `worker/sample_api/src/main/resources/application.yaml`
-- Automatic context propagation across async boundaries
-- W3C Trace Context headers (traceparent)
-
-**Note:** This is configured but requires an external tracing backend (e.g., Jaeger, Zipkin) which is not included in the Docker Compose setup.
-
-### Monitoring Checklist
-
-✅ **Is Kafka working?**
-- Check RedPanda Console: http://localhost:8081
-- Verify topics are created
-- Check for messages in topics
-
-✅ **Is Flink processing events?**
-- Check Flink Web UI
-- View metrics in Prometheus: `rate(envelopes_total[1m])`
-- Check console logs for processing stats
-
-✅ **Are there errors?**
-- Check error topics in RedPanda Console
-- View error metrics in Prometheus
-- Search logs for ERROR or WARN
-
-✅ **Is the system healthy?**
-- Check actuator health endpoints
-- Monitor consumer lag in RedPanda Console
-- Check Flink checkpoint success rate
-
----
-
-## Project Architecture
-
-### High-Level Architecture
-
-```
-┌─────────────┐      ┌──────────────────┐      ┌─────────────┐
-│   Kafka     │─────▶│  Flink Worker    │─────▶│   Kafka     │
-│  (Input)    │      │  (Processing)    │      │  (Output)   │
-└─────────────┘      └──────────────────┘      └─────────────┘
-                              │
-                              ├─▶ Business Logic (CEL)
-                              ├─▶ Enrichment (External API)
-                              ├─▶ Transformation
-                              └─▶ Validation
-                              
-                     ┌──────────────────┐
-                     │   Prometheus     │
-                     │   (Metrics)      │
-                     └──────────────────┘
-```
+**Stream-on-Demand Architecture**: Events are generated dynamically without persistent storage, enabling memory-efficient, scalable event streaming.
 
 ### Key Components
 
-1. **Flink Worker** (`worker/flink_worker`)
-   - Main streaming application
-   - Consumes from Kafka
-   - Executes business logic pipeline
-   - Produces to Kafka
-   - Exposes Prometheus metrics
+- **FastAPI Service**: REST API for configuration and event emission
+- **Event Generator**: Creates realistic Royal Mail parcel tracking events with proper XML format
+- **Kafka/Event Hub Producer**: High-throughput streaming with batching and compression
+- **CSV Generator**: Produces address lookup data for Azure Blob Storage
+- **Configuration Store**: In-memory configuration management
 
-2. **AI Worker** (`worker/ai_worker`)
-   - REST API for job orchestration
-   - Spring Boot application
-   - Manages Flink job lifecycle
+## Data Model
 
-3. **Business Logic** (`Business_logic/`)
-   - CEL (Common Expression Language) expressions
-   - YAML-based rule definitions
-   - Event-driven processing rules
+### Event Flow
 
-4. **Pipeline Components**
-   - `execution/`: Business logic, enrichment, transformation, validation modules
-   - `messages/`: Envelope and message handling
-   - `dag/`: Directed acyclic graph processing
-   - `cel/`: CEL expression evaluation
+Each parcel progresses through 4 scan events:
 
-5. **Infrastructure**
-   - `kafka/`: Kafka integration and configuration
-   - `flink/`: Flink adapters and utilities
-   - `metrics/`: Prometheus and OpenTelemetry integration
+1. **EVDAV** - Acceptance scan (parcel received)
+2. **EVIMC** - In-transit scan (processing center)
+3. **EVGPD** - Out for delivery scan
+4. **ENKDN** - Delivered scan
 
-### Data Flow
+### Product Categories
 
-1. **Input**: Events arrive on Kafka input topics as XML messages
-2. **Parse**: XML is parsed and converted to internal message format
-3. **Route**: Events are routed based on event type and domain
-4. **Execute**: Business logic rules are evaluated using CEL
-5. **Enrich**: External data is fetched via API calls (optional)
-6. **Transform**: Data is transformed according to rules
-7. **Validate**: Output is validated against schemas
-8. **Output**: Processed events are sent to Kafka output topics
-9. **Error Handling**: Errors are routed to error topics for retry/analysis
+- **Tracked24** (40%) - 24-hour tracked delivery
+- **Tracked48** (40%) - 48-hour tracked delivery
+- **SpecialDelivery09** (10%) - Guaranteed delivery by 9am
+- **SpecialDelivery13** (10%) - Guaranteed delivery by 1pm
 
----
+### Event Data Structure
 
-## Module Overview
+Each event includes:
 
-### Core Modules
+- **Unique Item ID**: 11 or 21-digit barcode (30% account-based)
+- **UPU Tracking Number**: International format (YA#########GB)
+- **Address Details**: Postcode, location, address lines
+- **Scan Metadata**: Timestamps, site IDs, device IDs, functional locations
+- **Contact Information**: Email and mobile (70% have both)
+- **Route Information**: Included in EVGPD and ENKDN events
 
-#### `appcontainer/` - Application Container Framework
-- **interfaces/**: Application container interfaces
-- **implementation/**: Concrete implementations
-- Dependency injection and lifecycle management
+## Prerequisites
 
-#### `cel/` - Common Expression Language
-- **celcore/**: Core CEL evaluation engine
-- **celimpl/**: Custom CEL function implementations
-- Business rule evaluation
+- Python 3.10+
+- Docker and Docker Compose (for containerized deployment)
+- Kafka or Azure Event Hub (for event streaming)
+- Azure Storage Account (for CSV uploads)
+- Azure Container Registry (for GitHub Actions deployment)
+- Azure Container Apps (for Azure deployment)
 
-#### `common/` - Shared Utilities
-- Utility classes used across all modules
-- Data structures, helpers, validators
-- CSV processing utilities
+## Build, Test, and Deploy
 
-#### `config/` - Configuration Management
-- Application configuration loading
-- Property management
-- Environment-specific configs
+### 1. Build Locally
 
-#### `dag/` - Directed Acyclic Graph
-- DAG construction and traversal
-- Dependency resolution
-- Execution ordering
+#### Step 1: Clone the Repository
 
-### Execution Modules
-
-#### `execution/all_execution/` - Complete Execution Pipeline
-Aggregates all execution stages into a single pipeline
-
-#### `execution/bizlogic/` - Business Logic Execution
-Executes CEL-based business rules on events
-
-#### `execution/enrichment/` - Data Enrichment
-Enriches events with external data via API calls
-
-#### `execution/execution/` - Core Execution Framework
-Base execution interfaces and abstractions
-
-#### `execution/messages/` - Message Handling
-Envelope management, correlation, message types
-
-#### `execution/parameters/` - Parameter Processing
-Parameter extraction and processing
-
-#### `execution/transformation/` - Data Transformation
-Transforms data structures according to rules
-
-#### `execution/validation/` - Data Validation
-Validates data against schemas and rules
-
-### Integration Modules
-
-#### `flink/` - Apache Flink Integration
-- **interfaces/**: Flink integration interfaces
-- **flinkadapter/**: Adapters for Flink streaming
-
-#### `kafka/` - Apache Kafka Integration
-- **kafka/**: Kafka producer/consumer implementations
-- **kafkaconfig/**: Kafka configuration
-
-#### `metrics/` - Observability
-- **envelope/**: Envelope-level metrics
-- **flink/**: Flink-specific metrics
-- **opentelemetry/**: OpenTelemetry integration
-
-### Worker Applications
-
-#### `worker/flink_worker/` - Main Flink Job
-The primary streaming application for production use
-
-**Main Class:** `com.hcltech.rmg.performance.FlinkWorker`
-
-#### `worker/ai_worker/` - Job Orchestration API
-REST API for managing Flink jobs
-
-**Main Class:** `com.hcltech.rmg.worker.AiWorker`
-
-#### `worker/sample_api/` - Mock External Service
-Reactive API for testing enrichment flows
-
-**Main Class:** `com.hcltech.rmg.testapi.TestApiApplication`
-
-#### `worker/csv_api/` - CSV Processing API
-REST API for CSV operations
-
-**Main Class:** `com.hcltech.rmg.csv.CsvApiApp`
-
-#### `worker/producer/` - Kafka Producer
-Standalone producer for sending test events
-
-#### `worker/shared_worker/` - Shared Worker Utilities
-Common code shared across all workers
-
-#### `worker/performance/` - Performance Testing
-Performance harness for benchmarking
-
-### Supporting Modules
-
-#### `cepstate/` - Complex Event Processing State
-State management for CEP scenarios
-
-#### `optics/` - Optics Library
-Functional lenses and optics for data access
-
-#### `xml/` - XML Processing
-- **xml/**: XML parsing and processing
-- **woodstox/**: Woodstox-based XML handling
-
-#### `coverage-report/` - Test Coverage
-Aggregated JaCoCo test coverage reports
-
----
-
-## Development Notes
-
-### Technology Stack
-
-- **Language:** Java 21
-- **Build Tool:** Apache Maven 3.8+
-- **Streaming:** Apache Flink 2.0.0
-- **Messaging:** Apache Kafka 3.7.1
-- **Web Framework:** Spring Boot 3.3.4
-- **Business Rules:** CEL (Common Expression Language) 0.11.0
-- **Metrics:** Prometheus, OpenTelemetry
-- **Testing:** JUnit 5, Mockito
-- **Code Coverage:** JaCoCo
-
-### Project Structure
-
-```
-kafkapoc/
-├── pom.xml                      # Parent POM
-├── compose.yaml                 # Docker Compose for local services
-├── prometheus.yml               # Prometheus configuration
-├── Business_logic/              # CEL business rules (YAML)
-├── appcontainer/                # Application container framework
-├── cel/                         # CEL evaluation engine
-├── cepstate/                    # CEP state management
-├── common/                      # Shared utilities
-├── config/                      # Configuration management
-├── dag/                         # DAG processing
-├── execution/                   # Execution pipeline modules
-├── flink/                       # Flink integration
-├── kafka/                       # Kafka integration
-├── metrics/                     # Metrics and observability
-├── optics/                      # Optics library
-├── worker/                      # Worker applications
-├── xml/                         # XML processing
-└── coverage-report/             # Aggregated test coverage
-```
-
-### Key Configuration Files
-
-- `pom.xml`: Maven project configuration and dependencies
-- `compose.yaml`: Local Docker services (Kafka, Prometheus, RedPanda)
-- `prometheus.yml`: Metrics scraping configuration
-- `Business_logic/*.yaml`: CEL business logic rules
-- `*/src/main/resources/logback.xml`: Logging configuration per module
-- `*/src/main/resources/application.properties`: Spring Boot configs
-
-### Common Development Tasks
-
-**Clean Everything:**
 ```bash
-mvn clean
+git clone <repository-url>
+cd rmg-python
 ```
 
-**Rebuild from Scratch:**
+#### Step 2: Create Virtual Environment
+
 ```bash
-mvn clean install
+python3 -m venv venv
+source venv/bin/activate  # On Windows: venv\Scripts\activate
 ```
 
-**Run Linting on Python Scripts:**
+#### Step 3: Install Dependencies
+
 ```bash
-./fix_pylint.sh -f testdata-utils/ -a
+pip install -r requirements.txt
 ```
 
-**Stop All Docker Services:**
+#### Step 4: Configure Environment Variables
+
+Create a `.env` file in the project root:
+
 ```bash
-docker compose down
+# Copy template if available, or create manually
+touch .env
 ```
 
-**Remove All Docker Data:**
+Required environment variables (see [Environment Variables](#environment-variables) section below).
+
+#### Step 5: Build Docker Image (Optional)
+
 ```bash
-docker compose down -v
+docker build -t rmg-python:latest .
 ```
 
-**View Real-time Docker Logs:**
+### 2. Test Locally
+
+#### Step 1: Start the Application
+
+**Option A: Run directly with Python**
+
 ```bash
-docker compose logs -f
+python -m app.main
 ```
 
----
+**Option B: Run with uvicorn**
 
-## Troubleshooting
+```bash
+uvicorn app.main:app --host 0.0.0.0 --port 8000
+```
 
-### Kafka Not Starting
+**Option C: Run with Docker Compose**
 
-**Symptom:** Kafka container fails to start or exits immediately
+```bash
+docker-compose up -d
+```
 
-**Solutions:**
-1. Check logs: `docker compose logs kafka`
-2. Remove volumes: `docker compose down -v`
-3. Restart: `docker compose up -d`
+The API will be available at `http://localhost:8000`
 
-### Port Already in Use
+#### Step 2: Verify Health Check
 
-**Symptom:** Error: "bind: address already in use"
+```bash
+curl http://localhost:8000/health
+```
 
-**Solutions:**
-1. Check what's using the port:
+Expected response:
+
+```json
+{
+  "status": "healthy",
+  "service": "Event Streaming API",
+  "version": "2.0.0",
+  "architecture": "stream-on-demand",
+  "configuration": {
+    "kafka_bootstrap": "localhost:9092",
+    "kafka_topic": "mper-input-events",
+    "producer_type": "kafka"
+  }
+}
+```
+
+#### Step 3: Test Configuration Endpoint
+
+```bash
+curl -X POST http://localhost:8000/generate \
+  -H "Content-Type: application/json" \
+  -d '{"parcels": 100, "seed": 42}'
+```
+
+#### Step 4: Test Event Emission
+
+```bash
+# Emit events for scan 1 (EVDAV)
+curl -X POST http://localhost:8000/scans/1/emissions \
+  -H "Content-Type: application/json" \
+  -d '{"limit": 100}'
+```
+
+### 3. Deploy Locally
+
+#### Using Docker Compose
+
+1. **Configure environment variables** in `.env` file
+
+2. **Start the service**
+
+```bash
+docker-compose up -d
+```
+
+3. **View logs**
+
+```bash
+docker-compose logs -f event-streaming-api
+```
+
+4. **Stop the service**
+
+```bash
+docker-compose down
+```
+
+#### Using Docker Directly
+
+1. **Build the image**
+
+```bash
+docker build -t rmg-python:latest .
+```
+
+2. **Run the container**
+
+```bash
+docker run -d \
+  --name rmg-python \
+  -p 8000:8000 \
+  --env-file .env \
+  -v $(pwd)/logs:/app/logs \
+  rmg-python:latest
+```
+
+### 4. Build and Deploy with GitHub Actions
+
+#### Prerequisites
+
+1. **Azure Container Registry (ACR)** - Create an ACR instance in Azure
+2. **GitHub Secrets** - Configure the following secrets in your GitHub repository:
+
+   - `AZURE_CREDENTIALS` - Azure service principal credentials (JSON format)
+   - `REGISTRY` - Azure Container Registry URL (e.g., `yourregistry.azurecr.io`)
+   - `ACR_NAME` - Azure Container Registry name
+
+#### Setup GitHub Secrets
+
+1. Go to your GitHub repository
+2. Navigate to **Settings** → **Secrets and variables** → **Actions**
+3. Click **New repository secret**
+4. Add the following secrets:
+
+   **AZURE_CREDENTIALS:**
    ```bash
-   # macOS/Linux
-   lsof -i :9092
-   lsof -i :8081
-   lsof -i :9090
+   # Create service principal (run in Azure CLI):
+   az ad sp create-for-rbac --name "github-actions-sp" \
+     --role contributor \
+     --scopes /subscriptions/{subscription-id}/resourceGroups/{resource-group} \
+     --sdk-auth
    ```
-2. Stop the conflicting service or change ports in `compose.yaml`
+   
+   Copy the JSON output and paste it as the secret value.
 
-### Flink Worker Won't Start
+   **REGISTRY:**
+   ```
+   yourregistry.azurecr.io
+   ```
 
-**Symptom:** Flink Worker crashes on startup
+   **ACR_NAME:**
+   ```
+   yourregistry
+   ```
 
-**Solutions:**
-1. Ensure Kafka is running: `docker compose ps`
-2. Check Java version: `java -version` (must be 21+)
-3. Verify build: `cd worker/flink_worker && mvn clean package`
-4. Check logs for exceptions
+#### CI Pipeline (Build)
 
-### Maven Build Fails
+The CI pipeline (`.github/workflows/CI-Python.yaml`) automatically:
 
-**Symptom:** `mvn install` fails with compilation errors
+1. Builds the Docker image on push to `main` or `develop` branches
+2. Scans the image for vulnerabilities using Trivy
+3. Logs in to Azure Container Registry
+4. Pushes the image to ACR with tag `latest`
 
-**Solutions:**
-1. Check Java version: `java -version`
-2. Clean build: `mvn clean`
-3. Update Maven: `mvn -version` (need 3.8+)
-4. Check for missing dependencies: `mvn dependency:tree`
+**Trigger the workflow:**
 
-### Tests Fail
+- Push to `main` or `develop` branches
+- Or manually trigger via GitHub Actions UI (Workflow dispatch)
 
-**Symptom:** `mvn test` reports failures
+#### CD Pipeline (Deploy to Azure)
 
-**Solutions:**
-1. Run specific test: `mvn test -Dtest=ClassName`
-2. Skip tests temporarily: `mvn install -DskipTests`
-3. Check test logs in `target/surefire-reports/`
+The CD pipeline (`.github/workflows/CD-Python.yaml`) automatically:
 
-### No Metrics in Prometheus
+1. Triggers after successful CI build completion
+2. Logs in to Azure Container Registry
+3. Redeploys the Azure Container App with the new image
 
-**Symptom:** Prometheus shows no data for Flink Worker
+**Prerequisites for Azure Deployment:**
 
-**Solutions:**
-1. Verify Flink Worker is running
-2. Check metrics endpoint: `curl http://localhost:9400/metrics`
-3. Verify Prometheus config in `prometheus.yml`
-4. Check Prometheus targets: http://localhost:9090/targets
+- Azure Container App named `rmg-python` in resource group `rg-aiforce-rmgpoc-uksouth-001`
+- Container App configured to pull from your ACR
+- Container App environment variables configured (see [Environment Variables](#environment-variables))
 
----
+**Update Container App name/resource group:**
 
-## Getting Help
+Edit `.github/workflows/CD-Python.yaml`:
 
-### Documentation
-
-Each module has its own README with specific details:
-- `worker/flink_worker/README.md`
-- `worker/ai_worker/README.md`
-- `cel/celcore/README.md`
-- `execution/*/README.md`
-- etc.
-
-### Module Dependencies
-
-To see the full dependency tree:
-```bash
-mvn dependency:tree
+```yaml
+--name rmg-python \  # Change to your container app name
+--resource-group rg-aiforce-rmgpoc-uksouth-001 \  # Change to your resource group
+--image yourregistry.azurecr.io/rmg-python:latest \  # Update ACR URL
 ```
 
-### Code Coverage
+### 5. Deploy to Azure Container Apps
 
-To view which code is covered by tests:
+#### Manual Deployment
+
+1. **Build and push to ACR**
+
 ```bash
-mvn clean verify
-open coverage-report/target/site/jacoco-aggregate/index.html
+# Login to Azure
+az login
+
+# Login to ACR
+az acr login --name <your-acr-name>
+
+# Build and push
+docker build -t <your-acr-name>.azurecr.io/rmg-python:latest .
+docker push <your-acr-name>.azurecr.io/rmg-python:latest
 ```
 
----
+2. **Deploy to Container App**
 
-## Quick Start Summary
-
-**1. Install Prerequisites:**
-- Java 21
-- Maven 3.8+
-- Docker & Docker Compose
-
-**2. Build Project:**
 ```bash
-mvn clean install
+az containerapp update \
+  --name rmg-python \
+  --resource-group <your-resource-group> \
+  --image <your-acr-name>.azurecr.io/rmg-python:latest \
+  --set-env-vars KAFKA_BOOTSTRAP_SERVERS=<your-kafka> \
+                  KAFKA_TOPIC=mper-input-events \
+                  PRODUCER_TYPE=kafka \
+                  AZURE_STORAGE_CONNECTION_STRING=<your-storage-connection> \
+                  EVENTHUB_CONNECTION_STRING=<your-eventhub-connection>
 ```
 
-**3. Start Services:**
+#### Verify Deployment
+
 ```bash
-docker compose up -d
+# Get Container App URL
+az containerapp show \
+  --name rmg-python \
+  --resource-group <your-resource-group> \
+  --query "properties.configuration.ingress.fqdn" \
+  --output tsv
+
+# Test health endpoint
+curl https://<your-container-app-url>/health
 ```
 
-**4. Run Flink Worker:**
+## Environment Variables
+
+#### Kafka/Event Hub Configuration
+
 ```bash
-cd worker/flink_worker
-mvn exec:java -Dexec.mainClass="com.hcltech.rmg.performance.FlinkWorker"
+KAFKA_BOOTSTRAP_SERVERS=localhost:9092    # Kafka broker address
+KAFKA_TOPIC=mper-input-events             # Topic name
+KAFKA_PARTITIONS=4                        # Number of partitions
+PRODUCER_TYPE=kafka                       # 'kafka' or 'eventhub'
+
+# If using Azure Event Hub:
+EVENTHUB_CONNECTION_STRING=Endpoint=sb://...
 ```
 
-**5. Monitor:**
-- Kafka: http://localhost:8081
-- Prometheus: http://localhost:9090
-- Logs: Console output
+#### Azure Blob Storage (for CSV uploads)
 
-That's it! You now have a running Kafka + Flink streaming pipeline.
+```bash
+AZURE_STORAGE_CONNECTION_STRING=DefaultEndpointsProtocol=https;...
+AZURE_STORAGE_CONTAINER_NAME=address-lookup
+AZURE_BLOB_PREFIX=                        # Optional prefix for blob names
+```
+
+#### API Server Configuration
+
+```bash
+API_HOST=0.0.0.0
+API_PORT=8000
+```
+
+#### Generation Configuration (Optional)
+
+```bash
+DEFAULT_SEED=42
+DEFAULT_START_DATE=2024-10-01T00:00:00
+DEFAULT_END_DATE=2025-10-01T00:00:00
+POSTCODE_FILE=                            # Optional custom postcode file
+```
+
+## API Endpoints
+
+### Health Check
+
+```http
+GET /health
+```
+
+Returns service status and configuration details.
+
+**Response:**
+
+```json
+{
+  "status": "healthy",
+  "service": "Event Streaming API",
+  "version": "2.0.0",
+  "architecture": "stream-on-demand",
+  "configuration": {
+    "kafka_bootstrap": "localhost:9092",
+    "kafka_topic": "mper-input-events",
+    "producer_type": "kafka",
+    "has_generation_config": true,
+    "parcels_configured": 100000
+  }
+}
+```
+
+### Configure Generation
+
+```http
+POST /generate
+Content-Type: application/json
+
+{
+  "parcels": 100000,
+  "seed": 42
+}
+```
+
+Configures the event generation parameters. This endpoint:
+
+- Stores configuration in memory
+- Generates and uploads 3 CSV files to Azure Blob Storage
+- Does NOT generate events (events are created on-demand when emission endpoints are called)
+
+**Parameters:**
+
+- `parcels` (required): Number of parcels to generate (each has 4 events)
+- `seed` (optional): Random seed for reproducibility (default: 42)
+
+**Response:**
+
+```json
+{
+  "status": "ok",
+  "parcels": 100000,
+  "seed": 42,
+  "events_per_scan": 100001,
+  "total_events": 400004,
+  "csv": {
+    "csv_generated": true,
+    "parcel_addresses": 100000,
+    "postcodes": 91,
+    "postcode_suffixes": 273,
+    "uploaded_to_azure": true,
+    "uploaded_files": [
+      "parcel_address.csv",
+      "postcode.csv",
+      "postcode_suffix.csv"
+    ]
+  },
+  "message": "Configuration stored for 100,000 parcels..."
+}
+```
+
+### Emit Events for Specific Scan
+
+```http
+POST /scans/{scan_no}/emissions
+Content-Type: application/json
+
+{
+  "limit": 1000  // optional
+}
+```
+
+Generates and streams events for a specific scan batch (1, 2, 3, or 4).
+
+**Path Parameters:**
+
+- `scan_no`: Scan number (1=EVDAV, 2=EVIMC, 3=EVGPD, 4=ENKDN)
+
+**Request Body:**
+
+- `limit` (optional): Maximum number of events to emit
+
+**Response:**
+
+```json
+{
+  "status": "ok",
+  "sent": 100001,
+  "scan": 1,
+  "parcels": 100000,
+  "message": "Generated and sent 100,001 events for Scan 1 (magic parcel + 100,000 parcels)"
+}
+```
+
+## CSV Files Generated
+
+When you call `/generate`, three CSV files are created and uploaded to Azure Blob Storage:
+
+### 1. parcel_address.csv
+
+Parcel address lookup table
+
+**Columns:**
+
+- `uniqueItemId` - Unique 11 or 21-digit barcode
+- `add_line1` - Address line 1
+- `add_line2` - Address line 2 (flat number, etc.)
+- `city` - City name
+- `county` - County name
+- `country` - Country code (GB)
+- `postcode` - UK postcode
+
+### 2. postcode.csv
+
+Postcode location mapping
+
+**Columns:**
+
+- `add_line1` - Address line 1
+- `add_line2` - Address line 2
+- `city` - City name
+- `county` - County name
+- `country` - Country code
+- `pincode` - Postcode
+
+### 3. postcode_suffix.csv
+
+Postcode suffix variations
+
+**Columns:**
+
+- `add_line1` - Address line variation
+- `postcode` - Base postcode
+- `po_suffix` - Two-letter suffix
+
+## Configuration Details
+
+### Event Timing Gaps
+
+Events are generated with realistic time gaps between scans:
+
+- **EVDAV → EVIMC**: 1-24 hours
+- **EVIMC → EVGPD**: 4-36 hours
+- **EVGPD → ENKDN**: 0.5-24 hours
+
+### Contact Information Distribution
+
+- 10% - No contact info
+- 10% - Email only
+- 10% - Mobile only
+- 70% - Both email and mobile
+
+### Account vs. Online Barcodes
+
+- 30% - Account-based (21 digits with embedded 10-digit account ID)
+- 70% - Online (11 digits)
+
+### UK Locations
+
+The system includes 95 real UK cities/counties and 91 actual UK postcodes for realistic address generation.
+
+## Project Structure
+
+```
+rmg-python/
+├── app/
+│   ├── main.py                 # Application entry point
+│   ├── api.py                  # FastAPI endpoints
+│   ├── models.py               # Data models and constants
+│   ├── config.py               # Environment configuration
+│   ├── config_store.py         # In-memory config management
+│   ├── streaming_generator.py  # On-demand event generation
+│   ├── streaming_emitter.py    # Event streaming logic
+│   ├── kafka_handler.py        # Kafka/Event Hub producer
+│   ├── utils.py                # Utility functions
+│   ├── emitter.py             # Stats tracking
+│   └── logger.py              # Logging configuration
+├── logs/                       # Application logs
+├── docker-compose.yml         # Docker compose configuration
+├── Dockerfile                 # Container definition
+├── requirements.txt           # Python dependencies
+└── README.md                  # This file
+```
+
+## 🔍 How to Get Azure Credentials
+
+### Event Hub Connection String
+
+1. Go to **Azure Portal**
+2. Navigate to your **Event Hubs Namespace**
+3. Click **"Shared access policies"**
+4. Click **"RootManageSharedAccessKey"** (or create a new policy)
+5. Copy **"Connection string–primary key"**
+
+### Blob Storage Connection String
+
+1. Go to **Azure Portal**
+2. Navigate to your **Storage Account**
+3. Click **"Access keys"** under Security + networking
+4. Copy **"Connection string"** from key1 or key2
+
+### Create Storage Container
+
+1. In your Storage Account, go to **"Containers"**
+2. Click **"+ Container"**
+3. Name it `address-lookup` (or update `.env` with your chosen name)
