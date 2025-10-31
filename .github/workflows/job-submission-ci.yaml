@@ -1,0 +1,41 @@
+# This pipeline is used to Build JAR file for Job Submission under Job Manager.
+
+name: Job Submission - CI
+on:
+  workflow_dispatch:
+  push:
+    branches: 
+    - main
+    - develop
+
+permissions:
+  contents: read
+  packages: write
+  id-token: write
+
+jobs:
+  build:
+    name: build-maven
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        
+      - name: Set up Temurin JDK 21
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+          
+      - name: Run unit and integration tests
+        run: mvn -B verify
+
+      - name: Build shared JAR
+        run: |
+          mvn clean package -DskipTests
+
+      - name: Upload Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: maven-artifact
+          path: target/*.jar  

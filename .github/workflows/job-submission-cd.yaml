@@ -1,0 +1,43 @@
+# This pipeline will submit Job onto Job Manager
+
+name: Job Submission - CD 
+on:
+  workflow_dispatch:
+  workflow_run:
+    workflows: ["Job Submission - CI"]
+    types:
+      - completed
+    
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+
+      - name: Download build artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: maven-artifact
+          path: .
+
+      - name: Verify artifact presence
+        run: ls -lh
+
+      - name: Azure Login
+        uses: azure/login@v2
+        with:
+          creds: ${{ secrets.AZURE_CREDENTIALS }}
+
+      - name: Upload JAR into Flink JobManager container
+        run: |
+          az containerapp upload \
+            --name jobmanager \
+            --resource-group rg-aiforce-rmgpoc-uksouth-001 \
+            --source flink-event-processing-job-0.1.0-shaded.jar \
+            --destination-path /opt/flink/flink-event-processing-job-0.1.0-shaded.jar
+
+      - name: Submit job using Flink CLI inside container
+        run: |
+          az containerapp exec \
+            --name jobmanager \
+            --resource-group rg-aiforce-rmgpoc-uksouth-001 \
+            --command "/opt/flink/bin/flink run -m localhost:8081 /opt/flink/flink-event-processing-job-0.1.0-shaded.jar"
