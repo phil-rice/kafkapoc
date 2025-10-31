@@ -31,10 +31,13 @@ public final class KafkaSourceForFlink<ESC, CepState, Msg, Schema, RT, MetricsPa
      * @param partitionDiscoveryInterval null to disable; else how often to discover new partitions
      * @param wmProvider                 watermark strategy provider (use WatermarkStrategy.noWatermarks() if none)
      */
-    public static <ESC, CepState, Msg, Schema, RT, FR, MetricsParam> DataStreamSource<RawMessage> rawKafkaStream(AppContainerDefn<ESC, CepState, Msg, Schema, RT, FR, MetricsParam> appContainerDefn, StreamExecutionEnvironment env, String bootstrapServers, String topic, String groupId, int parallelism, OffsetsInitializer startingOffsets, Duration partitionDiscoveryInterval, WatermarkStrategyProvider<RawMessage> wmProvider) {
+    public static <ESC, CepState, Msg, Schema, RT,FR,MetricsParam> DataStreamSource<RawMessage> rawKafkaStream(AppContainerDefn<ESC, CepState, Msg, Schema, RT,FR,MetricsParam> appContainerDefn, StreamExecutionEnvironment env, String bootstrapServers, String topic, String groupId, int parallelism, OffsetsInitializer startingOffsets, Duration partitionDiscoveryInterval, WatermarkStrategyProvider<RawMessage> wmProvider, Properties extraProperties) {
         Properties extra = new Properties();
+        if (extraProperties != null) {
+            extra.putAll(extraProperties);
+        }
         if (partitionDiscoveryInterval != null) {
-            extra.put("partition.discovery.interval.ms", String.valueOf(partitionDiscoveryInterval.toMillis()));
+            extra.putIfAbsent("partition.discovery.interval.ms", String.valueOf(partitionDiscoveryInterval.toMillis()));
         }
 
         org.apache.flink.connector.kafka.source.KafkaSource<RawMessage> source = org.apache.flink.connector.kafka.source.KafkaSource.<RawMessage>builder()
@@ -55,6 +58,10 @@ public final class KafkaSourceForFlink<ESC, CepState, Msg, Schema, RT, MetricsPa
      * Convenience overload with no partition discovery and no watermarks.
      */
     public static <ESC, CepState, Msg, Schema, RT, FR, MetricsParam> DataStreamSource<RawMessage> rawKafkaStream(AppContainerDefn<ESC, CepState, Msg, Schema, RT, FR, MetricsParam> appContainerDefn, StreamExecutionEnvironment env, String bootstrapServers, String topic, String groupId, int parallelism, OffsetsInitializer startingOffsets) {
-        return rawKafkaStream(appContainerDefn, env, bootstrapServers, topic, groupId, parallelism, startingOffsets, null, WatermarkStrategy::noWatermarks);
+        return rawKafkaStream(appContainerDefn, env, bootstrapServers, topic, groupId, parallelism, startingOffsets, null, WatermarkStrategy::noWatermarks, null);
+    }
+
+    public static <ESC, CepState, Msg, Schema, RT,FR,MetricsParam> DataStreamSource<RawMessage> rawKafkaStream(AppContainerDefn<ESC, CepState, Msg, Schema, RT,FR,MetricsParam> appContainerDefn, StreamExecutionEnvironment env, String bootstrapServers, String topic, String groupId, int parallelism, OffsetsInitializer startingOffsets, Duration partitionDiscoveryInterval, WatermarkStrategyProvider<RawMessage> wmProvider) {
+        return rawKafkaStream(appContainerDefn, env, bootstrapServers, topic, groupId, parallelism, startingOffsets, partitionDiscoveryInterval, wmProvider, null);
     }
 }

@@ -10,6 +10,7 @@ import com.hcltech.rmg.cepstate.CepEvent;
 import com.hcltech.rmg.cepstate.CepEventLog;
 import com.hcltech.rmg.cepstate.CepStateTypeClass;
 import com.hcltech.rmg.cepstate.MapStringObjectCepStateTypeClass;
+import com.hcltech.rmg.common.ISystemProps;
 import com.hcltech.rmg.common.ITimeService;
 import com.hcltech.rmg.common.apiclient.*;
 import com.hcltech.rmg.common.async.ExecutorServiceFactory;
@@ -35,18 +36,15 @@ import com.hcltech.rmg.kafkaconfig.KafkaConfig;
 import com.hcltech.rmg.messages.*;
 import com.hcltech.rmg.parameters.ParameterExtractor;
 import com.hcltech.rmg.parameters.Parameters;
-import com.hcltech.rmg.woodstox.WoodstoxXmlForMapStringObjectTypeClass;
 import com.hcltech.rmg.woodstox.WoodstoxXmlForMapStringObjectTypeClassNoValidation;
 import com.hcltech.rmg.xml.XmlTypeClass;
 import org.apache.flink.api.common.functions.RuntimeContext;
 import org.apache.flink.util.Collector;
 import org.codehaus.stax2.validation.XMLValidationSchema;
 
+import java.net.URI;
 import java.time.Duration;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Objects;
+import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.Function;
 
@@ -107,7 +105,7 @@ public final class AppContainerFactoryForMapStringObject implements IAppContaine
 
         return switch (id) {
             case "prod" -> basic(
-                    t -> KafkaConfig.fromSystemProps(t, true),
+                    AppContainerFactoryForMapStringObject::eventHubKafkaConfig,
                     id,
                     "mper-input-events",//topic from system properties
                     ITimeService.real,
@@ -317,5 +315,171 @@ public final class AppContainerFactoryForMapStringObject implements IAppContaine
                         })
                 )
         );
+    }
+
+    private static final String EVENT_HUB_CONN_PROP = "eventhub.connection.string";
+    private static final String EVENT_HUB_CONN_ENV = "EVENTHUB_CONNECTION_STRING";
+
+    private static KafkaConfig eventHubKafkaConfig(String topicOrNull) {
+        return eventHubKafkaConfig(topicOrNull, ISystemProps.real);
+    }
+
+    private static KafkaConfig eventHubKafkaConfig(String topicOrNull, ISystemProps systemProps) {
+        String connectionString = resolveEventHubConnectionString(systemProps);
+        EventHubConnectionDetails details = parseEventHubConnectionDetails(connectionString);
+
+        String derivedTopic = isNullOrBlank(details.entityPath()) ? null : details.entityPath();
+        String topicOverride = derivedTopic != null ? derivedTopic : topicOrNull;
+        KafkaConfig base = KafkaConfig.fromSystemProps(topicOverride, true);
+
+        String finalTopic = derivedTopic != null ? derivedTopic : base.topic();
+        String finalBootstrap = details.bootstrapServer();
+
+        Properties extra = new Properties();
+        if (base.extra() != null) {
+            extra.putAll(base.extra());
+        }
+
+        extra.put("security.protocol", "SASL_SSL");
+        extra.put("sasl.mechanism", "PLAIN");
+        extra.put("sasl.username", "$ConnectionString");
+        extra.put("sasl.password", connectionString);
+        extra.put("sasl.jaas.config", buildJaasConfig(connectionString));
+
+        // Surface Event Hub connection metadata for downstream dependency injection.
+        extra.put("eventhub.connection.string", connectionString);
+        extra.put("eventhub.bootstrap.server", finalBootstrap);
+        if (!isNullOrBlank(details.endpoint())) {
+            extra.put("eventhub.endpoint", details.endpoint());
+        }
+        if (!isNullOrBlank(details.host())) {
+            extra.put("eventhub.host", details.host());
+        }
+        if (!isNullOrBlank(details.namespace())) {
+            extra.put("eventhub.namespace", details.namespace());
+        }
+        if (!isNullOrBlank(finalTopic)) {
+            extra.put("eventhub.entity.path", finalTopic);
+        }
+        details.components().forEach((key, value) -> {
+            if (!isNullOrBlank(key) && value != null) {
+                extra.put("eventhub." + toDotCase(key), value);
+            }
+        });
+
+        return new KafkaConfig(
+                finalBootstrap,
+                true,
+                finalTopic,
+                base.groupId(),
+                base.sourceParallelism(),
+                base.startingOffsets(),
+                base.partitionDiscovery(),
+                extra
+        );
+    }
+
+    private static String resolveEventHubConnectionString(ISystemProps systemProps) {
+        String fromSystem = systemProps.getProperty(EVENT_HUB_CONN_PROP);
+        if (fromSystem != null && !fromSystem.isBlank()) {
+            return fromSystem.trim();
+        }
+        String fromEnv = System.getenv(EVENT_HUB_CONN_ENV);
+        if (fromEnv != null && !fromEnv.isBlank()) {
+            return fromEnv.trim();
+        }
+        throw new IllegalStateException("Azure Event Hub connection string must be provided via system property '" + EVENT_HUB_CONN_PROP + "' or environment variable '" + EVENT_HUB_CONN_ENV + "'.");
+    }
+
+    private static String buildJaasConfig(String connectionString) {
+        return "org.apache.kafka.common.security.plain.PlainLoginModule required username=\"$ConnectionString\" password=\"" + escapeForJaas(connectionString) + "\";";
+    }
+
+    private static String escapeForJaas(String value) {
+        return value.replace("\\", "\\\\").replace("\"", "\\\"");
+    }
+
+    private static EventHubConnectionDetails parseEventHubConnectionDetails(String connectionString) {
+        Map<String, String> components = new HashMap<>();
+        for (String segment : connectionString.split(";")) {
+            if (segment == null || segment.isBlank()) {
+                continue;
+            }
+            int idx = segment.indexOf('=');
+            if (idx <= 0 || idx == segment.length() - 1) {
+                continue;
+            }
+            String key = segment.substring(0, idx).trim();
+            String value = segment.substring(idx + 1).trim();
+            if (!key.isEmpty()) {
+                components.put(key, value);
+            }
+        }
+
+        String endpoint = components.get("Endpoint");
+        if (isNullOrBlank(endpoint)) {
+            throw new IllegalStateException("Azure Event Hub connection string is missing the Endpoint component");
+        }
+
+        URI endpointUri = URI.create(endpoint);
+        String host = endpointUri.getHost();
+        if (isNullOrBlank(host)) {
+            String normalized = endpoint;
+            if (normalized.startsWith("sb://")) {
+                normalized = normalized.substring(5);
+            }
+            if (normalized.endsWith("/")) {
+                normalized = normalized.substring(0, normalized.length() - 1);
+            }
+            int slashIdx = normalized.indexOf('/');
+            host = slashIdx >= 0 ? normalized.substring(0, slashIdx) : normalized;
+        }
+        if (isNullOrBlank(host)) {
+            throw new IllegalStateException("Azure Event Hub connection string Endpoint is invalid: " + endpoint);
+        }
+
+        String bootstrapServer = host.contains(":") ? host : host + ":9093";
+        String namespace = host.contains(".") ? host.substring(0, host.indexOf('.')) : host;
+        String entityPath = components.get("EntityPath");
+
+        return new EventHubConnectionDetails(endpoint, host, bootstrapServer, namespace, entityPath, Map.copyOf(components));
+    }
+
+    private static boolean isNullOrBlank(String value) {
+        return value == null || value.trim().isEmpty();
+    }
+
+    private static String toDotCase(String key) {
+        StringBuilder sb = new StringBuilder();
+        for (int i = 0; i < key.length(); i++) {
+            char c = key.charAt(i);
+            if (Character.isLetterOrDigit(c)) {
+                if (Character.isUpperCase(c)) {
+                    if (sb.length() > 0 && sb.charAt(sb.length() - 1) != '.') {
+                        sb.append('.');
+                    }
+                    sb.append(Character.toLowerCase(c));
+                } else {
+                    sb.append(c);
+                }
+            } else if (sb.length() > 0 && sb.charAt(sb.length() - 1) != '.') {
+                sb.append('.');
+            }
+        }
+        int len = sb.length();
+        if (len > 0 && sb.charAt(len - 1) == '.') {
+            sb.deleteCharAt(len - 1);
+        }
+        return sb.toString();
+    }
+
+    private record EventHubConnectionDetails(
+            String endpoint,
+            String host,
+            String bootstrapServer,
+            String namespace,
+            String entityPath,
+            Map<String, String> components
+    ) {
     }
 }

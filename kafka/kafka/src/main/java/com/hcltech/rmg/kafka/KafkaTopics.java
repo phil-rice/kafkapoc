@@ -6,6 +6,8 @@ import org.apache.kafka.clients.admin.AdminClient;
 import org.apache.kafka.clients.admin.AdminClientConfig;
 import org.apache.kafka.clients.admin.NewTopic;
 import org.apache.kafka.common.errors.TopicExistsException;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -15,6 +17,9 @@ import java.util.concurrent.ExecutionException;
 import java.util.stream.Collectors;
 
 public final class KafkaTopics {
+    private static final Logger LOG = LoggerFactory.getLogger(KafkaTopics.class);
+    private static final String EVENT_HUB_CONNECTION_EXTRA_KEY = "eventhub.connection.string";
+
     private KafkaTopics() {
     }
 
@@ -36,6 +41,13 @@ public final class KafkaTopics {
             errs.add("replicationFactor must be >= 1");
 
         if (!errs.isEmpty()) return ErrorsOr.errors(errs);
+
+        // Skip topic management for Azure Event Hub deployments, where the SAS user is often
+        // scoped to a single entity path and lacks permission to list or create topics.
+        if (cfg.eventHub()) {
+            LOG.info("Skipping topic existence check/creation because Event Hub connection settings are present");
+            return ErrorsOr.lift(false);
+        }
 
         // --- side effects wrapped in trying() ---
         return ErrorsOr.trying(() -> {
@@ -62,4 +74,5 @@ public final class KafkaTopics {
             }
         }).addPrefixIfError("ensureTopics");
     }
+
 }
