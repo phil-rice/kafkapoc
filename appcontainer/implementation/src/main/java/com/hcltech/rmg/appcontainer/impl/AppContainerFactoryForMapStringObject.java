@@ -283,7 +283,7 @@ public final class AppContainerFactoryForMapStringObject implements IAppContaine
                             Class<Map<String, Object>> msgClass = (Class) Map.class;
                             AspectExecutor<EnrichmentWithDependencies, ValueEnvelope<Map<String, Object>, Map<String, Object>>, CepEvent> oneEnrichmentExecutor =
                                     new EnrichmentExecutor<>(csvApiClient, cepStateTypeClass, msgTypeClass, tokenGenerator);
-                            var bizLogicExecutor = new BizLogicExecutor<Map<String, Object>, Map<String, Object>>(configs, CelRuleBuilders.newRuleBuilder, msgClass);
+                            var bizLogicExecutor = new  BizLogicExecutor<Map<String, Object>, Map<String, Object>>(configs, CelRuleBuilders.newRuleBuilder, msgClass);
 
                             return IEnrichmentAspectExecutor.<Map<String, Object>, Map<String, Object>>create(cepStateTypeClass, configs, oneEnrichmentExecutor).map(
                                     enricher ->
