@@ -45,6 +45,7 @@ public class EventHubCopyJob {
         }
 
         see.fromSource(source, WatermarkStrategy.noWatermarks(), "source")
+                .map(new LogWhatWeHaveFunction())
                 .sinkTo(sink)
                 .name("sink");
 
