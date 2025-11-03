@@ -40,11 +40,10 @@ public class AiWorkerJobBuilder implements JobBuilder<StreamExecutionEnvironment
         var appContainer = IAppContainerFactory.resolve(appContainerDefn).valueOrThrow();
 
         // Make sure Kafka topics exist (best-effort)
-        KafkaTopics.ensureTopics(appContainer.eventSourceConfig(), EnvelopeRouting.allTopics, 12, (short) 1);
+        KafkaTopics.ensureTopics(appContainer.eventSourceConfig(), EnvelopeRouting.allTopics, 0, (short) 1);
 
         // Build pipeline (does NOT execute)
-        var func = new NormalPipelineFunction<>(appContainerDefn, "notification");
-        ValueErrorRetryStreams<Map<String, Object>, Map<String, Object>> pipe = BuildPipeline.buildPipeline(env, appContainerDefn, func, true);
+        ValueErrorRetryStreams<Map<String, Object>, Map<String, Object>> pipe = BuildPipeline.buildPipeline(env, appContainerDefn, true);
 
         // Optional: metrics web port probe + perf printer (same as your sample)
         new Thread(() -> FlinkHelper.probeMetricsPort(9400, 9401), "metrics-probe").start();

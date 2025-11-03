@@ -44,7 +44,8 @@ public final class KafkaSourceForFlink<ESC, CepState, Msg, Schema, RT, MetricsPa
                 .setBootstrapServers(bootstrapServers)
                 .setTopics(topic).setGroupId(groupId)
                 .setDeserializer(new RawMessageDeserialiser(appContainerDefn)) // ← resolves in open()
-                .setStartingOffsets(startingOffsets).setProperties(extra).build();
+                .setStartingOffsets(startingOffsets)
+                .setProperties(extra).build();
 
         WatermarkStrategy<RawMessage> wms = wmProvider != null ? wmProvider.get() : WatermarkStrategy.noWatermarks();
         DataStreamSource<RawMessage> stream = env.fromSource(source, wms, "kafka-" + topic);

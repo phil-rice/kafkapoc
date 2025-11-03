@@ -19,16 +19,18 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.Map;
 
-public final class PerfHarnessMain {
+public final class PerfEventHub {
 
     public static void main(String[] args) throws Exception {
-        System.setProperty("java.io.tmpdir", "C:\\flink-tmp");
-        // print to confirm
+        final String tmpDir = "/datadrive/flink-tmp";
+        System.setProperty("java.io.tmpdir", tmpDir);
+        System.setProperty("io.netty.native.workdir", tmpDir); // for Netty native tmp
+
+                // print to confirm
         System.out.println("tmpdir = " + System.getProperty("java.io.tmpdir"));
         System.out.println("PATH = " + System.getenv("PATH"));
         System.out.println("java.library.path = " + System.getProperty("java.library.path"));
         // (your existing temp dir setup)
-        System.setProperty("java.io.tmpdir", "C:\\flink-tmp");
 
         // --- Build local paths (portable across Win/*nix) ---
         Path base = Paths.get(System.getProperty("java.io.tmpdir"));           // e.g. C:\flink-tmp
@@ -46,7 +48,7 @@ public final class PerfHarnessMain {
         conf.set(CheckpointingOptions.SAVEPOINT_DIRECTORY, savepoints.toUri().toString());  // file:///C:/flink-tmp/savepoints
 
         StreamExecutionEnvironment env = StreamExecutionEnvironment.createLocalEnvironmentWithWebUI(conf);
-        var appContainerDefn = AppContainerDefn.of(AppContainerFactoryForMapStringObject.class, "perf");
+        var appContainerDefn = AppContainerDefn.of(AppContainerFactoryForMapStringObject.class, "perfeventhub");
         var appContainer = IAppContainerFactory.resolve(appContainerDefn).valueOrThrow();
         if (KafkaTopics.ensureTopics(appContainer.eventSourceConfig(), EnvelopeRouting.allTopics, 12, (short) 1).valueOrThrow()) {//just sticking 12/3 in for tests
             System.out.println("Created output topics");
@@ -66,7 +68,7 @@ public final class PerfHarnessMain {
 
         // route to Kafka
         String brokers = appContainer.eventSourceConfig().bootstrapServer();
-        EnvelopeRouting.routeToKafka(appContainerDefn, pipe.values(), pipe.errors(), pipe.retries(), brokers, "processed", "errors", "retry");
+        EnvelopeRouting.routeToKafka(appContainerDefn, pipe.values(), pipe.errors(), pipe.retries(), brokers, "processed", "errors", "retry", appContainer.eventSourceConfig().properties());
 
         pipe.env().execute("rmg-perf-harness");
     }

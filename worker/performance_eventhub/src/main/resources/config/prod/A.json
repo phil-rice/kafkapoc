@@ -1,0 +1,60 @@
+{
+  "events": {
+    "EVDAV": {
+      "bizlogic": {
+        "all": {
+          "type": "cel",
+          "cel": "{'out': [message]}"     }
+      },
+      "enrichment": {
+        "all": {
+          "type": "composite",
+          "enrichers": [
+          ]
+        }
+      }
+    },
+    "EVIMC": {
+      "bizlogic": {
+        "all": {
+          "type": "cel",
+          "cel": "{'out': [message]}"     }
+      },
+      "enrichment": {
+        "all": {
+          "type": "composite",
+          "enrichers": [
+          ]
+        }
+      }
+    },
+    "EVGPD": {
+      "bizlogic": {
+        "all": {
+          "type": "cel",
+          "cel": "{'out': [message]}"     }
+      },
+      "enrichment": {
+        "all": {
+          "type": "composite",
+          "enrichers": [
+          ]
+        }
+      }
+    },
+    "ENKDN": {
+      "bizlogic": {
+        "all": {
+          "type": "cel",
+          "cel": "{'out': [message]}"     }
+      },
+      "enrichment": {
+        "all": {
+          "type": "composite",
+          "enrichers": [
+          ]
+        }
+      }
+    }
+  }
+}

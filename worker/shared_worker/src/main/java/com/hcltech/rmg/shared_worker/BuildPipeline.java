@@ -28,7 +28,6 @@ public class BuildPipeline {
     public static <CepState, Msg, Schema> ValueErrorRetryStreams<CepState, Msg> buildPipeline(
             StreamExecutionEnvironment env,
             AppContainerDefn<KafkaConfig, CepState, Msg, Schema, RuntimeContext, Collector<Envelope<CepState, Msg>>, FlinkMetricsParams> appContainerDefn,
-            RichAsyncFunction<Envelope<CepState, Msg>, Envelope<CepState, Msg>> func,
             boolean rememberBizlogicInput) {
         AppContainer<KafkaConfig, CepState, Msg, Schema, RuntimeContext, Collector<Envelope<CepState, Msg>>, FlinkMetricsParams> app = IAppContainerFactory.resolve(appContainerDefn).valueOrThrow();
         KafkaConfig kafka = app.eventSourceConfig();

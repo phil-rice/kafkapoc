@@ -1,6 +1,6 @@
 <component name="ProjectRunConfigurationManager">
   <configuration default="false" name="PerfHarnessMain" type="Application" factoryName="Application" nameIsGenerated="true">
-    <option name="MAIN_CLASS_NAME" value="com.hcltech.rmg.performance.PerfHarnessMain" />
+    <option name="MAIN_CLASS_NAME" value="com.hcltech.rmg.performance.PerfEventHub" />
     <module name="performance" />
     <extension name="coverage">
       <pattern>

@@ -27,7 +27,8 @@ public class KafkaFlinkHelper {
 
     static public <ESC, CepState, Msg, Schema, RT, FR, MetricsParam> DataStreamSource<RawMessage> createRawMessageStreamFromKafka(AppContainerDefn<ESC, CepState, Msg, Schema, RT, FR, MetricsParam> appContainerDefn, StreamExecutionEnvironment env, KafkaConfig kafka, int checkpointingInterval, String rocksDBPath, boolean useRocksDBStateBackend) {
         final int totalPartitions = kafka.sourceParallelism();
-        env.setParallelism(totalPartitions > 0 ? totalPartitions : env.getParallelism());
+        int parallelism = totalPartitions > 0 ? totalPartitions : env.getParallelism();
+        env.setParallelism(parallelism);
         env.getConfig().setAutoWatermarkInterval(0);
         env.enableCheckpointing(checkpointingInterval);
         if (useRocksDBStateBackend)
@@ -36,7 +37,7 @@ public class KafkaFlinkHelper {
         env.getCheckpointConfig().setMinPauseBetweenCheckpoints(5000);
         env.getCheckpointConfig().setTolerableCheckpointFailureNumber(3);
 
-        var raw = KafkaSourceForFlink.rawKafkaStream(appContainerDefn, env, kafka.bootstrapServer(), kafka.topic(), kafka.groupId(), totalPartitions, OffsetsInitializer.earliest(), Duration.ofSeconds(60), WatermarkStrategyProvider.none(), kafka.extra());
+        var raw = KafkaSourceForFlink.rawKafkaStream(appContainerDefn, env, kafka.bootstrapServer(), kafka.topic(), kafka.groupId(), totalPartitions, OffsetsInitializer.earliest(), Duration.ofSeconds(60), WatermarkStrategyProvider.none(), kafka.properties());
         return raw;
     }
 

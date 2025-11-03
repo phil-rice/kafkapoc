@@ -52,7 +52,7 @@ public final class KafkaTopics {
         // --- side effects wrapped in trying() ---
         return ErrorsOr.trying(() -> {
             Properties adminProps = new Properties();
-            if (cfg.extra() != null) adminProps.putAll(cfg.extra());
+            if (cfg.properties() != null) adminProps.putAll(cfg.properties());
             adminProps.put(AdminClientConfig.BOOTSTRAP_SERVERS_CONFIG, cfg.bootstrapServer());
 
             try (AdminClient admin = AdminClient.create(adminProps)) {

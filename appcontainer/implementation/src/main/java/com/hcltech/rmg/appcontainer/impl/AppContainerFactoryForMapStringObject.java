@@ -107,7 +107,7 @@ public final class AppContainerFactoryForMapStringObject implements IAppContaine
             case "prod" -> basic(
                     AppContainerFactoryForMapStringObject::eventHubKafkaConfig,
                     id,
-                    "mper-input-events",//topic from system properties
+                    "testinputs",//topic from system properties
                     ITimeService.real,
                     IUuidGenerator.defaultGenerator(),
                     "config/root-prod.json",
@@ -159,6 +159,26 @@ public final class AppContainerFactoryForMapStringObject implements IAppContaine
                             "productType", List.of("msg", "productType"),
                             "company", List.of("msg", "company"))),
                     IEventTypeExtractor.fromPathForMapStringObject(List.of("msg", "eventType")),
+                    IDomainTypeExtractor.fixed("parcel"),
+                    "config/prod/",
+                    "/tmp/flink-rocksdb-prod",
+                    false,
+                    v -> v
+            );
+            case "perfeventhub" -> basic(
+                    AppContainerFactoryForMapStringObject::eventHubKafkaConfig,
+                    id,
+                    "testinputs", //topic
+                    ITimeService.real,
+                    IUuidGenerator.defaultGenerator(),
+                    "config/root-prod.json",
+                    30_000,
+                    RootConfigLoader::fromClasspath,
+                    ConfigsBuilder::buildFromClasspath,
+                    "noCelCondition",
+                    ParameterExtractor.defaultParameterExtractor(defaultParametersForProd, Map.of(), Map.of(
+                            "productType", List.of("MPE", "mailPiece", "mailPieceBarcode", "royalMailSegment", "mailTypeCode"))),
+                    IEventTypeExtractor.fromPathForMapStringObject(List.of("MPE", "manualScan", "trackedEventCode")),
                     IDomainTypeExtractor.fixed("parcel"),
                     "config/prod/",
                     "/tmp/flink-rocksdb-prod",
@@ -342,8 +362,8 @@ public final class AppContainerFactoryForMapStringObject implements IAppContaine
         String finalBootstrap = details.bootstrapServer();
 
         Properties extra = new Properties();
-        if (base.extra() != null) {
-            extra.putAll(base.extra());
+        if (base.properties() != null) {
+            extra.putAll(base.properties());
         }
 
         extra.put("security.protocol", "SASL_SSL");
@@ -372,6 +392,12 @@ public final class AppContainerFactoryForMapStringObject implements IAppContaine
                 extra.put("eventhub." + toDotCase(key), value);
             }
         });
+        // Azure-friendly DNS & reconnect/backoff tuning
+        extra.put("client.dns.lookup", "use_all_dns_ips");
+        extra.put("reconnect.backoff.ms", "500");
+        extra.put("reconnect.backoff.max.ms", "10000");
+        extra.put("retry.backoff.ms", "100");
+        extra.put("request.timeout.ms", "60000");
 
         return new KafkaConfig(
                 finalBootstrap,

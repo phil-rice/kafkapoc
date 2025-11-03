@@ -1,0 +1,9 @@
+{
+  "xmlSchemaPath": "schemas/true.xsd",
+  "parameterConfig": {
+    "parameters": [
+      { "legalValue": ["A"], "defaultValue": "A", "description": "product type" }
+
+    ]
+  }
+}

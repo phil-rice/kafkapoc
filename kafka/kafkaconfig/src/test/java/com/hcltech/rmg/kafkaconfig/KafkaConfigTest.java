@@ -67,8 +67,8 @@ class KafkaConfigTest {
         // Discovery default: 60 seconds
         assertEquals(Duration.ofSeconds(60), cfg.partitionDiscovery());
         assertEquals("60000",
-                cfg.extra().getProperty("partition.discovery.interval.ms"),
-                "extra should contain discovery interval in ms");
+                cfg.properties().getProperty("partition.discovery.interval.ms"),
+                "properties should contain discovery interval in ms");
     }
 
     @Test
@@ -93,7 +93,7 @@ class KafkaConfigTest {
         assertIsLatest(cfg.toOffsetsInitializer());
 
         assertEquals(Duration.ofSeconds(30), cfg.partitionDiscovery());
-        assertEquals("30000", cfg.extra().getProperty("partition.discovery.interval.ms"));
+        assertEquals("30000", cfg.properties().getProperty("partition.discovery.interval.ms"));
     }
 
     @Test
@@ -115,8 +115,8 @@ class KafkaConfigTest {
         KafkaConfig cfg = KafkaConfig.fromProperties(p, null,false);
 
         assertNull(cfg.partitionDiscovery(), "discovery should be null when configured as 0");
-        assertNull(cfg.extra().getProperty("partition.discovery.interval.ms"),
-                "extra should NOT include discovery interval when disabled");
+        assertNull(cfg.properties().getProperty("partition.discovery.interval.ms"),
+                "properties should NOT include discovery interval when disabled");
     }
 
     @Test
@@ -172,6 +172,6 @@ class KafkaConfigTest {
         assertIsLatest(cfg.toOffsetsInitializer());
 
         assertEquals(Duration.ofSeconds(5), cfg.partitionDiscovery());
-        assertEquals("5000", cfg.extra().getProperty("partition.discovery.interval.ms"));
+        assertEquals("5000", cfg.properties().getProperty("partition.discovery.interval.ms"));
     }
 }

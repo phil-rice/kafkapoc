@@ -7,6 +7,7 @@ import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.hcltech.rmg.appcontainer.interfaces.AppContainer;
 import com.hcltech.rmg.appcontainer.interfaces.AppContainerDefn;
 import com.hcltech.rmg.appcontainer.interfaces.IAppContainerFactory;
+import com.hcltech.rmg.common.IEnvGetter;
 import com.hcltech.rmg.messages.*;
 import com.hcltech.rmg.shared_worker.serialisation.AiFailureRecordSerializer;
 import com.hcltech.rmg.shared_worker.serialisation.ErrorRecordSerializer;
@@ -44,7 +45,7 @@ public final class EnvelopeKafkaSinks {
                         new ValueKeySerializer<>(),
                         new ValuePayloadSerializer<>(defn)
                 ))
-                .setDeliveryGuarantee(DeliveryGuarantee.AT_LEAST_ONCE)
+                .setDeliveryGuarantee(DeliveryGuarantee.NONE)
                 .build();
     }
 

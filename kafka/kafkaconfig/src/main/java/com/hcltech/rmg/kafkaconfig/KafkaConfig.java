@@ -14,7 +14,7 @@ public record KafkaConfig(
         int sourceParallelism,   // source parallelism (usually = #partitions)
         String startingOffsets,  // "earliest" or "latest"
         Duration partitionDiscovery, // null => disabled
-        Properties extra          // any additional Kafka props (client tuning, auth, etc.)
+        Properties properties          // The kafka properties
 ) {
 
 
@@ -31,7 +31,7 @@ public record KafkaConfig(
         String topic = topicOrNull == null ? p.getProperty("kafka.topic", "test-topic") : topicOrNull;
         String groupId = p.getProperty("kafka.group.id", "g-" + System.currentTimeMillis());
         int sourceParallelism = getInt(p, "kafka.source.parallelism",
-                Integer.getInteger("kafka.partitions", 12));
+                Integer.getInteger("kafka.partitions", 14));
         int targetParallelism = getInt(p, "kafka.target.partitions", sourceParallelism);
 
         String offsets = p.getProperty("kafka.starting.offsets", "earliest").trim().toLowerCase();

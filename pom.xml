@@ -49,6 +49,7 @@
         <module>worker/flink_worker</module>
         <module>worker/oneliner</module>
         <module>worker/performance</module>
+        <module>worker/performance_eventhub</module>
         <module>worker/producer</module>
         <module>worker/producer_inputs_outputs_worker</module>
         <module>worker/producer_same_id_worker</module>

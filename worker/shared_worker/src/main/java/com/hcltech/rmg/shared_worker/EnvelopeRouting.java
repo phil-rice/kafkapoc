@@ -5,7 +5,12 @@ import com.hcltech.rmg.messages.AiFailureEnvelope;
 import com.hcltech.rmg.messages.ErrorEnvelope;
 import com.hcltech.rmg.messages.RetryEnvelope;
 import com.hcltech.rmg.messages.ValueEnvelope;
+import org.apache.flink.api.common.functions.OpenContext;
+import org.apache.flink.api.common.functions.RichMapFunction;
+import org.apache.flink.configuration.Configuration;
 import org.apache.flink.streaming.api.datastream.DataStream;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.util.List;
 import java.util.Properties;
@@ -56,7 +61,8 @@ public final class EnvelopeRouting {
                 .sinkTo(EnvelopeKafkaSinks.valueSink(defn, brokers, processedTopic, cfg))
                 .name("values->kafka");
 
-        errors
+        errors.map(new ErrorLogger<CepState, Msg>())
+                .name("errors->log")
                 .sinkTo(EnvelopeKafkaSinks.errorSink(brokers, errorsTopic, cfg))
                 .name("errors->kafka");
 
@@ -84,5 +90,23 @@ public final class EnvelopeRouting {
             String retryTopic
     ) {
         routeToKafka(defn,values, errors, retries, brokers, processedTopic, errorsTopic, retryTopic, new Properties());
+    }
+
+    static final class ErrorLogger<CepState, Msg> extends RichMapFunction<ErrorEnvelope<CepState, Msg>, ErrorEnvelope<CepState, Msg>> {
+        private transient Logger log;
+
+        @Override
+        public void open(OpenContext parameters) {
+            // Use a stable logger name so logback filters are easy to apply if needed
+            this.log = LoggerFactory.getLogger("ErrorsStream");
+        }
+
+        @Override
+        public ErrorEnvelope<CepState, Msg> map(ErrorEnvelope<CepState, Msg> err) {
+            // If ErrorEnvelope exposes structured fields, format them here.
+            // Fallback to toString() if not.
+            log.warn("ErrorEnvelope: {}", err);
+            return err; // pass-through so the downstream sink still gets it
+        }
     }
 }

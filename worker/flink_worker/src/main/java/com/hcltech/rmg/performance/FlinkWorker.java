@@ -29,8 +29,7 @@ public final class FlinkWorker {
             // just sticking 12/3 in for tests
             System.out.println("Created output topics");
         }
-        var func = new NormalPipelineFunction<>(appContainerDefn, "notification");
-        ValueErrorRetryStreams<Map<String, Object>, Map<String, Object>> pipe = BuildPipeline.buildPipeline(env, appContainerDefn, func, false);
+        ValueErrorRetryStreams<Map<String, Object>, Map<String, Object>> pipe = BuildPipeline.buildPipeline(env, appContainerDefn, false);
 
         // optional: try to locate the actual /metrics port in background
         new Thread(() -> FlinkHelper.probeMetricsPort(9400, 9401), "metrics-probe").start();
