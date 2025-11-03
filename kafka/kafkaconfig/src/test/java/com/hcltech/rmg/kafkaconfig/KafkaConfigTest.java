@@ -58,7 +58,7 @@ class KafkaConfigTest {
         assertNotNull(cfg.groupId());
         assertTrue(cfg.groupId().startsWith("g-"), "groupId should default to 'g-{timestamp}'");
 
-        assertEquals(12, cfg.sourceParallelism(), "parallelism should fall back to system default 12");
+        assertEquals(14, cfg.sourceParallelism(), "parallelism should fall back to system default 12");
 
         // Offsets default to earliest (string + mapping)
         assertEquals("earliest", cfg.startingOffsets(), "startingOffsets should default to 'earliest'");
