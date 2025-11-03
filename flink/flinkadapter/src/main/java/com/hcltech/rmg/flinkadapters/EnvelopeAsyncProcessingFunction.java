@@ -55,8 +55,8 @@ public class EnvelopeAsyncProcessingFunction<ESC, CepState, Msg, Schema>
     private DeepCopy<CepState> cesStateDeepCopy;
     private Function<Envelope<CepState, Msg>, Envelope<CepState, Msg>> afterParse;
 
-    public EnvelopeAsyncProcessingFunction(AppContainerDefn appContainerDefn, String module, boolean rememberBizlogicInput) {
-        super(appContainerDefn);
+    public EnvelopeAsyncProcessingFunction(AppContainerDefn appContainerDefn, String module, boolean rememberBizlogicInput, boolean useLanesAndRing) {
+        super(appContainerDefn, useLanesAndRing);
         this.module = module;
         this.rememberBizlogicInput = rememberBizlogicInput;
     }
