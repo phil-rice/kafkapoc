@@ -23,4 +23,6 @@ Thumbs.db
 node_modules/
 *.zip
 
+testdata-utils/
+
 state/

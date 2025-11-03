@@ -355,4 +355,102 @@ public abstract class AbstractXmlTypeClassTest<S> {
         assertThrows(UnsupportedOperationException.class, () -> m.put("x", null));
     }
 
+    @Test
+    @DisplayName("namespaced root: do not double-nest root element (no MPE→MPE)")
+    void namespaced_root_should_not_double_nest() throws Exception {
+        // Minimal XSD for the Royal Mail PTP namespace and MPE root
+        String xsd = """
+      <xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
+                 targetNamespace="http://www.royalmailgroup.com/cm/ptpMailPiece/V1"
+                 xmlns:ptp="http://www.royalmailgroup.com/cm/ptpMailPiece/V1"
+                 elementFormDefault="qualified">
+        <xs:element name="MPE">
+          <xs:complexType>
+            <xs:sequence>
+              <xs:element name="mailPiece"  minOccurs="0"/>
+              <xs:element name="manualScan" minOccurs="0"/>
+            </xs:sequence>
+          </xs:complexType>
+        </xs:element>
+      </xs:schema>
+      """;
+
+        String xml = """
+      <ptp:MPE xmlns:dt="http://www.royalmailgroup.com/cm/rmDatatypes/V1"
+               xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+               xmlns:ptp="http://www.royalmailgroup.com/cm/ptpMailPiece/V1"
+               xmlns="http://www.royalmailgroup.com/cm/ptpMailPiece/V1">
+        <mailPiece>
+          <mailPieceBarcode>
+            <royalMailSegment>
+              <UPUCountry>JGB </UPUCountry>
+              <informationCode>8</informationCode>
+              <versionId>2</versionId>
+              <mailItemFormatCode>15</mailItemFormatCode>
+              <mailClassCode>F</mailClassCode>
+              <mailTypeCode>A</mailTypeCode>
+            </royalMailSegment>
+            <channelSegment>
+              <uniqueItemId>56023361655</uniqueItemId>
+              <mailPieceWeight>1</mailPieceWeight>
+              <weightCode>1</weightCode>
+              <pricePaid>123</pricePaid>
+              <barcodeCreationDate>2024-10-03</barcodeCreationDate>
+              <productId>100</productId>
+              <UPUTrackingNumber>YA806247555GB</UPUTrackingNumber>
+              <address><buildingNumber>1</buildingNumber></address>
+              <destinationPostcodeDPS><postcode>GU11AA</postcode></destinationPostcodeDPS>
+              <destinationCountry>GB </destinationCountry>
+              <requiredAtDeliveryCode>S</requiredAtDeliveryCode>
+            </channelSegment>
+          </mailPieceBarcode>
+        </mailPiece>
+        <manualScan>
+          <messageId>6a15e781-5405-49d6-b5fd-1d559f892380</messageId>
+          <trackEventId>5086027372263826</trackEventId>
+          <deviceId>687069057112181</deviceId>
+          <userId>test</userId>
+          <RMGLocation>
+            <functionalLocationId>432</functionalLocationId>
+            <siteId>000470</siteId>
+          </RMGLocation>
+          <scanLocation>
+            <altitude>0.0</altitude><longitude>0.0</longitude><latitude>0.0</latitude>
+          </scanLocation>
+          <trackedEventCode>EVDAV</trackedEventCode>
+          <scanTimestamp>2024-10-03T23:57:16+01:00</scanTimestamp>
+          <eventTimestamp>2024-10-03T23:57:16+01:00</eventTimestamp>
+          <transmissionTimestamp>2024-10-03T23:59:09+01:00</transmissionTimestamp>
+          <transmissionCompleteTimestamp>2024-10-03T23:59:09+01:00</transmissionCompleteTimestamp>
+          <eventReceivedTimestamp>2024-10-03T23:59:09+01:00</eventReceivedTimestamp>
+          <eventReason>22</eventReason>
+          <manualScanIndicator>false</manualScanIndicator>
+          <workProcessCode>100</workProcessCode>
+          <auxiliaryData>
+            <data><name>RECIPIENT_EMAILID</name><value>user560233@example.com</value></data>
+            <data><name>RECIPIENT_MOBILENO</name><value>07203670275</value></data>
+          </auxiliaryData>
+        </manualScan>
+      </ptp:MPE>
+      """;
+
+        S schema;
+        try (InputStream in = new ByteArrayInputStream(xsd.getBytes(StandardCharsets.UTF_8))) {
+            schema = eng.loadSchema("ptp.xsd", in);
+        }
+
+        Map<String, Object> parsed = eng.parseAndValidate(xml, schema);
+
+        assertTrue(parsed.containsKey("MPE"), "Root key should be 'MPE' (local name)");
+        Map<String, Object> root = asMap(parsed.get("MPE"));
+
+        // ❌ Expected to fail today if you currently see MPE => MPE => body
+        assertFalse(root.containsKey("MPE"),
+                "Root must not contain nested 'MPE'. Expected 'mailPiece' and 'manualScan' directly under the root.");
+
+        // Sanity: ensure main children live directly under the root
+        assertTrue(root.containsKey("mailPiece"), "root should contain 'mailPiece'");
+        assertTrue(root.containsKey("manualScan"), "root should contain 'manualScan'");
+    }
+
 }
