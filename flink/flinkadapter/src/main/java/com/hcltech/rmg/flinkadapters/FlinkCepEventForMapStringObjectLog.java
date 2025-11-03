@@ -29,6 +29,7 @@ public final class FlinkCepEventForMapStringObjectLog implements CepEventLog {
         return new FlinkCepEventForMapStringObjectLog(ctx, namePrefix);
     }
 
+
     private FlinkCepEventForMapStringObjectLog(RuntimeContext ctx, String namePrefix) {
         ListStateDescriptor<CepEvent> logDesc =
                 new ListStateDescriptor<>(namePrefix + ".log", CEP_EVENT_TI);

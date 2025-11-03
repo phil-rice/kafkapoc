@@ -6,10 +6,7 @@ import com.hcltech.rmg.appcontainer.interfaces.AiDefn;
 import com.hcltech.rmg.appcontainer.interfaces.AppContainer;
 import com.hcltech.rmg.appcontainer.interfaces.IAppContainerFactory;
 import com.hcltech.rmg.celimpl.CelRuleBuilders;
-import com.hcltech.rmg.cepstate.CepEvent;
-import com.hcltech.rmg.cepstate.CepEventLog;
-import com.hcltech.rmg.cepstate.CepStateTypeClass;
-import com.hcltech.rmg.cepstate.MapStringObjectCepStateTypeClass;
+import com.hcltech.rmg.cepstate.*;
 import com.hcltech.rmg.common.ISystemProps;
 import com.hcltech.rmg.common.ITimeService;
 import com.hcltech.rmg.common.Paths;
@@ -32,6 +29,7 @@ import com.hcltech.rmg.execution.bizlogic.BizLogicExecutor;
 import com.hcltech.rmg.flink_metrics.FlinkMetricsFactory;
 import com.hcltech.rmg.flink_metrics.FlinkMetricsParams;
 import com.hcltech.rmg.flinkadapters.FlinkCepEventForMapStringObjectLog;
+import com.hcltech.rmg.flinkadapters.FlinkCepEventLogV2Ring;
 import com.hcltech.rmg.flinkadapters.FlinkCollectorFutureRecordAdapter;
 import com.hcltech.rmg.kafkaconfig.KafkaConfig;
 import com.hcltech.rmg.messages.*;
@@ -292,7 +290,9 @@ public final class AppContainerFactoryForMapStringObject implements IAppContaine
         );
 
         var msgTypeClass = new MapStringObjectAndListStringMsgTypeClass();
-        Function<RuntimeContext, CepEventLog> cepEventLogFunction = rt -> FlinkCepEventForMapStringObjectLog.from(rt, "CepState");
+//        Function<RuntimeContext, CepEventLog> cepEventLogFunction = rt -> new NullCepEventLog();
+        Function<RuntimeContext, CepEventLog> cepEventLogFunction = rt -> FlinkCepEventLogV2Ring.from(rt, "CepState");
+//        Function<RuntimeContext, CepEventLog> cepEventLogFunction = rt -> FlinkCepEventForMapStringObjectLog.from(rt, "CepState");
 
 
         EnvelopeFailureAdapter<Map<String, Object>, Map<String, Object>> failureAdapter = new EnvelopeFailureAdapter<>("AppContainerForMapStringObject");
