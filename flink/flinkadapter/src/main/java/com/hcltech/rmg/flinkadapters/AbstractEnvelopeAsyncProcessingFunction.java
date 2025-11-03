@@ -113,7 +113,8 @@ public abstract class AbstractEnvelopeAsyncProcessingFunction<ESC, CepState, Msg
                             cfg.correlator(), cfg.failureAdapter(), frType, cfg.timeService()
                     ),
                     frType,
-                    (inpFrType, env, corrId, completion) -> userFn.submit(inpFrType, env, corrId, completion),
+                    (inpFrType, env, corrId, completion) ->
+                            userFn.submit(inpFrType, env, corrId, completion),
                     ioPool
             );
             // leave lanes/ring/permits null on this path

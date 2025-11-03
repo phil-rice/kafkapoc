@@ -10,6 +10,10 @@
         </encoder>
     </appender>
 
+    <!-- Hide the specific noisy sources by level only -->
+    <logger name="org.apache.flink.api.java.typeutils.runtime.kryo.KryoSerializer" level="WARN"/>
+    <logger name="org.apache.flink.metrics.MetricGroup" level="ERROR"/>
+
     <!-- Quiet down Kafka client chatter (especially bootstrap disconnect WARNs) -->
     <logger name="org.apache.kafka.clients.NetworkClient" level="ERROR" additivity="false">
         <appender-ref ref="CONSOLE"/>

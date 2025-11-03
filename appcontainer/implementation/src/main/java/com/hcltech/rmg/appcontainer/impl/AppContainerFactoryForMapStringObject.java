@@ -291,8 +291,8 @@ public final class AppContainerFactoryForMapStringObject implements IAppContaine
 
         var msgTypeClass = new MapStringObjectAndListStringMsgTypeClass();
 //        Function<RuntimeContext, CepEventLog> cepEventLogFunction = rt -> new NullCepEventLog();
-        Function<RuntimeContext, CepEventLog> cepEventLogFunction = rt -> FlinkCepEventLogV2Ring.from(rt, "CepState");
-//        Function<RuntimeContext, CepEventLog> cepEventLogFunction = rt -> FlinkCepEventForMapStringObjectLog.from(rt, "CepState");
+//        Function<RuntimeContext, CepEventLog> cepEventLogFunction = rt -> FlinkCepEventLogV2Ring.from(rt, "CepState");
+        Function<RuntimeContext, CepEventLog> cepEventLogFunction = rt -> FlinkCepEventForMapStringObjectLog.from(rt, "CepState");
 
 
         EnvelopeFailureAdapter<Map<String, Object>, Map<String, Object>> failureAdapter = new EnvelopeFailureAdapter<>("AppContainerForMapStringObject");
