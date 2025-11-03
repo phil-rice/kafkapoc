@@ -30,8 +30,10 @@ public interface IEnrichmentAspectExecutor<CepState, Msg> {
                 dependencies.addAll(e.asDependencies());
             }
         });
-        return Topo.topoSortFromNodes(dependencies, ListPathTC.INSTANCE, EnrichmentWithDependenciesNodeTc.INSTANCE).map(generations ->
+        ErrorsOr<IEnrichmentAspectExecutor<CepState, Msg>> sorted = Topo.topoSortFromNodes(dependencies, ListPathTC.INSTANCE, EnrichmentWithDependenciesNodeTc.INSTANCE).map(generations ->
                 new EnrichmentAspectExecutor<CepState, Msg>(cepStateTypeClass, generations, evaluator));
+
+        return sorted;
 
     }
 }

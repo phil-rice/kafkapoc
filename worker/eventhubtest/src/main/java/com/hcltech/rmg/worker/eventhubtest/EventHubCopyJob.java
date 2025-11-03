@@ -34,7 +34,7 @@ public class EventHubCopyJob {
     /** Exposed for tests (inject an IEnvGetter that returns fake env vars). */
     public static void run(IEnvGetter env) throws Exception {
         KafkaDefaults defaults = new KafkaDefaults(
-                "rmgeventhub.servicebus.windows.net:9093", // Event Hubs bootstrap (Kafka endpoint)
+                "rmgeventhub-premium.servicebus.windows.net:9093", // Event Hubs bootstrap (Kafka endpoint)
                 // "localhost:9092", // <- for local Kafka testing
                 "testinputs",                               // must exist
                 "processed",                                // must exist
@@ -67,10 +67,11 @@ public class EventHubCopyJob {
         see.fromSource(source, WatermarkStrategy.noWatermarks(), "source")
                 .name("source")
                 .slotSharingGroup("all")
+                .setParallelism(12)
                 .map(new LogWhatWeHaveFunction())
                 .name("map")
                 .slotSharingGroup("all")
-                .sinkTo(new DiscardingSink<>())
+                .sinkTo(sink)
                 .name("sink: Writer")
                 .slotSharingGroup("all");
 

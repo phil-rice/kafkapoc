@@ -11,11 +11,9 @@ import java.util.Map;
 public class EnrichmentPipelineStep<ESC, CepState, Msg, Schema, FlinkRT, FlinkFR, MetricParam> {
 
     private final IEnrichmentAspectExecutor<CepState, Msg> enrichmentExecutor;
-    private final Map<String, Config> keyToConfigMap;
 
 
     public EnrichmentPipelineStep(AppContainer<ESC, CepState, Msg, Schema, FlinkRT, FlinkFR, MetricParam> container, String module) {
-        this.keyToConfigMap = container.keyToConfigMap();
         this.enrichmentExecutor = container.enrichmentExecutor();
     }
 

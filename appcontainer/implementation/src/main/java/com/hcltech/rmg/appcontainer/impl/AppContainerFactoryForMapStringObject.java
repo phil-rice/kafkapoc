@@ -12,6 +12,7 @@ import com.hcltech.rmg.cepstate.CepStateTypeClass;
 import com.hcltech.rmg.cepstate.MapStringObjectCepStateTypeClass;
 import com.hcltech.rmg.common.ISystemProps;
 import com.hcltech.rmg.common.ITimeService;
+import com.hcltech.rmg.common.Paths;
 import com.hcltech.rmg.common.apiclient.*;
 import com.hcltech.rmg.common.async.ExecutorServiceFactory;
 import com.hcltech.rmg.common.async.OrderPreservingAsyncExecutorConfig;
@@ -100,6 +101,28 @@ public final class AppContainerFactoryForMapStringObject implements IAppContaine
         }
         return env;
     }
+    static Envelope<Map<String, Object>, Map<String, Object>> afterParseForAuxData(Envelope<Map<String, Object>, Map<String, Object>> env){
+        if (env instanceof ValueEnvelope<Map<String, Object>, Map<String, Object>> ve) {
+            var data = ve.data();
+            Object object = Paths.getObject(data, List.of("MPE", "manualScan", "auxiliaryData"));
+
+            if (object != null&& object instanceof Map){
+                Map<String, Object> auxDataMap = (Map<String, Object>) object;
+                var d = auxDataMap.get("data");
+                if (d != null && !(d instanceof List))
+                    auxDataMap.put("data", List.of(d));
+            } else {
+               if (object instanceof String){
+                   var manualScan = (Map<String,Object>)Paths.getObject(data, List.of("MPE", "manualScan"));
+                   manualScan.remove("auxiliaryData");
+               }else {
+                   throw new IllegalStateException("Unexpected Auxiliary Data: " + object);
+               }
+            }
+        }
+        return env;
+
+    }
 
     private static ErrorsOr<AppContainer<KafkaConfig, Map<String, Object>, Map<String, Object>, XMLValidationSchema, RuntimeContext, Collector<Envelope<Map<String, Object>, Map<String, Object>>>, FlinkMetricsParams>> build(String id, AiDefn aiDefn) {
 
@@ -181,9 +204,9 @@ public final class AppContainerFactoryForMapStringObject implements IAppContaine
                     IEventTypeExtractor.fromPathForMapStringObject(List.of("MPE", "manualScan", "trackedEventCode")),
                     IDomainTypeExtractor.fixed("parcel"),
                     "config/prod/",
-                    "/tmp/flink-rocksdb-prod",
-                    false,
-                    v -> v
+                    "/datadrive/flink-rocksdb-prod",
+                    true,
+                    AppContainerFactoryForMapStringObject::afterParseForAuxData
             );
             case "ai" -> basic(
                     t -> KafkaConfig.fromSystemProps(t, false),
@@ -230,6 +253,7 @@ public final class AppContainerFactoryForMapStringObject implements IAppContaine
     }
 
     // ---------- monadic composition (inlined) ----------
+
 
     private static ErrorsOr<AppContainer<KafkaConfig, Map<String, Object>, Map<String, Object>, XMLValidationSchema, RuntimeContext, Collector<Envelope<Map<String, Object>, Map<String, Object>>>, FlinkMetricsParams>> basic(
             Function<String, KafkaConfig> eventSourceConfigFn,

@@ -16,6 +16,8 @@ import com.hcltech.rmg.shared_worker.serialisation.ValueRecordSerializer;
 import org.apache.flink.api.common.serialization.SerializationSchema;
 import org.apache.flink.connector.base.DeliveryGuarantee;
 import org.apache.flink.connector.kafka.sink.KafkaSink;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.nio.charset.StandardCharsets;
 import java.util.List;
@@ -26,6 +28,7 @@ import java.util.Properties;
  * Uses record-level serializers (in serialisation package) to add Kafka headers.
  */
 public final class EnvelopeKafkaSinks {
+    private static final Logger log = LoggerFactory.getLogger(EnvelopeKafkaSinks.class);
 
     private EnvelopeKafkaSinks() {
     }
@@ -192,6 +195,7 @@ public final class EnvelopeKafkaSinks {
 
         @Override
         public byte[] serialize(ErrorEnvelope<CepState, Msg> e) {
+            log.error(e.toString());
             try (ByteArrayBuilder buf = new ByteArrayBuilder()) {
                 JsonGenerator gen = MAPPER.getFactory().createGenerator(buf);
                 gen.writeStartObject();

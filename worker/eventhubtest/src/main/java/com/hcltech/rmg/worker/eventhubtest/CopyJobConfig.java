@@ -2,6 +2,8 @@ package com.hcltech.rmg.worker.eventhubtest;
 
 import com.hcltech.rmg.common.IEnvGetter;
 import com.hcltech.rmg.kafkaconfig.KafkaConfig;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.time.Duration;
 import java.util.Properties;
@@ -10,6 +12,8 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 public class CopyJobConfig {
+
+    private static final Logger log = LoggerFactory.getLogger(CopyJobConfig.class);
 
     public static KafkaConfig source(IEnvGetter env, KafkaDefaults defaults) {
         return build(env, defaults, defaults.inputTopic(), false);

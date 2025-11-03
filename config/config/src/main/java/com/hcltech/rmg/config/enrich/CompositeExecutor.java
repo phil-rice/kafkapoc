@@ -9,7 +9,8 @@ public record CompositeExecutor(
     @Override
     public List<EnrichmentWithDependencies> asDependencies() {
         return enrichers.stream()
-                .flatMap(e -> e.asDependencies().stream())
+                .flatMap(e ->
+                        e.asDependencies().stream())
                 .toList();
     }
 }

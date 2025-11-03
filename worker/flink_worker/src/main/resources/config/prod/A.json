@@ -4,13 +4,25 @@
       "bizlogic": {
         "all": {
           "type": "cel",
-          "cel": "{'out': [message]}"     }
+          "cel": "{'out': (has(message.MPE.manualScan.auxiliaryData) && has(message.MPE.manualScan.auxiliaryData.data) && message.MPE.manualScan.auxiliaryData.data.size() > 0 && message.MPE.manualScan.auxiliaryData.data[0].name == 'RECIPIENT_EMAILID' && message.MPE.mailPiece.mailPieceBarcode.channelSegment.productId == '100') ? [{'type': 'notification', 'trackedEventCode': 'NRARS', 'originatingTrackedEventCode': 'EVDAV', 'notificationDestination': string(message.MPE.manualScan.auxiliaryData.data[0].value), 'notificationDestinationType': '1', 'notificationRecipientType': 'R', 'eventTimestamp': string(message.MPE.manualScan.eventTimestamp), 'uniqueItemId': string(message.MPE.mailPiece.mailPieceBarcode.channelSegment.uniqueItemId), 'UPUTrackingNumber': string(message.MPE.mailPiece.mailPieceBarcode.channelSegment.UPUTrackingNumber)}] : [] + [{'type': 'tracking', 'eventCode': 'EVDAV', 'eventName': 'Accepted at Depot', 'eventDateTime': string(message.MPE.manualScan.eventTimestamp), 'uniqueItemId': string(message.MPE.mailPiece.mailPieceBarcode.channelSegment.uniqueItemId), 'UPUTrackingNumber': string(message.MPE.mailPiece.mailPieceBarcode.channelSegment.UPUTrackingNumber), 'productId': string(message.MPE.mailPiece.mailPieceBarcode.channelSegment.productId), 'functionalLocationId': string(message.MPE.manualScan.RMGLocation.functionalLocationId), 'siteId': string(message.MPE.manualScan.RMGLocation.siteId), 'postcode': string(message.MPE.mailPiece.mailPieceBarcode.channelSegment.destinationPostcodeDPS.postcode), 'destinationCountry': string(message.MPE.mailPiece.mailPieceBarcode.channelSegment.destinationCountry)}]}"
+        }
       },
+
       "enrichment": {
         "all": {
           "type": "composite",
           "enrichers": [
-          ]
+            {
+              "type": "lookupz",
+              "inputs": [["MPE", "mailPiece", "mailPieceBarcode", "channelSegment", "productId"]],
+              "output": ["productCategory"],
+              "lookup": {
+                "100": {"productCategory": "Tracked24"},
+                "101": {"productCategory": "Tracked48"},
+                "109": {"productCategory": "SpecialDelivery09"},
+                "113": {"productCategory": "SpecialDelivery13"}
+              }
+            }    ]
         }
       }
     },
@@ -18,7 +30,8 @@
       "bizlogic": {
         "all": {
           "type": "cel",
-          "cel": "{'out': [message]}"     }
+          "cel": "{'out': [{'type': 'tracking', 'eventCode': 'EVIMC', 'eventName': 'Accepted at Mail Centre', 'eventDateTime': string(message.MPE.manualScan.eventTimestamp), 'uniqueItemId': string(message.MPE.mailPiece.mailPieceBarcode.channelSegment.uniqueItemId), 'UPUTrackingNumber': string(message.MPE.mailPiece.mailPieceBarcode.channelSegment.UPUTrackingNumber), 'productId': string(message.MPE.mailPiece.mailPieceBarcode.channelSegment.productId), 'functionalLocationId': string(message.MPE.manualScan.RMGLocation.functionalLocationId), 'siteId': string(message.MPE.manualScan.RMGLocation.siteId), 'postcode': string(message.MPE.mailPiece.mailPieceBarcode.channelSegment.destinationPostcodeDPS.postcode), 'destinationCountry': string(message.MPE.mailPiece.mailPieceBarcode.channelSegment.destinationCountry)}]}"
+        }
       },
       "enrichment": {
         "all": {
@@ -32,7 +45,8 @@
       "bizlogic": {
         "all": {
           "type": "cel",
-          "cel": "{'out': [message]}"     }
+          "cel": "{'out': (has(message.MPE.manualScan.auxiliaryData) && has(message.MPE.manualScan.auxiliaryData.data) && message.MPE.manualScan.auxiliaryData.data.size() > 0 && message.MPE.manualScan.auxiliaryData.data[0].name == 'RECIPIENT_EMAILID' && message.MPE.mailPiece.mailPieceBarcode.channelSegment.productId == '100') ? [{'type': 'notification', 'trackedEventCode': 'NRBRS', 'originatingTrackedEventCode': 'EVGPD', 'notificationDestination': string(message.MPE.manualScan.auxiliaryData.data[0].value), 'notificationDestinationType': '1', 'notificationRecipientType': 'R', 'eventTimestamp': string(message.MPE.manualScan.eventTimestamp), 'uniqueItemId': string(message.MPE.mailPiece.mailPieceBarcode.channelSegment.uniqueItemId), 'UPUTrackingNumber': string(message.MPE.mailPiece.mailPieceBarcode.channelSegment.UPUTrackingNumber)}] : [] + [{'type': 'tracking', 'eventCode': 'EVGPD', 'eventName': 'Out for Delivery', 'eventDateTime': string(message.MPE.manualScan.eventTimestamp), 'uniqueItemId': string(message.MPE.mailPiece.mailPieceBarcode.channelSegment.uniqueItemId), 'UPUTrackingNumber': string(message.MPE.mailPiece.mailPieceBarcode.channelSegment.UPUTrackingNumber), 'productId': string(message.MPE.mailPiece.mailPieceBarcode.channelSegment.productId), 'userId': string(message.MPE.manualScan.userId), 'deviceId': string(message.MPE.manualScan.deviceId), 'functionalLocationId': string(message.MPE.manualScan.RMGLocation.functionalLocationId), 'siteId': string(message.MPE.manualScan.RMGLocation.siteId), 'postcode': string(message.MPE.mailPiece.mailPieceBarcode.channelSegment.destinationPostcodeDPS.postcode), 'destinationCountry': string(message.MPE.mailPiece.mailPieceBarcode.channelSegment.destinationCountry), 'longitude': string(message.MPE.manualScan.scanLocation.longitude), 'latitude': string(message.MPE.manualScan.scanLocation.latitude), 'altitude': string(message.MPE.manualScan.scanLocation.altitude)}]}"
+        }
       },
       "enrichment": {
         "all": {
@@ -46,7 +60,8 @@
       "bizlogic": {
         "all": {
           "type": "cel",
-          "cel": "{'out': [message]}"     }
+          "cel": "{'out': (has(message.MPE.manualScan.auxiliaryData) && has(message.MPE.manualScan.auxiliaryData.data) && message.MPE.manualScan.auxiliaryData.data.size() > 0 && message.MPE.manualScan.auxiliaryData.data[0].name == 'RECIPIENT_EMAILID' && message.MPE.mailPiece.mailPieceBarcode.channelSegment.productId == '100') ? [{'type': 'notification', 'trackedEventCode': 'NRCRS', 'originatingTrackedEventCode': 'ENKDN', 'notificationDestination': string(message.MPE.manualScan.auxiliaryData.data[0].value), 'notificationDestinationType': '1', 'notificationRecipientType': 'R', 'eventTimestamp': string(message.MPE.manualScan.eventTimestamp), 'uniqueItemId': string(message.MPE.mailPiece.mailPieceBarcode.channelSegment.uniqueItemId), 'UPUTrackingNumber': string(message.MPE.mailPiece.mailPieceBarcode.channelSegment.UPUTrackingNumber)}] : [] + [{'type': 'tracking', 'eventCode': 'ENKDN', 'eventName': 'Delivered', 'eventDateTime': string(message.MPE.manualScan.eventTimestamp), 'uniqueItemId': string(message.MPE.mailPiece.mailPieceBarcode.channelSegment.uniqueItemId), 'UPUTrackingNumber': string(message.MPE.mailPiece.mailPieceBarcode.channelSegment.UPUTrackingNumber), 'productId': string(message.MPE.mailPiece.mailPieceBarcode.channelSegment.productId), 'userId': string(message.MPE.manualScan.userId), 'deviceId': string(message.MPE.manualScan.deviceId), 'functionalLocationId': string(message.MPE.manualScan.RMGLocation.functionalLocationId), 'siteId': string(message.MPE.manualScan.RMGLocation.siteId), 'postcode': string(message.MPE.mailPiece.mailPieceBarcode.channelSegment.destinationPostcodeDPS.postcode), 'destinationCountry': string(message.MPE.mailPiece.mailPieceBarcode.channelSegment.destinationCountry), 'longitude': string(message.MPE.manualScan.scanLocation.longitude), 'latitude': string(message.MPE.manualScan.scanLocation.latitude), 'altitude': string(message.MPE.manualScan.scanLocation.altitude)}]}"
+        }
       },
       "enrichment": {
         "all": {
