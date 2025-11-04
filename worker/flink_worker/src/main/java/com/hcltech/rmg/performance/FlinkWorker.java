@@ -44,7 +44,7 @@ public final class FlinkWorker {
 
         // route to Kafka
         String brokers = appContainer.eventSourceConfig().bootstrapServer();
-        EnvelopeRouting.routeToKafka(appContainerDefn, pipe.values(), pipe.errors(), pipe.retries(), brokers, "processed", "errors", "retry");
+        EnvelopeRouting.routeToKafka(appContainerDefn, pipe.values(), pipe.errors(), pipe.retries(), brokers, "processed", "errors", "retry", appContainer.eventSourceConfig().properties());
 
         pipe.env().execute("rmg-perf-harness");
     }

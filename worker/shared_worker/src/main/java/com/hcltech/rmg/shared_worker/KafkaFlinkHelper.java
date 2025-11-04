@@ -171,6 +171,7 @@ public class KafkaFlinkHelper {
     private static void applyNetworkProps(Properties p) {
         p.put("receive.buffer.bytes", "8388608");          // 8 MB
         p.put("socket.receive.buffer.bytes", "8388608");   // some clients honor this
+        p.put("connections.max.idle.ms", "300000");   // we don't want to drop connections
     }
 
     /** Robust timeouts + gentle backoffs (avoid thrashing on throttles). */
