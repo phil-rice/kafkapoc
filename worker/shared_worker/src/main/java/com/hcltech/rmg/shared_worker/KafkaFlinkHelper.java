@@ -20,10 +20,18 @@ import org.apache.flink.streaming.api.environment.StreamExecutionEnvironment;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.lang.management.GarbageCollectorMXBean;
+import java.lang.management.ManagementFactory;
+import java.lang.management.RuntimeMXBean;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.Duration;
+import java.util.List;
 import java.util.Properties;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 public class KafkaFlinkHelper {
     private static final Logger LOG = LoggerFactory.getLogger(KafkaFlinkHelper.class);
@@ -69,6 +77,74 @@ public class KafkaFlinkHelper {
     private static final ConfigOption<Boolean> OPT_RDB_METRICS =
             ConfigOptions.key("state.backend.rocksdb.metrics.enabled").booleanType().defaultValue(true);
 
+    // ---- Lightweight GC debug logger (runs once per JVM) ----
+    private static final AtomicBoolean GC_LOGGER_STARTED = new AtomicBoolean(false);
+    private static volatile ScheduledExecutorService GC_EXEC = null;
+
+    /**
+     * Start a periodic logger that prints JVM GC totals, per-interval deltas, and overhead% (GC time / uptime).
+     * No external metrics systems required. Safe to call multiple times; only starts once.
+     */
+    public static void startJvmGcDebugLogger(Duration interval) {
+        if (interval == null || interval.isNegative() || interval.isZero()) {
+            LOG.warn("GC logger not started: invalid interval {}", interval);
+            return;
+        }
+        if (!GC_LOGGER_STARTED.compareAndSet(false, true)) {
+            // already running
+            return;
+        }
+
+        final List<GarbageCollectorMXBean> beans = ManagementFactory.getGarbageCollectorMXBeans();
+        final RuntimeMXBean rt = ManagementFactory.getRuntimeMXBean();
+
+        GC_EXEC = Executors.newSingleThreadScheduledExecutor(r -> {
+            Thread t = new Thread(r, "gc-debug-logger");
+            t.setDaemon(true);
+            return t;
+        });
+
+        // state for deltas
+        final long[] prev = new long[] { 0L /*timeMs*/, 0L /*count*/ };
+        GC_EXEC.scheduleAtFixedRate(() -> {
+            try {
+                long totalTimeMs = 0;
+                long totalCount = 0;
+                for (GarbageCollectorMXBean b : beans) {
+                    long t = b.getCollectionTime();   // ms (may be -1 if not supported)
+                    long c = b.getCollectionCount();  // may be -1 if not supported
+                    if (t > 0) totalTimeMs += t;
+                    if (c > 0) totalCount += c;
+                }
+                long deltaMs = totalTimeMs - prev[0];
+                long deltaCount = totalCount - prev[1];
+                prev[0] = totalTimeMs;
+                prev[1] = totalCount;
+
+                long upMs = rt.getUptime();
+                double overheadPct = (upMs > 0) ? (totalTimeMs * 100.0 / upMs) : 0.0;
+
+                LOG.info("GC: total={} ms ( {} ms), count={} ( {}), uptime={} ms, overhead={}%"
+                                + (deltaMs > 0 ? "" : "  (idle)"),
+                        totalTimeMs, Math.max(deltaMs, 0),
+                        totalCount, Math.max(deltaCount, 0),
+                        upMs, String.format("%.2f", overheadPct));
+            } catch (Throwable t) {
+                LOG.warn("GC logger tick failed", t);
+            }
+        }, 0L, interval.toMillis(), TimeUnit.MILLISECONDS);
+
+        // best-effort shutdown
+        Runtime.getRuntime().addShutdownHook(new Thread(() -> {
+            ScheduledExecutorService exec = GC_EXEC;
+            if (exec != null) {
+                exec.shutdownNow();
+            }
+        }, "gc-debug-logger-shutdown"));
+
+        LOG.info("Started JVM GC debug logger at interval {}", interval);
+    }
+
     /**
      * Build the RawMessage stream and configure metrics/state/checkpointing.
      */
@@ -80,6 +156,9 @@ public class KafkaFlinkHelper {
             int checkpointingInterval,
             String rocksDBPath,
             boolean useRocksDBStateBackend) {
+
+        // (A) Start lightweight GC debug logging every 5s (safe no-op if already started).
+        startJvmGcDebugLogger(Duration.ofSeconds(5));
 
         // 1) Parallelism: match source to partitions if provided.
         final int parallelism = kafka.sourceParallelism() > 0
@@ -106,7 +185,7 @@ public class KafkaFlinkHelper {
             ensureRocksDbStateBackend(env, rocksDBPath);
         }
 
-        // 6) Kafka consumer props (Event Hubs via Kafka): Profile B – larger, coalesced fetches.
+        // 6) Kafka consumer props (Event Hubs via Kafka): Profile B  larger, coalesced fetches.
         Properties consumerProps = buildTunedKafkaConsumerProps(kafka);
 
         // 7) Source: build and set parallelism explicitly.
@@ -154,7 +233,7 @@ public class KafkaFlinkHelper {
 
     /**
      * Profile B: broker coalescing + large per-partition chunk + high total fetch.
-     * - fetch.min.bytes = 1MB (~500×2KB messages)
+     * - fetch.min.bytes = 1MB (~500�2KB messages)
      * - fetch.max.wait.ms = 100ms (allow the broker to fill)
      * - max.partition.fetch.bytes = 8MB (fat chunk per partition)
      * - fetch.max.bytes = 128MB (room for many partitions at once)
@@ -171,7 +250,7 @@ public class KafkaFlinkHelper {
     private static void applyNetworkProps(Properties p) {
         p.put("receive.buffer.bytes", "8388608");          // 8 MB
         p.put("socket.receive.buffer.bytes", "8388608");   // some clients honor this
-        p.put("connections.max.idle.ms", "300000");   // we don't want to drop connections
+        p.put("connections.max.idle.ms", "300000");        // we don't want to drop connections
     }
 
     /** Robust timeouts + gentle backoffs (avoid thrashing on throttles). */
@@ -187,7 +266,7 @@ public class KafkaFlinkHelper {
 
     private static void logEffectiveKafkaProps(Properties p) {
         try {
-            LOG.info("Kafka consumer tuning → fetch.min.bytes={}, fetch.max.wait.ms={}, max.partition.fetch.bytes={}, fetch.max.bytes={}, " +
+            LOG.info("Kafka consumer tuning � fetch.min.bytes={}, fetch.max.wait.ms={}, max.partition.fetch.bytes={}, fetch.max.bytes={}, " +
                             "receive.buffer.bytes={}, socket.receive.buffer.bytes={}, max.poll.records={}, session.timeout.ms={}, heartbeat.interval.ms={}, request.timeout.ms={}",
                     p.getProperty("fetch.min.bytes"),
                     p.getProperty("fetch.max.wait.ms"),
@@ -220,13 +299,12 @@ public class KafkaFlinkHelper {
                 ConfigOptions.key("execution.checkpointing.incremental").booleanType().noDefaultValue(),
                 true);
 
-
         // Directories
         DirectorySetup dirs = prepareDirectories(rocksDBPath);
         configuration.set(RocksDBOptions.LOCAL_DIRECTORIES, dirs.localDir().toString());
         configuration.set(CheckpointingOptions.CHECKPOINTS_DIRECTORY, dirs.checkpointsDir().toUri().toString());
 
-        // ★ Give RocksDB a real budget per slot (you have 256 GB → 8 GB/slot is safe)
+        //  Give RocksDB a real budget per slot (you have 256 GB � 8 GB/slot is safe)
         configuration.setString("state.backend.rocksdb.memory.fixed-per-slot", "8g");
         // Split: 50% write buffers, 10% high-priority (index/filter), remainder block cache
         configuration.setString("state.backend.rocksdb.memory.write-buffer-ratio", "0.5");
@@ -253,7 +331,7 @@ public class KafkaFlinkHelper {
         cfg.set(OPT_SCOPE_REWRITE, true);
         cfg.set(OPT_RDB_METRICS, true);
 
-        LOG.info("Metrics → Prometheus at port {}, RocksDB metrics enabled", prometheusPort);
+        LOG.info("Metrics � Prometheus at port {}, RocksDB metrics enabled", prometheusPort);
 
         ClassLoader cl = Thread.currentThread().getContextClassLoader();
         if (cl == null) cl = KafkaFlinkHelper.class.getClassLoader();
@@ -284,7 +362,7 @@ public class KafkaFlinkHelper {
 
     /**
      * RocksDB throughput tuning (SSD):
-     * - 256 MB memtables × 4 → ~1 GB per CF for write buffers
+     * - 256 MB memtables � 4 � ~1 GB per CF for write buffers
      * - 256 MB target file size (fewer files, less compaction churn)
      * - higher L0 thresholds
      * - more background threads
