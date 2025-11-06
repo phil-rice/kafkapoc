@@ -110,12 +110,8 @@ public final class AppContainerFactoryForMapStringObject implements IAppContaine
                 if (d != null && !(d instanceof List))
                     auxDataMap.put("data", List.of(d));
             } else {
-               if (object instanceof String){
                    var manualScan = (Map<String,Object>)Paths.getObject(data, List.of("MPE", "manualScan"));
                    manualScan.remove("auxiliaryData");
-               }else {
-                   throw new IllegalStateException("Unexpected Auxiliary Data: " + object);
-               }
             }
         }
         return env;

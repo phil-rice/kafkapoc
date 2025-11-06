@@ -221,7 +221,7 @@ public final class EnvelopeKafkaSinks {
             implements SerializationSchema<ErrorEnvelope<CepState, Msg>> {
         @Override public void open(InitializationContext ctx) {}
         @Override public byte[] serialize(ErrorEnvelope<CepState, Msg> e) {
-            log.error(e.toString());
+//            log.error(e.toString());
             try (ByteArrayBuilder buf = new ByteArrayBuilder()) {
                 JsonGenerator gen = MAPPER.getFactory().createGenerator(buf);
                 gen.writeStartObject();
