@@ -1,0 +1,4 @@
+{
+  "role": { "name": "worker-performance-eventhub" },
+  "sampling": { "percentage": 0.01 }
+}
