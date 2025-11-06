@@ -12,15 +12,20 @@
           "type": "composite",
           "enrichers": [
             {
-              "type": "lookup",
-              "inputs": [[ "MPE", "mailPiece", "mailPieceBarcode", "channelSegment", "productId"]],
-              "output": ["productCategory"],
-              "lookup": {
-                "100": {"productCategory": "Tracked24"},
-                "101": {"productCategory": "Tracked48"},
-                "109": {"productCategory": "SpecialDelivery09"},
-                "113": {"productCategory": "SpecialDelivery13"}
+              "type": "csvAzure",
+              "inputs": [
+                [ "MPE", "mailPiece", "mailPieceBarcode", "channelSegment", "destinationPostcodeDPS", "postcode"]
+              ],
+              "inputColumns": ["postcode"],
+              "output": ["address"],
+              "outputColumns": ["add_line1", "add_line2", "city", "county", "country", "postcode"],
+              "azure": {
+                 "accountName":"rmgparcelcheckpoint",
+                 "container": "address-lookup",
+                 "blobPath": "parcel_address.csv",
+                 "sasEnvVar": "AZURE_SAS_TOKEN"
               }
+
             }
           ]
         }

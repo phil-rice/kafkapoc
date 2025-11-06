@@ -13,7 +13,7 @@
           "type": "composite",
           "enrichers": [
             {
-              "type": "lookupz",
+              "type": "lookup",
               "inputs": [["MPE", "mailPiece", "mailPieceBarcode", "channelSegment", "productId"]],
               "output": ["productCategory"],
               "lookup": {

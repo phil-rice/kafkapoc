@@ -109,7 +109,7 @@ public class EnvelopeAsyncProcessingFunction<ESC, CepState, Msg, Schema>
                 envelopeMetrics.addToMetricsAtEnd(afterBizLogic);
                 long finish = timeService.currentTimeNanos();
                 long duration = finish - start;
-                metrics.histogram("NormalPipelineFunction.asyncInvoke.millis", duration);
+                metrics.histogram("NormalPipelineFunction.asyncInvoke.nanos", duration);
                 afterBizLogic.valueEnvelope().setDurationNanos(duration);
 
                 completion.success(env, corrId, afterBizLogic);

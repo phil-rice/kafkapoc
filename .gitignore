@@ -2,6 +2,9 @@
 target/
 **/target/
 pom.xml.tag
+.run/
+*.jar
+*.tar.gz
 pom.xml.releaseBackup
 pom.xml.versionsBackup
 release.properties

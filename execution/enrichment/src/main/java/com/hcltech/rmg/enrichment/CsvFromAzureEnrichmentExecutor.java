@@ -10,6 +10,8 @@ import com.hcltech.rmg.config.enrich.CsvFromAzureEnrichment;
 import com.hcltech.rmg.execution.aspects.AspectExecutor;
 import com.hcltech.rmg.messages.MsgTypeClass;
 import com.hcltech.rmg.messages.ValueEnvelope;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.InputStream;
 import java.net.http.HttpClient;
@@ -39,6 +41,7 @@ import java.util.concurrent.ConcurrentHashMap;
 public final class CsvFromAzureEnrichmentExecutor<CepState, Msg>
         implements AspectExecutor<CsvFromAzureEnrichment, ValueEnvelope<CepState, Msg>, CepEvent> {
 
+    private static final Logger log = LoggerFactory.getLogger(CsvFromAzureEnrichmentExecutor.class);
     /** Cache of loaded CSV lookups keyed by the immutable {@link CsvFromAzureEnrichment} record. */
     private static final ConcurrentHashMap<CsvFromAzureEnrichment, Map<String, List<String>>> LOOKUP_CACHE =
             new ConcurrentHashMap<>();
@@ -113,12 +116,14 @@ public final class CsvFromAzureEnrichmentExecutor<CepState, Msg>
         // Cache keyed by the immutable config record itself
         return LOOKUP_CACHE.computeIfAbsent(cfg, c -> {
             final String desc = safeDescribe(az);
+            log.info("Loading azure desc = " + desc);
             try (InputStream is = AzureBlobClient.openBlobStream(az, tokenGenerator, httpClient)) {
                 // ',' CSV delimiter; composite key delimiter from cfg
                 return CsvResourceLoader
                         .loadFromInputStream(is, ',', desc, c.inputColumns(), c.outputColumns(), c.keyDelimiter())
                         .map();
             } catch (Exception e) {
+                log.error("Error while loading Azure blob stream", e);
                 throw new RuntimeException("Error loading CSV from Azure blob: " + desc, e);
             }
         });

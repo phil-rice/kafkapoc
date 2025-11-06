@@ -14,13 +14,15 @@ import com.hcltech.rmg.shared_worker.EnvelopeRouting;
 import org.apache.flink.configuration.CheckpointingOptions;
 import org.apache.flink.configuration.Configuration;
 import org.apache.flink.streaming.api.environment.StreamExecutionEnvironment;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.Map;
 
 public final class PerfEventHub {
-
+private static final Logger log = LoggerFactory.getLogger(PerfEventHub.class);
     public static void main(String[] args) throws Exception {
         final String tmpDir = "/datadrive/flink-tmp";
         System.setProperty("java.io.tmpdir", tmpDir);

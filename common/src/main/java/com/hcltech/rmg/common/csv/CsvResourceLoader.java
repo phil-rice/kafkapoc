@@ -1,5 +1,8 @@
 package com.hcltech.rmg.common.csv;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import java.io.BufferedReader;
 import java.io.InputStream;
 import java.io.InputStreamReader;
@@ -8,6 +11,8 @@ import java.util.List;
 import java.util.Objects;
 
 public final class CsvResourceLoader {
+
+    private static final Logger log = LoggerFactory.getLogger(CsvResourceLoader.class);
 
     private CsvResourceLoader() {}
 
@@ -69,9 +74,11 @@ public final class CsvResourceLoader {
             }
 
             CsvLookupCollector collector = new CsvLookupCollector(header, inCols, outCols, keyDelimiter);
-
+long count = 0;
             // data lines
             while ((line = br.readLine()) != null) {
+               if (count++ %100000 ==0)
+                   log.info(count + " lines read");
                 if (line.isBlank()) continue;
                 collector.accept(lineParser.parse(line));
             }
